@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surat Izin Siswa - Sistem SCP</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Cropper.js CSS & JS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col font-sans overflow-hidden">
+
+    <!-- Navbar Utama -->
+    <nav class="bg-indigo-600 text-white px-4 md:px-6 py-3 flex justify-between items-center shadow-md z-30 flex-shrink-0 h-[57px]">
+        <div class="flex items-center space-x-3 md:space-x-4">
+            <!-- Tombol Garis 3 -->
+            <button id="toggleSidebarNav" class="p-2 text-indigo-100 hover:text-white hover:bg-indigo-700/50 rounded-lg focus:outline-none transition md:pointer-events-none md:opacity-50 md:cursor-not-allowed">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+
+            <!-- Menu Profil Ringkas -->
+            <div id="btnOpenProfile" class="flex items-center space-x-2 bg-indigo-700/60 hover:bg-indigo-700/90 px-3 py-1.5 rounded-full border border-indigo-400/30 cursor-pointer transition">
+                <div class="w-7 h-7 rounded-full bg-indigo-200 text-indigo-800 flex items-center justify-center font-bold text-xs shadow-sm overflow-hidden flex-shrink-0">
+                    <img id="navAvatarImg" src="" class="w-full h-full object-cover hidden" alt="Avatar">
+                    <svg id="navAvatarSvg" class="w-5 h-5 text-indigo-600 mt-1" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                <div class="text-xs md:text-sm font-medium flex items-center space-x-1.5 truncate max-w-[150px] sm:max-w-[250px] md:max-w-none">
+                    <span id="navFullname" class="font-semibold truncate">Siswa</span>
+                    <span class="text-indigo-300">|</span>
+                    <span id="navNis" class="text-indigo-200 text-xs">-</span>
+                </div>
+            </div>
+
+            <!-- Judul Panel -->
+            <h1 class="hidden lg:block text-base md:text-lg font-bold border-l border-indigo-400/40 pl-4">
+                SCP Sekolah - Panel Siswa
+            </h1>
+        </div>
+
+        <button id="btnLogout" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition flex-shrink-0">
+            Keluar
+        </button>
+    </nav>
+
+    <!-- Layout Utama -->
+    <div class="flex flex-1 h-[calc(100vh-57px)] overflow-hidden relative">
+        <!-- Overlay Gelap Sidebar Mobile -->
+        <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-20 hidden md:hidden transition-opacity duration-300"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed md:static top-0 bottom-0 left-0 w-64 bg-white border-r border-slate-200 p-5 flex flex-col justify-between transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-30 h-full flex-shrink-0">
+            <div class="space-y-6">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Navigasi Utama</span>
+                </div>
+
+                <nav class="space-y-2">
+                    <a href="dashboard.html" class="flex items-center space-x-3 px-4 py-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium rounded-xl transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 001 1m-6 0h6"></path>
+                        </svg>
+                        <span>Dashboard</span>
+                    </a>
+
+                    <a href="suratizin.html" class="flex items-center space-x-3 px-4 py-3 bg-indigo-50 text-indigo-600 font-semibold rounded-xl transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span>Surat Izin</span>
+                    </a>
+                </nav>
+            </div>
+            
+            <div class="border-t border-slate-100 pt-4 text-xs text-slate-400 text-center flex-shrink-0">
+                Sistem SCP &copy; 2026
+            </div>
+        </aside>
+
+        <!-- Konten Utama -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
+            <div class="max-w-6xl mx-auto space-y-6">
+                <!-- Header Konten & Tombol Tambah -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-slate-800">Pengajuan Surat Izin</h2>
+                        <p class="text-slate-500 text-xs md:text-sm mt-1">Kelola dan ajukan permohonan izin keluar atau tidak masuk sekolah.</p>
+                    </div>
+                    <button id="btnOpenCreateModal" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition shadow-md flex items-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span>Buat Pengajuan</span>
+                    </button>
+                </div>
+
+                <!-- Tabel Riwayat Izin -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+                        <h3 class="font-bold text-slate-700 text-sm md:text-base">Riwayat Pengajuan Izin</h3>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100/70 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="py-3.5 px-4 font-semibold">Tanggal Mulai</th>
+                                    <th class="py-3.5 px-4 font-semibold">Tanggal Selesai</th>
+                                    <th class="py-3.5 px-4 font-semibold">Alasan</th>
+                                    <th class="py-3.5 px-4 font-semibold">Dokumen / File</th>
+                                    <th class="py-3.5 px-4 font-semibold">Status Approval</th>
+                                    <th class="py-3.5 px-4 font-semibold">Diverifikasi Oleh</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaveTableBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
+                                <tr>
+                                    <td colspan="7" class="py-8 text-center text-slate-400">Memuat data pengajuan...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL BUAT / EDIT PENGAJUAN IZIN -->
+    <div id="createLeaveModal" class="fixed inset-0 bg-slate-900/60 z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
+            
+            <!-- Header Modal -->
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white flex-shrink-0">
+                <h3 id="modalTitle" class="font-bold text-base md:text-lg">Form Pengajuan Izin</h3>
+                <button id="btnCloseCreateLeave" type="button" class="text-indigo-200 hover:text-white text-2xl font-bold">&times;</button>
+            </div>
+
+            <!-- Form & Isi Konten (Hanya area ini yang scroll) -->
+            <form id="formLeaveRequest" class="p-6 space-y-4 overflow-y-auto flex-1" enctype="multipart/form-data">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Jenis Surat / Izin</label>
+                    <select id="leaveType" required class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition bg-white">
+                        <option value="" disabled selected>-- Pilih Jenis Izin --</option>
+                        <option value="Sakit">Sakit</option>
+                        <option value="Acara">Acara Keluarga / Penting</option>
+                        <option value="Izin">Izin Dispensasi / Lainnya</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Masa Berlaku Surat (Mulai s/d Selesai)</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <span class="text-[11px] text-slate-400 block mb-0.5">Tanggal Mulai</span>
+                            <input type="date" id="leaveStartDate" required class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-slate-400 block mb-0.5">Tanggal Selesai</span>
+                            <input type="date" id="leaveEndDate" required class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Alasan / Keterangan</label>
+                    <textarea id="leaveReason" rows="3" required placeholder="Tuliskan detail alasan permohonan izin..." class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">
+                        Upload Surat Bukti <span class="text-red-500">* (Max 5 MB per File)</span>
+                    </label>
+                    <input type="file" id="leaveDocumentFile" multiple accept=".pdf,.png,.jpg,.jpeg" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition bg-slate-50 text-slate-600 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    <span class="text-[11px] text-slate-400 mt-1 block">Format: PDF, JPG, JPEG, PNG. Maksimal 5 MB per file.</span>
+                </div>
+
+                <!-- Container Preview List File -->
+                <div id="fileListContainer" class="space-y-2 mt-2 max-h-40 overflow-y-auto pr-1"></div>
+            </form>
+
+            <!-- Tombol Aksi Modal -->
+            <div class="bg-slate-50 px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 flex-shrink-0">
+                <button type="button" id="btnCancelCreateLeave" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition">
+                    Batal
+                </button>
+                <button type="submit" form="formLeaveRequest" id="btnSubmitLeave" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow">
+                    Kirim Pengajuan
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+   <!-- Modal Profil User -->
+    <div id="profileModal" class="fixed inset-0 bg-slate-900/60 z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
+            <!-- Header Modal -->
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white flex-shrink-0">
+                <h3 class="font-bold text-lg">Profil Saya</h3>
+                <button id="btnCloseProfile" class="text-indigo-200 hover:text-white text-xl font-bold">&times;</button>
+            </div>
+
+            <!-- Body Modal -->
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <!-- Foto Profil -->
+                <div class="flex flex-col items-center justify-center">
+                    <div class="relative group">
+                        <div class="w-24 h-24 rounded-full bg-slate-200 border-4 border-indigo-100 flex items-center justify-center overflow-hidden shadow-md">
+                            <img id="modalAvatarImg" src="" class="w-full h-full object-cover hidden" alt="Foto Profil">
+                            <svg id="modalAvatarSvg" class="w-16 h-16 text-slate-400 mt-2" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            </svg>
+                        </div>
+                        <label for="inputAvatar" class="absolute bottom-0 right-0 bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-full cursor-pointer shadow-md transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                <circle cx="12" cy="13" r="3" stroke-width="2"></circle>
+                            </svg>
+                        </label>
+                        <input type="file" id="inputAvatar" accept="image/*" class="hidden">
+                    </div>
+                    <span class="text-xs text-slate-400 mt-2">Klik ikon kamera untuk mengganti foto</span>
+                </div>
+
+                <!-- Nama Lengkap -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Nama Lengkap</label>
+                    <input type="text" id="modalFullname" readonly class="w-full px-3.5 py-2 rounded-lg bg-slate-100 border border-slate-300 text-slate-700 text-sm font-semibold outline-none cursor-not-allowed">
+                </div>
+
+                <!-- Username & Password -->
+                <div>
+                    <label for="modalUsername" class="block text-xs font-semibold text-slate-500 uppercase mb-1">Username</label>
+                    <input type="text" id="modalUsername" placeholder="Masukkan username baru..." class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                </div>
+
+                <div>
+                    <label for="modalPassword" class="block text-xs font-semibold text-slate-500 uppercase mb-1">Password Baru</label>
+                    <input type="password" id="modalPassword" placeholder="Biarkan kosong jika tidak diganti" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                </div>
+
+                <!-- NIS & NISN -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">NIS</label>
+                        <input type="text" id="modalNis" readonly class="w-full px-3.5 py-2 rounded-lg bg-slate-100 border border-slate-300 text-slate-700 text-sm outline-none cursor-not-allowed">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">NISN</label>
+                        <input type="text" id="modalNisn" readonly class="w-full px-3.5 py-2 rounded-lg bg-slate-100 border border-slate-300 text-slate-700 text-sm outline-none cursor-not-allowed">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Modal -->
+            <div class="bg-slate-50 px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 flex-shrink-0">
+                <button id="btnCancelProfile" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition">
+                    Batal
+                </button>
+                <button id="btnSaveProfile" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow">
+                    Simpan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL CROP GAMBAR ================= -->
+    <div id="cropModal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-slate-800 px-6 py-4 flex justify-between items-center text-white flex-shrink-0">
+                <h3 class="font-bold text-base">Potong & Putar Foto</h3>
+                <button id="btnCloseCrop" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+            </div>
+            
+            <div class="p-4 flex-1 overflow-hidden flex items-center justify-center bg-slate-950">
+                <div class="max-h-[60vh] w-full flex items-center justify-center">
+                    <img id="cropImage" class="max-w-full max-h-[50vh] block" alt="Gambar Crop">
+                </div>
+            </div>
+
+            <div class="bg-slate-100 p-3 flex justify-center space-x-4 border-t border-slate-200 flex-shrink-0">
+                <button id="btnRotateLeft" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1 shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    <span>Putar Kiri</span>
+                </button>
+                <button id="btnRotateRight" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1 shadow-sm">
+                    <span>Putar Kanan</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </div>
+
+            <div class="bg-white px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 flex-shrink-0">
+                <button id="btnCancelCrop" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition">Batal</button>
+                <button id="btnApplyCrop" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow">Gunakan Foto Ini</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script JavaScript -->
+    <script>
+        const API_BASE_URL = 'http://localhost/ukk-scp-new/public/api';
+        const token = localStorage.getItem('auth_token');
+        const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
+
+        // DOM Profile Nav & Modal
+        const navFullname = document.getElementById('navFullname');
+        const navNis = document.getElementById('navNis');
+        const navAvatarImg = document.getElementById('navAvatarImg');
+        const navAvatarSvg = document.getElementById('navAvatarSvg');
+
+        const profileModal = document.getElementById('profileModal');
+        const btnOpenProfile = document.getElementById('btnOpenProfile');
+        const btnCloseProfile = document.getElementById('btnCloseProfile');
+        const btnCancelProfile = document.getElementById('btnCancelProfile');
+        const btnSaveProfile = document.getElementById('btnSaveProfile');
+
+        const modalAvatarImg = document.getElementById('modalAvatarImg');
+        const modalAvatarSvg = document.getElementById('modalAvatarSvg');
+        const modalFullname = document.getElementById('modalFullname');
+        const modalNis = document.getElementById('modalNis');
+        const modalNisn = document.getElementById('modalNisn');
+        const modalBio = document.getElementById('modalBio');
+        const inputAvatar = document.getElementById('inputAvatar');
+
+        // DOM Crop
+        const cropModal = document.getElementById('cropModal');
+        const cropImage = document.getElementById('cropImage');
+        const btnCloseCrop = document.getElementById('btnCloseCrop');
+        const btnCancelCrop = document.getElementById('btnCancelCrop');
+        const btnApplyCrop = document.getElementById('btnApplyCrop');
+        const btnRotateLeft = document.getElementById('btnRotateLeft');
+        const btnRotateRight = document.getElementById('btnRotateRight');
+
+        let cropper = null;
+        let tempCroppedImageBase64 = null;
+
+        // DOM Leave Requests & File Management
+        const leaveTableBody = document.getElementById('leaveTableBody');
+        const createLeaveModal = document.getElementById('createLeaveModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const btnOpenCreateModal = document.getElementById('btnOpenCreateModal');
+        const btnCloseCreateLeave = document.getElementById('btnCloseCreateLeave');
+        const btnCancelCreateLeave = document.getElementById('btnCancelCreateLeave');
+        const formLeaveRequest = document.getElementById('formLeaveRequest');
+        const btnSubmitLeave = document.getElementById('btnSubmitLeave');
+
+        const leaveStartDateInput = document.getElementById('leaveStartDate');
+        const leaveEndDateInput = document.getElementById('leaveEndDate');
+        const leaveDocumentFileInput = document.getElementById('leaveDocumentFile');
+        const fileListContainer = document.getElementById('fileListContainer');
+
+        // Variable penampung file & edit state
+        let selectedFiles = [];
+        let deletedFilePaths = [];
+        let editingRequestId = null;
+        const MAX_SIZE_MB = 5;
+        const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024; // 5 MB
+
+        // 1. Proteksi Halaman
+        if (!token || userData.id_role !== 4) {
+            alert('Akses ditolak! Silakan login sebagai Siswa.');
+            window.location.href = '../login/login.html';
+        } else {
+            renderProfileData();
+            fetchLeaveRequests();
+        }
+
+        function renderProfileData() {
+            const currentData = JSON.parse(localStorage.getItem('user_data') || '{}');
+            const fullname = currentData.fullname || currentData.username || 'Siswa';
+            const nis = currentData.nis || '-';
+            const nisn = currentData.nisn || '-';
+            const bio = currentData.bio || '';
+            
+            let avatarSrc = currentData.avatar_url || null;
+            if (!avatarSrc && currentData.avatar) {
+                avatarSrc = `${API_BASE_URL.replace('/api', '')}/storage/${currentData.avatar}`;
+            }
+
+            navFullname.textContent = fullname;
+            navNis.textContent = nis;
+
+            modalFullname.value = fullname;
+            modalNis.value = nis;
+            modalNisn.value = nisn;
+            if (modalBio) modalBio.value = bio;
+
+            updateAvatarUI(avatarSrc);
+        }
+
+        function updateAvatarUI(avatarSrc) {
+            if (avatarSrc) {
+                navAvatarImg.src = avatarSrc;
+                navAvatarImg.classList.remove('hidden');
+                navAvatarSvg.classList.add('hidden');
+
+                modalAvatarImg.src = avatarSrc;
+                modalAvatarImg.classList.remove('hidden');
+                modalAvatarSvg.classList.add('hidden');
+            } else {
+                navAvatarImg.classList.add('hidden');
+                navAvatarSvg.classList.remove('hidden');
+
+                modalAvatarImg.classList.add('hidden');
+                modalAvatarSvg.classList.remove('hidden');
+            }
+        }
+
+        // 2. Fetch Data Leave Requests
+        async function fetchLeaveRequests() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/leave-requests?id_siswa=${userData.id_user}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        renderLeaveTable([]);
+                        return;
+                    }
+                    throw new Error(`HTTP Error Status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                const listData = result.data || result;
+                if (Array.isArray(listData)) {
+                    renderLeaveTable(listData);
+                } else {
+                    renderLeaveTable([]);
+                }
+            } catch (error) {
+                console.error('Error fetching leave requests:', error);
+                leaveTableBody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-red-500">Gagal memuat data pengajuan. Pastikan koneksi server terhubung.</td></tr>`;
+            }
+        }
+
+        function renderLeaveTable(requests) {
+            if (!requests || requests.length === 0) {
+                leaveTableBody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Belum ada riwayat pengajuan izin.</td></tr>`;
+                return;
+            }
+
+            window.currentLeaveRequests = requests;
+
+            leaveTableBody.innerHTML = requests.map(item => {
+                let statusBadge = '';
+                let actionBtn = '-';
+
+                const requestId = item.id_izin_keluar || item.id_leave_request || item.id;
+
+                if (item.status_approval === 'Disetujui') {
+                    statusBadge = `<span class="bg-emerald-100 text-emerald-700 font-semibold px-2.5 py-1 rounded-full text-xs">Disetujui</span>`;
+                } else if (item.status_approval === 'Ditolak') {
+                    statusBadge = `<span class="bg-red-100 text-red-700 font-semibold px-2.5 py-1 rounded-full text-xs">Ditolak</span>`;
+                } else {
+                    statusBadge = `<span class="bg-amber-100 text-amber-700 font-semibold px-2.5 py-1 rounded-full text-xs">Pending</span>`;
+                    
+                    actionBtn = `
+                        <div class="flex items-center justify-center space-x-1.5">
+                            <button onclick="editLeaveRequest(${requestId})" class="text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 p-1.5 rounded-lg transition" title="Edit Pengajuan">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
+                            <button onclick="deleteLeaveRequest(${requestId})" class="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded-lg transition" title="Hapus Pengajuan">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                }
+
+                const verifierName = item.verifier ? (item.verifier.fullname || item.verifier.username) : '-';
+
+                // Render Multiple Dokumen / File Pendukung
+                let fileRender = `<span class="text-slate-400 text-xs italic">Tidak ada file</span>`;
+                const docs = item.documents || item.files || item.leave_documents || [];
+                
+                if (Array.isArray(docs) && docs.length > 0) {
+                    fileRender = `<div class="flex flex-col gap-1">` + docs.map((doc, idx) => {
+                        const fileUrl = doc.file_url || doc.url || (doc.file_path ? `${API_BASE_URL.replace('/api', '')}/storage/${doc.file_path}` : '#');
+                        const fileName = doc.file_name || doc.name || `Dokumen ${idx + 1}`;
+                        return `
+                            <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-1 text-indigo-600 hover:text-indigo-800 text-xs font-semibold hover:underline">
+                                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                                <span class="truncate max-w-[120px]">${fileName}</span>
+                            </a>
+                        `;
+                    }).join('') + `</div>`;
+                } else if (item.document_path || item.file_path) {
+                    let rawPath = item.document_path || item.file_path;
+                    let fileArray = [];
+
+                    if (typeof rawPath === 'string' && rawPath.startsWith('[')) {
+                        try {
+                            fileArray = JSON.parse(rawPath);
+                        } catch (e) {
+                            fileArray = [rawPath.replace(/[\[\]"']/g, '')];
+                        }
+                    } else if (Array.isArray(rawPath)) {
+                        fileArray = rawPath;
+                    } else {
+                        fileArray = [rawPath];
+                    }
+
+                    fileRender = `<div class="flex flex-col gap-1">` + fileArray.map((path, idx) => {
+                        const fileUrl = `${API_BASE_URL.replace('/api', '')}/storage/${path.trim()}`;
+                        const fileName = path.split('/').pop() || `Dokumen ${idx + 1}`;
+                        return `
+                            <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-1 text-indigo-600 hover:text-indigo-800 text-xs font-semibold hover:underline">
+                                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                                <span class="truncate max-w-[120px]">${fileName}</span>
+                            </a>
+                        `;
+                    }).join('') + `</div>`;
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3.5 px-4 font-medium">${item.start_date}</td>
+                        <td class="py-3.5 px-4 font-medium">${item.end_date}</td>
+                        <td class="py-3.5 px-4 max-w-xs truncate">${item.reason}</td>
+                        <td class="py-3.5 px-4">${fileRender}</td>
+                        <td class="py-3.5 px-4">${statusBadge}</td>
+                        <td class="py-3.5 px-4 font-medium text-slate-600">${verifierName}</td>
+                        <td class="py-3.5 px-4 text-center">${actionBtn}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        window.editLeaveRequest = function(id) {
+            const item = (window.currentLeaveRequests || []).find(req => {
+                const reqId = req.id_izin_keluar || req.id_leave_request || req.id;
+                return reqId == id;
+            });
+
+            if (!item) {
+                alert('Data pengajuan tidak ditemukan!');
+                return;
+            }
+
+            editingRequestId = id;
+
+            // Parse Alasan & Jenis Izin
+            let reasonText = item.reason || '';
+            let leaveType = '';
+            const match = reasonText.match(/^\[Jenis:\s*([^\]]+)\]\s*(.*)$/);
+            if (match) {
+                leaveType = match[1];
+                reasonText = match[2];
+            }
+
+            document.getElementById('leaveType').value = leaveType || 'Izin';
+            leaveStartDateInput.value = item.start_date;
+            leaveEndDateInput.value = item.end_date;
+            document.getElementById('leaveReason').value = reasonText;
+
+            // Reset array file baru
+            selectedFiles = [];
+            leaveDocumentFileInput.required = false;
+
+            // Render daftar file lama yang sudah tersimpan di server
+            renderExistingFiles(item);
+
+            modalTitle.textContent = 'Edit Pengajuan Izin';
+            btnSubmitLeave.textContent = 'Simpan Perubahan';
+
+            createLeaveModal.classList.remove('hidden');
+        };
+
+        // Fungsi pembantu untuk menampilkan file lama saat Mode Edit
+        function renderExistingFiles(item) {
+            fileListContainer.innerHTML = '';
+            deletedFilePaths = []; // Reset setiap kali modal edit dibuka
+
+            let docs = item.documents || item.files || item.leave_documents || [];
+            let fileArray = [];
+
+            if (Array.isArray(docs) && docs.length > 0) {
+                fileArray = docs.map(d => ({
+                    path: d.file_path || d.path || d.file_name,
+                    name: d.file_name || d.name || 'Dokumen',
+                    url: d.file_url || d.url || (d.file_path ? `${API_BASE_URL.replace('/api', '')}/storage/${d.file_path}` : '#')
+                }));
+            } else if (item.document_path || item.file_path) {
+                let rawPath = item.document_path || item.file_path;
+                let paths = [];
+
+                if (typeof rawPath === 'string' && rawPath.startsWith('[')) {
+                    try { paths = JSON.parse(rawPath); } catch (e) { paths = [rawPath.replace(/[\[\]"']/g, '')]; }
+                } else if (Array.isArray(rawPath)) {
+                    paths = rawPath;
+                } else {
+                    paths = [rawPath];
+                }
+
+                fileArray = paths.map(p => ({
+                    path: p.trim(),
+                    name: p.split('/').pop() || 'Dokumen',
+                    url: `${API_BASE_URL.replace('/api', '')}/storage/${p.trim()}`
+                }));
+            }
+
+            if (fileArray.length > 0) {
+                const headerTitle = document.createElement('p');
+                headerTitle.className = 'text-xs font-semibold text-slate-500 mb-1';
+                headerTitle.textContent = 'File Tersimpan saat ini:';
+                fileListContainer.appendChild(headerTitle);
+
+                fileArray.forEach((file, idx) => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.id = `existing-file-${idx}`;
+                    itemDiv.className = 'flex items-center justify-between p-2 bg-indigo-50/60 border border-indigo-100 rounded-lg text-xs text-indigo-900 mb-1.5';
+                    
+                    itemDiv.innerHTML = `
+                        <a href="${file.url}" target="_blank" class="flex items-center space-x-2 font-medium hover:underline truncate mr-2">
+                            <svg class="w-4 h-4 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                            </svg>
+                            <span class="truncate max-w-[200px]">${file.name}</span>
+                        </a>
+                        <div class="flex items-center space-x-1 flex-shrink-0">
+                            <span class="text-[10px] bg-indigo-200 text-indigo-800 px-1.5 py-0.5 rounded font-semibold">Lama</span>
+                            <button type="button" onclick="removeExistingFile('${idx}', '${file.path}')" class="text-red-500 hover:text-red-700 hover:bg-red-100 p-1 rounded transition" title="Hapus file ini">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                    fileListContainer.appendChild(itemDiv);
+                });
+            }
+        }
+
+        // Fungsi aksi saat tombol hapus file lama diklik
+        window.removeExistingFile = function(elementId, filePath) {
+            if (confirm('Apakah kamu yakin ingin menghapus file ini?')) {
+                deletedFilePaths.push(filePath);
+                const elem = document.getElementById(`existing-file-${elementId}`);
+                if (elem) elem.remove();
+            }
+        };
+
+        async function deleteLeaveRequest(id) {
+            if (!id || id === 'undefined') {
+                alert('ID Pengajuan tidak valid!');
+                return;
+            }
+
+            if (!confirm('Apakah kamu yakin ingin menghapus pengajuan izin ini?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/leave-requests/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (response.ok && (result.status === 'success' || response.status === 200)) {
+                    alert('Pengajuan izin berhasil dihapus!');
+                    fetchLeaveRequests();
+                } else {
+                    alert(result.message || 'Gagal menghapus pengajuan izin.');
+                }
+            } catch (error) {
+                console.error('Error delete leave request:', error);
+                alert('Terjadi kesalahan koneksi.');
+            }
+        }
+
+        // 3. Multiple File Upload
+        leaveDocumentFileInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+
+            files.forEach(file => {
+                if (file.size > MAX_SIZE_BYTES) {
+                    alert(`File "${file.name}" melebihi batas ukuran maksimal 5 MB!`);
+                    return;
+                }
+
+                const isDuplicate = selectedFiles.some(f => f.name === file.name && f.size === file.size);
+                if (!isDuplicate) {
+                    selectedFiles.push(file);
+                }
+            });
+
+            leaveDocumentFileInput.value = '';
+            renderFileList();
+        });
+
+        function renderFileList() {
+            // Jaga agar file lama (existing) tidak terhapus dari view saat file baru di-render
+            const existingFileElems = fileListContainer.querySelectorAll('[id^="existing-file-"]');
+            const headerTitleElem = fileListContainer.querySelector('p');
+
+            fileListContainer.innerHTML = '';
+
+            if (headerTitleElem) fileListContainer.appendChild(headerTitleElem);
+            existingFileElems.forEach(el => fileListContainer.appendChild(el));
+
+            if (!editingRequestId && selectedFiles.length === 0) {
+                leaveDocumentFileInput.required = true;
+                return;
+            } else {
+                leaveDocumentFileInput.required = false;
+            }
+
+            selectedFiles.forEach((file, index) => {
+                const fileSizeFormatted = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+                const fileItem = document.createElement('div');
+                fileItem.className = 'flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700';
+
+                fileItem.innerHTML = `
+                    <div class="flex items-center space-x-2 truncate mr-2">
+                        <svg class="w-4 h-4 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span class="font-medium truncate">${file.name}</span>
+                        <span class="text-slate-400 flex-shrink-0">(${fileSizeFormatted})</span>
+                    </div>
+                    <button type="button" onclick="removeSelectedFile(${index})" class="text-red-500 hover:text-red-700 p-1 rounded transition" title="Hapus file">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                `;
+                fileListContainer.appendChild(fileItem);
+            });
+        }
+
+        window.removeSelectedFile = function(index) {
+            selectedFiles.splice(index, 1);
+            renderFileList();
+        };
+
+        function resetFormAndFiles() {
+            editingRequestId = null;
+            selectedFiles = [];
+            deletedFilePaths = [];
+            formLeaveRequest.reset();
+            leaveDocumentFileInput.required = true;
+            modalTitle.textContent = 'Form Pengajuan Izin';
+            btnSubmitLeave.textContent = 'Kirim Pengajuan';
+            fileListContainer.innerHTML = '';
+        }
+
+        function setupDateInputs() {
+            const today = new Date().toISOString().split('T')[0];
+            leaveStartDateInput.value = today;
+            leaveEndDateInput.value = today;
+            leaveStartDateInput.min = today;
+            leaveEndDateInput.min = today;
+        }
+
+        leaveStartDateInput.addEventListener('change', () => {
+            leaveEndDateInput.min = leaveStartDateInput.value;
+            if (leaveEndDateInput.value < leaveStartDateInput.value) {
+                leaveEndDateInput.value = leaveStartDateInput.value;
+            }
+        });
+
+        btnOpenCreateModal.addEventListener('click', () => {
+            resetFormAndFiles();
+            setupDateInputs();
+            createLeaveModal.classList.remove('hidden');
+        });
+
+        function closeCreateLeaveModal() {
+            resetFormAndFiles();
+            createLeaveModal.classList.add('hidden');
+        }
+
+        btnCloseCreateLeave.addEventListener('click', closeCreateLeaveModal);
+        btnCancelCreateLeave.addEventListener('click', closeCreateLeaveModal);
+
+        // Submit Form Pengajuan Izin (Create & Update)
+        formLeaveRequest.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const leaveType = document.getElementById('leaveType').value;
+            const startDate = leaveStartDateInput.value;
+            const endDate = leaveEndDateInput.value;
+            const reasonText = document.getElementById('leaveReason').value.trim();
+
+            if (!editingRequestId && selectedFiles.length === 0) {
+                alert('Harap unggah minimal 1 file surat bukti!');
+                return;
+            }
+
+            const combinedReason = `[Jenis: ${leaveType}] ${reasonText}`;
+
+            const formData = new FormData();
+            formData.append('id_siswa', userData.id_user);
+            formData.append('id_pengaju', userData.id_user);
+            formData.append('start_date', startDate);
+            formData.append('end_date', endDate);
+            formData.append('reason', combinedReason);
+            formData.append('status_approval', 'Pending');
+
+            if (editingRequestId) {
+                formData.append('_method', 'PUT');
+            }
+
+            // Lampirkan file baru
+            selectedFiles.forEach((file) => {
+                formData.append('documents[]', file);
+            });
+
+            // Lampirkan daftar file lama yang dihapus
+            if (deletedFilePaths.length > 0) {
+                deletedFilePaths.forEach(path => {
+                    formData.append('deleted_documents[]', path);
+                });
+            }
+
+            try {
+                btnSubmitLeave.disabled = true;
+                btnSubmitLeave.textContent = 'Mengirim...';
+
+                const url = editingRequestId 
+                    ? `${API_BASE_URL}/leave-requests/${editingRequestId}`
+                    : `${API_BASE_URL}/leave-requests`;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok && (result.status === 'success' || response.status === 200 || response.status === 201)) {
+                    alert(editingRequestId ? 'Pengajuan izin berhasil diperbarui!' : 'Pengajuan izin berhasil dibuat!');
+                    closeCreateLeaveModal();
+                    fetchLeaveRequests();
+                } else {
+                    alert(result.message || 'Gagal menyimpan pengajuan izin.');
+                }
+            } catch (error) {
+                console.error('Error submit leave request:', error);
+                alert('Terjadi kesalahan koneksi ke server.');
+            } finally {
+                btnSubmitLeave.disabled = false;
+                btnSubmitLeave.textContent = editingRequestId ? 'Simpan Perubahan' : 'Kirim Pengajuan';
+            }
+        });
+
+        // 4. Profil User
+        btnOpenProfile.addEventListener('click', () => {
+            tempCroppedImageBase64 = null;
+            renderProfileData();
+            profileModal.classList.remove('hidden');
+        });
+
+        function closeProfileModal() { profileModal.classList.add('hidden'); }
+        btnCloseProfile.addEventListener('click', closeProfileModal);
+        btnCancelProfile.addEventListener('click', closeProfileModal);
+
+        btnSaveProfile.addEventListener('click', async () => {
+            const formData = new FormData();
+            if (modalBio) formData.append('bio', modalBio.value.trim());
+
+            if (tempCroppedImageBase64) {
+                const responseBlob = await fetch(tempCroppedImageBase64);
+                const blob = await responseBlob.blob();
+                formData.append('avatar', blob, 'avatar.jpg');
+            }
+
+            try {
+                btnSaveProfile.disabled = true;
+                btnSaveProfile.textContent = 'Menyimpan...';
+
+                const response = await fetch(`${API_BASE_URL}/profile/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    const updatedUser = result.data || result.user || result;
+                    localStorage.setItem('user_data', JSON.stringify(updatedUser));
+                    localStorage.removeItem('user_avatar');
+                    renderProfileData(); 
+                    closeProfileModal();
+                    alert('Berhasil memperbaharui profil!');
+                } else {
+                    alert(result.message || 'Gagal memperbarui profil.');
+                }
+            } catch (error) {
+                console.error('Error update profile:', error);
+                alert('Terjadi kesalahan koneksi ke server.');
+            } finally {
+                btnSaveProfile.disabled = false;
+                btnSaveProfile.textContent = 'Simpan';
+            }
+        });
+
+        // 5. Crop Image Logic
+        inputAvatar.addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (files && files.length > 0) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    cropImage.src = event.target.result;
+                    cropModal.classList.remove('hidden');
+
+                    if (cropper) cropper.destroy();
+
+                    cropper = new Cropper(cropImage, {
+                        aspectRatio: 1,
+                        viewMode: 1,
+                        background: false
+                    });
+                };
+                reader.readAsDataURL(files[0]);
+            }
+        });
+
+        btnRotateLeft.addEventListener('click', () => cropper && cropper.rotate(-90));
+        btnRotateRight.addEventListener('click', () => cropper && cropper.rotate(90));
+
+        function closeCropModal() {
+            cropModal.classList.add('hidden');
+            inputAvatar.value = '';
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+        }
+
+        btnCloseCrop.addEventListener('click', closeCropModal);
+        btnCancelCrop.addEventListener('click', closeCropModal);
+
+        btnApplyCrop.addEventListener('click', () => {
+            if (cropper) {
+                const canvas = cropper.getCroppedCanvas({ width: 300, height: 300 });
+                tempCroppedImageBase64 = canvas.toDataURL('image/jpeg');
+                modalAvatarImg.src = tempCroppedImageBase64;
+                modalAvatarImg.classList.remove('hidden');
+                modalAvatarSvg.classList.add('hidden');
+                closeCropModal();
+            }
+        });
+
+        // 6. Logout & Sidebar Control
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = '../login/login.html';
+        });
+
+        const toggleSidebarNav = document.getElementById('toggleSidebarNav');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+        function toggleSidebar() {
+            if (window.innerWidth >= 768) return;
+
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+            if (isClosed) {
+                sidebar.classList.remove('-translate-x-full');
+                sidebarOverlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('hidden');
+            }
+        }
+
+        toggleSidebarNav.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                sidebar.classList.remove('-translate-x-full');
+                sidebarOverlay.classList.add('hidden');
+                toggleSidebarNav.disabled = true;
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                toggleSidebarNav.disabled = false;
+            }
+        });
+
+        if (window.innerWidth >= 768) {
+            toggleSidebarNav.disabled = true;
+        }
+    </script>
+</body>
+</html>
