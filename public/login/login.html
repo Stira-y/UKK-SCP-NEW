@@ -9,7 +9,7 @@
 </head>
 <body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
 
-    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-200 relative">
         <!-- Header -->
         <div class="text-center mb-6">
             <h1 class="text-2xl font-bold text-slate-800">Sistem SCP Sekolah</h1>
@@ -29,6 +29,7 @@
                     id="login_input" 
                     name="login_input" 
                     required 
+                    autocomplete="off"
                     placeholder="Masukkan email atau username"
                     class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition duration-150"
                 >
@@ -38,7 +39,7 @@
             <div>
                 <div class="flex justify-between items-center mb-1">
                     <label for="password" class="block text-sm font-medium text-slate-700">Kata Sandi</label>
-                    <a href="lupa-password.html" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition duration-150">
+                    <a href="lupapw.html" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition duration-150">
                         Lupa Password?
                     </a>
                 </div>
@@ -51,7 +52,7 @@
                         required 
                         placeholder="••••••••"
                         class="w-full px-4 py-2.5 pr-11 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition duration-150"
-                    >
+                    />
                     <!-- Tombol Toggle Mata (Show/Hide Password) -->
                     <button 
                         type="button" 
@@ -93,10 +94,24 @@
         const btnText = document.getElementById('btnText');
         const btnSpinner = document.getElementById('btnSpinner');
 
+        const loginInput = document.getElementById('login_input');
         const passwordInput = document.getElementById('password');
+
         const togglePasswordBtn = document.getElementById('togglePassword');
         const eyeOpen = document.getElementById('eyeOpen');
         const eyeClosed = document.getElementById('eyeClosed');
+
+        // Mencegah pengetikan spasi pada input password
+        passwordInput.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault();
+            }
+        });
+
+        // Mencegah spasi yang masuk melalui metode lain (copy-paste / autofill)
+        passwordInput.addEventListener('input', () => {
+            passwordInput.value = passwordInput.value.replace(/\s/g, '');
+        });
 
         // Toggle Fitur Lihat/Sembunyikan Password
         togglePasswordBtn.addEventListener('click', () => {
@@ -136,7 +151,7 @@
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const loginValue = document.getElementById('login_input').value.trim();
+            const loginValue = loginInput.value.trim();
             const passwordValue = passwordInput.value;
 
             setLoading(true);
@@ -150,11 +165,10 @@
                         'Accept': 'application/json'
                     },
                     body: JSON.stringify({
-                        username: loginValue, // Nilai ini bisa berisi Email maupun Username
+                        username: loginValue,
                         password: passwordValue
                     })
                 });
-                
 
                 const result = await response.json();
 
@@ -168,20 +182,18 @@
                         const user = result.data.user;
 
                         if (user.id_role === 1) {
-                            window.location.href = '../role 1 waka/dashboard.html';
+                            window.location.href = '../role 1 waka/dashboard1.html';
                         } else if (user.id_role === 2) {
-                            window.location.href = '../role 2 guru/dashboard.html';
+                            window.location.href = '../role 2 guru/dashboard2.html';
                         } else if (user.id_role === 3) {
-                            window.location.href = '../role 3 walikelas&bk/dashboard.html';
+                            window.location.href = '../role 3 walikelas&bk/dashboard3.html';
                         } else if (user.id_role === 4) {
-                            window.location.href = '../role 4 siswa/dashboard.html';
+                            window.location.href = '../role 4 siswa/dashboard4.html';
                         } else {
                             showAlert('Role pengguna tidak dikenal.', false);
                         }
                     }, 1000);
                 } else {
-                    // TAMBAHKAN BLOK ELSE INI:
-                    // Jika password/username salah atau validasi gagal dari backend
                     showAlert(result.message || 'Username/email atau password salah', false);
                 }
             } catch (error) {

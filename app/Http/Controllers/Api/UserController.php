@@ -4,10 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\SchoolClass;
+use App\Models\Attendance;
+use App\Models\LeaveRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -19,36 +25,495 @@ class UserController extends Controller
             $query->where('id_role', $request->id_role);
         }
 
-        $users = $query->latest()->get();
+        return response()->json([
+            'status' => 'success',
+            'data' => $query->latest()->get()
+        ], 200);
+    }
+
+    public function getStudentsGrouped(Request $request)
+    {
+        $category = $request->query('category', 'all');
+
+        $query = User::with(['role', 'schoolClass'])
+            ->where('id_role', 4)
+            ->whereNotNull('id_class');
+
+        if (in_array($category, ['X', 'XI', 'XII'], true)) {
+            $query->whereHas('schoolClass', function ($q) use ($category) {
+                $q->where('kelas_nomor', $category);
+            });
+        }
+
+        $students = $query->get()->sort(function ($a, $b) {
+            $classNameA = $a->schoolClass
+                ? $a->schoolClass->kelas_nomor . ' ' . $a->schoolClass->nama_kelas
+                : 'ZZZ';
+
+            $classNameB = $b->schoolClass
+                ? $b->schoolClass->kelas_nomor . ' ' . $b->schoolClass->nama_kelas
+                : 'ZZZ';
+
+            $cmp = strcasecmp($classNameA, $classNameB);
+
+            if ($cmp === 0) {
+                return strcasecmp($a->fullname ?? '', $b->fullname ?? '');
+            }
+
+            return $cmp;
+        })->values();
 
         return response()->json([
             'status' => 'success',
-            'data'   => $users
+            'data' => $students
+        ], 200);
+    }
+
+    public function getGraduations(Request $request)
+    {
+        $graduates = User::where('id_role', 4)
+            ->whereNull('id_class')
+            ->orderByRaw('CAST(nisn AS UNSIGNED) ASC')
+            ->orderBy('nisn', 'asc')
+            ->get();
+
+        $userIds = $graduates->pluck('id_user');
+
+        $attendancesCounts = Attendance::whereIn('id_siswa', $userIds)
+            ->where('status', 'Hadir')
+            ->selectRaw('id_siswa, count(*) as total')
+            ->groupBy('id_siswa')
+            ->pluck('total', 'id_siswa');
+
+        $leaveCounts = LeaveRequest::whereIn('id_siswa', $userIds)
+            ->whereIn('status_approval', ['Disetujui', 'Di Terima', 'di terima', 'disetujui'])
+            ->selectRaw('id_siswa, count(*) as total')
+            ->groupBy('id_siswa')
+            ->pluck('total', 'id_siswa');
+
+        $result = $graduates->map(function ($st) use ($attendancesCounts, $leaveCounts) {
+            $totalIzin = $leaveCounts[$st->id_user] ?? 0;
+            $totalPresensi = $attendancesCounts[$st->id_user] ?? 0;
+
+            return [
+                'id_user'        => $st->id_user,
+                'nisn'           => $st->nisn ?? '-',
+                'nis'            => $st->nis ?? '-',
+                'fullname'       => $st->fullname ?? $st->username,
+                'total_izin'     => $totalIzin,
+                'total_presensi' => $totalPresensi,
+                'tahun_lulus'    => $st->updated_at ? date('Y', strtotime($st->updated_at)) : date('Y'),
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $result
+        ], 200);
+    }
+
+    public function getTeachersGrouped(Request $request)
+    {
+        $category = $request->query('category', 'all');
+
+        $query = User::with(['role', 'schoolClass'])
+            ->whereIn('id_role', [1, 2, 3])
+            ->orWhereNotNull('nip');
+
+        if ($category !== 'all') {
+            if ($category === 'Waka') {
+                $query->where('id_role', 1);
+            } elseif ($category === 'Walikelas') {
+                $query->where('id_role', 3)->where('title', 'Walikelas');
+            } elseif ($category === 'Guru BK') {
+                $query->where('id_role', 3)->where('title', 'Guru BK');
+            } elseif ($category === 'Guru Biasa' || $category === 'Guru') {
+                $query->where('id_role', 2);
+            }
+        }
+
+        $teachers = $query->get()->sortBy('fullname')->values();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $teachers
+        ], 200);
+    }
+
+    public function storeTeacherByWaka(Request $request)
+    {
+        $messages = [
+            'nip.unique' => 'NIP sudah terdaftar!',
+            'username.unique' => 'Username sudah digunakan!',
+            'email.unique' => 'Email sudah digunakan oleh akun lain!',
+            'id_role.required' => 'Role wajib dipilih!',
+            'id_role.in' => 'Pilihan role tidak valid!',
+        ];
+
+        $validator = Validator::make($request->all(), [
+            'fullname' => 'required|string|max:255',
+            'nip' => 'nullable|string|max:50|unique:users,nip',
+            'id_role' => 'required|integer|in:1,2,3',
+            'id_class' => 'nullable|exists:classes,id_class',
+            'title' => 'required|string|max:100',
+            'username' => 'required|string|max:100|unique:users,username',
+            'email' => 'required|string|email:rfc,dns|max:255|unique:users,email',
+            'password' => 'nullable|string|min:8'
+        ], $messages);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $data = $validator->validated();
+        $plainPassword = !empty($data['password']) ? $data['password'] : 'Peh_1234';
+        $data['password'] = Hash::make($plainPassword);
+
+        $teacher = User::create($data);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Data guru baru berhasil ditambahkan',
+            'data' => $teacher->load(['role', 'schoolClass'])
+        ], 201);
+    }
+
+    public function updateTeacherByWaka(Request $request, $id)
+    {
+        $teacher = User::find($id);
+
+        if (!$teacher) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data guru tidak ditemukan'
+            ], 404);
+        }
+
+        $messages = [
+            'nip.unique' => 'NIP sudah terdaftar!',
+            'username.unique' => 'Username sudah digunakan!',
+            'email.unique' => 'Email sudah digunakan oleh akun lain!',
+            'id_role.in' => 'Pilihan role tidak valid!',
+        ];
+
+        $validator = Validator::make($request->all(), [
+            'nip' => 'nullable|string|max:50|unique:users,nip,' . $id . ',id_user',
+            'id_role' => 'sometimes|required|integer|in:1,2,3',
+            'id_class' => 'nullable',
+            'title' => 'required|string|max:100',
+            'username' => 'required|string|max:100|unique:users,username,' . $id . ',id_user',
+            'email' => 'sometimes|required|string|email:rfc,dns|max:255|unique:users,email,' . $id . ',id_user',
+            'password' => 'nullable|string|min:8'
+        ], $messages);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $data = $validator->validated();
+
+        if (empty($data['password'])) {
+            unset($data['password']);
+        } else {
+            $data['password'] = Hash::make($data['password']);
+        }
+
+        $teacher->update($data);
+
+        $wakaUser = $request->user();
+        if ($wakaUser) {
+            Cache::forget("waka_edit_otp_new_email_{$wakaUser->id_user}_{$id}");
+            Cache::forget("waka_edit_otp_password_{$wakaUser->id_user}_{$id}");
+            Cache::forget("waka_verified_new_email_{$wakaUser->id_user}_{$id}");
+            Cache::forget("waka_verified_password_{$wakaUser->id_user}_{$id}");
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Data guru berhasil diperbarui',
+            'data' => $teacher->load(['role', 'schoolClass'])
+        ], 200);
+    }
+
+    public function importTeachersBatch(Request $request)
+    {
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.fullname' => 'required|string|max:255',
+            'items.*.username' => 'required|string|max:100',
+            'items.*.email'    => 'required|string|email:rfc,dns|max:255',
+            'items.*.role'     => 'required|string',
+            'items.*.title'    => 'required|string',
+            'items.*.nip'      => 'nullable|string|max:50',
+            'items.*.password' => 'nullable|string',
+            'items.*.kelas'    => 'nullable|string',
+        ]);
+
+        $classes = SchoolClass::all();
+        $importedCount = 0;
+        $errors = [];
+
+        $roleNameToId = [
+            'waka'      => 1,
+            'guru'      => 2,
+            'kesiswaan' => 3
+        ];
+
+        foreach ($request->items as $idx => $item) {
+            $rowNum = $idx + 2;
+
+            if (User::where('email', $item['email'])->exists()) {
+                $errors[] = "Baris {$rowNum}: Email '{$item['email']}' sudah terdaftar.";
+                continue;
+            }
+
+            if (User::where('username', $item['username'])->exists()) {
+                $errors[] = "Baris {$rowNum}: Username '{$item['username']}' sudah digunakan.";
+                continue;
+            }
+
+            if (!empty($item['nip']) && User::where('nip', $item['nip'])->exists()) {
+                $errors[] = "Baris {$rowNum}: NIP '{$item['nip']}' sudah terdaftar.";
+                continue;
+            }
+
+            $rawRole = strtolower(trim($item['role']));
+            $roleId = $roleNameToId[$rawRole] ?? 2;
+
+            $title = trim($item['title']);
+            $isWali = strcasecmp(str_replace(' ', '', $title), 'walikelas') === 0;
+
+            $matchedClassId = null;
+            if ($isWali) {
+                if (empty($item['kelas']) || trim($item['kelas']) === '-') {
+                    $errors[] = "Baris {$rowNum}: Wali Kelas wajib menentukan kelas binaan.";
+                    continue;
+                }
+
+                $cleanClassStr = preg_replace('/\s+/', ' ', trim($item['kelas']));
+                foreach ($classes as $c) {
+                    $fullC1 = trim($c->kelas_nomor . ' ' . $c->nama_kelas . ' ' . ($c->nomor_kelas ?? ''));
+                    $fullC2 = trim($c->kelas_nomor . ' ' . $c->nama_kelas . ($c->nomor_kelas ?? ''));
+                    if (strcasecmp($cleanClassStr, $fullC1) === 0 || strcasecmp($cleanClassStr, $fullC2) === 0) {
+                        $matchedClassId = $c->id_class;
+                        break;
+                    }
+                }
+
+                if (!$matchedClassId) {
+                    $errors[] = "Baris {$rowNum}: Kelas binaan '{$item['kelas']}' tidak ditemukan di database.";
+                    continue;
+                }
+            }
+
+            $plainPassword = !empty($item['password']) ? trim($item['password']) : 'Peh_1234';
+
+            User::create([
+                'fullname' => trim($item['fullname']),
+                'nip'      => !empty($item['nip']) && trim($item['nip']) !== '-' ? trim($item['nip']) : null,
+                'username' => trim($item['username']),
+                'email'    => strtolower(trim($item['email'])),
+                'password' => Hash::make($plainPassword),
+                'id_role'  => $roleId,
+                'title'    => $title,
+                'id_class' => $matchedClassId
+            ]);
+
+            $importedCount++;
+        }
+
+        if ($importedCount === 0 && count($errors) > 0) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Seluruh baris gagal diimpor:',
+                'errors'  => $errors
+            ], 422);
+        }
+
+        return response()->json([
+            'status'         => 'success',
+            'message'        => "Berhasil mengimpor {$importedCount} data guru.",
+            'imported_count' => $importedCount,
+            'errors'         => $errors
         ], 200);
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'fullname' => 'required|string|max:255',
-            'email'    => 'required|string|email|max:255|unique:users,email',
-            'password' => 'required|string|min:6',
-            'id_role'  => 'required|exists:roles,id_role',
-            'id_class' => 'nullable|exists:school_classes,id_class',
-            'username' => 'nullable|string|max:100|unique:users,username',
-            'nis'      => 'nullable|string|max:50|unique:users,nis',
-            'nisn'     => 'nullable|string|max:50|unique:users,nisn',
-            'nip'      => 'nullable|string|max:50|unique:users,nip',
-            'title'    => 'nullable|string|max:50',
-        ]);
+        $messages = [
+            'nis.unique' => 'NIS sudah digunakan',
+            'nisn.unique' => 'NISN sudah digunakan',
+            'fullname.unique' => 'Fullname sudah digunakan',
+            'username.unique' => 'Username sudah digunakan',
+            'email.unique' => 'Email ini sudah digunakan oleh akun lain.',
+        ];
 
-        $user = User::create($validated);
+        $validator = Validator::make($request->all(), [
+            'fullname' => 'required|string|max:255|unique:users,fullname',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'password' => 'required|string|min:8',
+            'id_role' => 'required|exists:roles,id_role',
+            'id_class' => 'nullable|exists:classes,id_class',
+            'username' => 'nullable|string|max:100|unique:users,username',
+            'nis' => 'nullable|string|max:50|unique:users,nis',
+            'nisn' => 'nullable|string|max:50|unique:users,nisn',
+            'nip' => 'nullable|string|max:50|unique:users,nip',
+            'title' => 'nullable|string|max:100',
+        ], $messages);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $data = $validator->validated();
+        $data['password'] = Hash::make($data['password']);
+
+        $user = User::create($data);
 
         return response()->json([
-            'status'  => 'success',
+            'status' => 'success',
             'message' => 'User berhasil ditambahkan',
-            'data'    => $user->load(['role', 'schoolClass'])
+            'data' => $user->load(['role', 'schoolClass'])
         ], 201);
+    }
+
+    public function storeStudentByWaka(Request $request)
+    {
+        $messages = [
+            'nis.unique' => 'NIS sudah digunakan',
+            'nisn.unique' => 'NISN sudah digunakan',
+            'username.unique' => 'Username sudah digunakan',
+            'email.unique' => 'Email ini sudah digunakan oleh akun lain.',
+        ];
+
+        $validator = Validator::make($request->all(), [
+            'fullname' => 'required|string|max:255',
+            'email' => 'required|string|email:rfc,dns|max:255|unique:users,email',
+            'username' => 'nullable|string|max:100|unique:users,username',
+            'nis' => 'nullable|string|max:50|unique:users,nis',
+            'nisn' => 'nullable|string|max:50|unique:users,nisn',
+            'id_class' => 'nullable|exists:classes,id_class',
+            'password' => 'required|string|min:8'
+        ], $messages);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $data = $validator->validated();
+        $data['id_role'] = 4;
+        $data['password'] = Hash::make($data['password']);
+
+        $student = User::create($data);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Data siswa baru berhasil ditambahkan',
+            'data' => $student->load(['role', 'schoolClass'])
+        ], 201);
+    }
+
+    public function importStudentsBatch(Request $request)
+    {
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.kelas'    => 'required|string',
+            'items.*.fullname' => 'required|string|max:255',
+            'items.*.username' => 'required|string|max:100',
+            'items.*.email'    => 'required|string|email:rfc,dns|max:255',
+            'items.*.password' => 'required|string|min:8',
+            'items.*.nis'      => 'nullable|string|max:50',
+            'items.*.nisn'     => 'nullable|string|max:50',
+        ]);
+
+        $classes = SchoolClass::all();
+        $importedCount = 0;
+        $errors = [];
+
+        foreach ($request->items as $idx => $item) {
+            $rowNum = $idx + 2;
+
+            $cleanClassStr = preg_replace('/\s+/', ' ', trim($item['kelas']));
+            $matchedClass = null;
+
+            foreach ($classes as $c) {
+                $fullC1 = trim($c->kelas_nomor . ' ' . $c->nama_kelas . ' ' . ($c->nomor_kelas ?? ''));
+                $fullC2 = trim($c->kelas_nomor . ' ' . $c->nama_kelas . ($c->nomor_kelas ?? ''));
+                if (strcasecmp($cleanClassStr, $fullC1) === 0 || strcasecmp($cleanClassStr, $fullC2) === 0) {
+                    $matchedClass = $c;
+                    break;
+                }
+            }
+
+            if (!$matchedClass) {
+                $errors[] = "Baris {$rowNum}: Kelas '{$item['kelas']}' tidak terdaftar di sistem.";
+                continue;
+            }
+
+            if (User::where('email', $item['email'])->exists()) {
+                $errors[] = "Baris {$rowNum}: Email '{$item['email']}' sudah terdaftar.";
+                continue;
+            }
+
+            if (User::where('username', $item['username'])->exists()) {
+                $errors[] = "Baris {$rowNum}: Username '{$item['username']}' sudah digunakan.";
+                continue;
+            }
+
+            if (!empty($item['nis']) && User::where('nis', $item['nis'])->exists()) {
+                $errors[] = "Baris {$rowNum}: NIS '{$item['nis']}' sudah terdaftar.";
+                continue;
+            }
+
+            if (!empty($item['nisn']) && User::where('nisn', $item['nisn'])->exists()) {
+                $errors[] = "Baris {$rowNum}: NISN '{$item['nisn']}' sudah terdaftar.";
+                continue;
+            }
+
+            User::create([
+                'fullname' => trim($item['fullname']),
+                'username' => trim($item['username']),
+                'email'    => strtolower(trim($item['email'])),
+                'password' => Hash::make(trim($item['password'])),
+                'nis'      => !empty($item['nis']) ? trim($item['nis']) : null,
+                'nisn'     => !empty($item['nisn']) ? trim($item['nisn']) : null,
+                'id_class' => $matchedClass->id_class,
+                'id_role'  => 4
+            ]);
+
+            $importedCount++;
+        }
+
+        if ($importedCount === 0 && count($errors) > 0) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Seluruh baris gagal diimpor:',
+                'errors'  => $errors
+            ], 422);
+        }
+
+        return response()->json([
+            'status'         => 'success',
+            'message'        => "Berhasil mengimpor {$importedCount} data siswa.",
+            'imported_count' => $importedCount,
+            'errors'         => $errors
+        ], 200);
     }
 
     public function show($id)
@@ -57,14 +522,14 @@ class UserController extends Controller
 
         if (!$user) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'User tidak ditemukan'
             ], 404);
         }
 
         return response()->json([
             'status' => 'success',
-            'data'   => $user
+            'data' => $user
         ], 200);
     }
 
@@ -74,34 +539,54 @@ class UserController extends Controller
 
         if (!$user) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'User tidak ditemukan'
             ], 404);
         }
 
-        $validated = $request->validate([
-            'fullname' => 'sometimes|required|string|max:255',
-            'email'    => 'sometimes|required|string|email|max:255|unique:users,email,' . $id . ',id_user',
-            'password' => 'nullable|string|min:6',
-            'id_role'  => 'sometimes|required|exists:roles,id_role',
-            'id_class' => 'nullable|exists:school_classes,id_class',
+        $messages = [
+            'nis.unique' => 'NIS sudah digunakan',
+            'nisn.unique' => 'NISN sudah digunakan',
+            'fullname.unique' => 'Fullname sudah digunakan',
+            'username.unique' => 'Username sudah digunakan',
+            'email.unique' => 'Email ini sudah digunakan oleh akun lain.',
+        ];
+
+        $validator = Validator::make($request->all(), [
+            'fullname' => 'sometimes|required|string|max:255|unique:users,fullname,' . $id . ',id_user',
+            'email' => 'sometimes|required|string|email:rfc,dns|max:255|unique:users,email,' . $id . ',id_user',
+            'password' => 'nullable|string|min:8',
+            'id_role' => 'sometimes|required|exists:roles,id_role',
+            'id_class' => 'nullable|exists:classes,id_class',
             'username' => 'nullable|string|max:100|unique:users,username,' . $id . ',id_user',
-            'nis'      => 'nullable|string|max:50|unique:users,nis,' . $id . ',id_user',
-            'nisn'     => 'nullable|string|max:50|unique:users,nisn,' . $id . ',id_user',
-            'nip'      => 'nullable|string|max:50|unique:users,nip,' . $id . ',id_user',
-            'title'    => 'nullable|string|max:50',
-        ]);
+            'nis' => 'nullable|string|max:50|unique:users,nis,' . $id . ',id_user',
+            'nisn' => 'nullable|string|max:50|unique:users,nisn,' . $id . ',id_user',
+            'nip' => 'nullable|string|max:50|unique:users,nip,' . $id . ',id_user',
+            'title' => 'nullable|string|max:100',
+        ], $messages);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $validated = $validator->validated();
 
         if (empty($validated['password'])) {
             unset($validated['password']);
+        } else {
+            $validated['password'] = Hash::make($validated['password']);
         }
 
         $user->update($validated);
 
         return response()->json([
-            'status'  => 'success',
+            'status' => 'success',
             'message' => 'Data user berhasil diperbarui',
-            'data'    => $user->load(['role', 'schoolClass'])
+            'data' => $user->load(['role', 'schoolClass'])
         ], 200);
     }
 
@@ -111,7 +596,7 @@ class UserController extends Controller
 
         if (!$user) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'User tidak ditemukan'
             ], 404);
         }
@@ -119,60 +604,495 @@ class UserController extends Controller
         $user->delete();
 
         return response()->json([
-            'status'  => 'success',
+            'status' => 'success',
             'message' => 'User berhasil dihapus'
         ], 200);
     }
 
-    /**
-     * Memperbarui Foto Profil (Avatar) & Bio Pengguna Login
-     */
+    public function sendWakaOtp(Request $request)
+    {
+        $wakaUser = $request->user();
+
+        if (!$wakaUser || !$wakaUser->email) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Email Waka/Admin tidak ditemukan.'
+            ], 400);
+        }
+
+        $type = $request->input('type', 'password');
+        $targetUserId = $request->input('current_user_id', 'general');
+
+        if ($type === 'new_email' && $request->filled('new_email')) {
+            $validator = Validator::make($request->all(), [
+                'new_email' => 'required|email|unique:users,email,' . $targetUserId . ',id_user',
+            ], [
+                'new_email.unique' => 'Email ini sudah terdaftar/digunakan oleh akun lain.'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $validator->errors()->first()
+                ], 422);
+            }
+        }
+
+        $otp = sprintf('%06d', random_int(0, 999999));
+        
+        $cacheKey = "waka_edit_otp_{$type}_{$wakaUser->id_user}_{$targetUserId}";
+
+        Cache::put($cacheKey, [
+            'code' => (string) $otp,
+            'type' => $type,
+            'target_user_id' => $targetUserId,
+            'new_email' => $request->input('new_email'),
+            'expires_at' => now()->addMinutes(10)->timestamp
+        ], now()->addMinutes(10));
+
+        try {
+            $subject = ($type === 'new_email') 
+                ? 'Kode Verifikasi OTP Ubah Email Akun' 
+                : 'Kode Verifikasi OTP Ubah Password Akun';
+
+            Mail::raw(
+                "Halo {$wakaUser->fullname},\n\n" .
+                "Kode verifikasi OTP Anda untuk aksi (" . strtoupper($type) . ") adalah: {$otp}\n\n" .
+                "Kode ini berlaku selama 10 menit.",
+                function ($message) use ($wakaUser, $subject) {
+                    $message->to($wakaUser->email)
+                        ->subject($subject);
+                }
+            );
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Kode OTP berhasil dikirim ke email Waka/Admin.'
+            ], 200);
+        } catch (\Throwable $e) {
+            Cache::forget($cacheKey);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengirim email OTP. Silakan coba lagi.'
+            ], 500);
+        }
+    }
+
+    public function verifyWakaOtp(Request $request)
+    {
+        $request->validate([
+            'otp' => 'required|string|digits:6'
+        ]);
+
+        $wakaUser = $request->user();
+        $type = $request->input('type', 'password');
+        $targetUserId = $request->input('current_user_id', 'general');
+
+        $cacheKey = "waka_edit_otp_{$type}_{$wakaUser->id_user}_{$targetUserId}";
+        $cachedOtpData = Cache::get($cacheKey);
+
+        if (!$cachedOtpData || now()->timestamp > $cachedOtpData['expires_at']) {
+            return response()->json([
+                'status' => 'expired',
+                'message' => 'Kode verifikasi kadaluarsa, silakan masukkan kode baru.'
+            ], 422);
+        }
+
+        if ((string) $cachedOtpData['code'] !== (string) $request->otp) {
+            return response()->json([
+                'status' => 'invalid',
+                'message' => 'Kode verifikasi OTP salah'
+            ], 422);
+        }
+
+        Cache::put("waka_verified_{$type}_{$wakaUser->id_user}_{$targetUserId}", (string)$request->otp, now()->addMinutes(15));
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Verifikasi OTP berhasil!'
+        ], 200);
+    }
+
+    public function updateStudentByWaka(Request $request, $id)
+    {
+        $student = User::where('id_role', 4)->find($id);
+
+        if (!$student) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data siswa tidak ditemukan'
+            ], 404);
+        }
+
+        $wakaUser = $request->user();
+        $hasEmailChange = $request->filled('email') && strtolower(trim($request->email)) !== strtolower(trim($student->email));
+        $hasPasswordChange = $request->filled('password');
+
+        if ($hasPasswordChange) {
+            $submittedOtp = $request->input('otp_password', $request->input('otp'));
+            $verifiedPassToken = Cache::get("waka_verified_password_{$wakaUser->id_user}_{$id}");
+            $cacheKey = "waka_edit_otp_password_{$wakaUser->id_user}_{$id}";
+            $cachedData = Cache::get($cacheKey);
+
+            $isValidPasswordOtp = ($verifiedPassToken && (!$submittedOtp || $submittedOtp === $verifiedPassToken))
+                || ($cachedData && (string)$cachedData['code'] === (string)$submittedOtp);
+
+            if (!$isValidPasswordOtp) {
+                return response()->json([
+                    'status' => 'invalid',
+                    'message' => 'Kode verifikasi salah'
+                ], 422);
+            }
+
+            Cache::forget("waka_verified_password_{$wakaUser->id_user}_{$id}");
+            Cache::forget($cacheKey);
+        }
+
+        if ($hasEmailChange) {
+            $submittedOtp = $request->input('otp_email', $request->input('otp'));
+            $verifiedEmailToken = Cache::get("waka_verified_new_email_{$wakaUser->id_user}_{$id}");
+            $cacheKey = "waka_edit_otp_new_email_{$wakaUser->id_user}_{$id}";
+            $cachedData = Cache::get($cacheKey);
+
+            $isValidEmailOtp = ($verifiedEmailToken && (!$submittedOtp || $submittedOtp === $verifiedEmailToken))
+                || ($cachedData && (string)$cachedData['code'] === (string)$submittedOtp);
+
+            if (!$isValidEmailOtp) {
+                return response()->json([
+                    'status' => 'invalid',
+                    'message' => 'Kode verifikasi email salah atau belum diverifikasi'
+                ], 422);
+            }
+
+            Cache::forget("waka_verified_new_email_{$wakaUser->id_user}_{$id}");
+            Cache::forget($cacheKey);
+        }
+
+        $messages = [
+            'fullname.unique' => 'Fullname sudah digunakan',
+            'username.unique' => 'Username sudah digunakan',
+            'email.unique' => 'Email ini sudah digunakan oleh akun lain.',
+        ];
+
+        $validator = Validator::make($request->all(), [
+            'fullname' => 'sometimes|required|string|max:255|unique:users,fullname,' . $id . ',id_user',
+            'username' => 'nullable|string|max:100|unique:users,username,' . $id . ',id_user',
+            'email' => 'sometimes|required|string|email:rfc,dns|max:255|unique:users,email,' . $id . ',id_user',
+            'id_class' => 'nullable|exists:classes,id_class',
+            'password' => 'nullable|string|min:8'
+        ], $messages);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $data = $validator->validated();
+
+        if (empty($data['password'])) {
+            unset($data['password']);
+        } else {
+            $data['password'] = Hash::make($data['password']);
+        }
+
+        if (!$hasEmailChange) {
+            unset($data['email']);
+        }
+
+        unset($data['nis'], $data['nisn']);
+        $student->update($data);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Data siswa berhasil diperbarui',
+            'data' => $student->load(['role', 'schoolClass'])
+        ], 200);
+    }
+
+    public function promoteClasses(Request $request)
+    {
+        $userIds = $request->input('student_ids', $request->input('user_ids', []));
+
+        if (empty($userIds)) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Tidak ada siswa yang dipilih untuk kenaikan kelas.'
+            ], 200);
+        }
+
+        $students = User::whereIn('id_user', $userIds)
+            ->where('id_role', 4)
+            ->with('schoolClass')
+            ->get();
+
+        $allClasses = SchoolClass::all();
+        $promotedCount = 0;
+        $graduatedCount = 0;
+
+        foreach ($students as $student) {
+            $currentClass = $student->schoolClass;
+            if (!$currentClass) continue;
+
+            $currentTingkat = strtoupper(trim($currentClass->kelas_nomor));
+
+            if ($currentTingkat === 'XII') {
+                $student->id_class = null;
+                $student->save();
+                $graduatedCount++;
+            } elseif ($currentTingkat === 'X') {
+                $targetClass = $allClasses->first(function ($c) use ($currentClass) {
+                    return strtoupper(trim($c->kelas_nomor)) === 'XI' &&
+                           strcasecmp(trim($c->nama_kelas), trim($currentClass->nama_kelas)) === 0 &&
+                           trim((string)$c->nomor_kelas) === trim((string)$currentClass->nomor_kelas);
+                });
+
+                if ($targetClass) {
+                    $student->id_class = $targetClass->id_class;
+                    $student->save();
+                    $promotedCount++;
+                }
+            } elseif ($currentTingkat === 'XI') {
+                $targetClass = $allClasses->first(function ($c) use ($currentClass) {
+                    return strtoupper(trim($c->kelas_nomor)) === 'XII' &&
+                           strcasecmp(trim($c->nama_kelas), trim($currentClass->nama_kelas)) === 0 &&
+                           trim((string)$c->nomor_kelas) === trim((string)$currentClass->nomor_kelas);
+                });
+
+                if ($targetClass) {
+                    $student->id_class = $targetClass->id_class;
+                    $student->save();
+                    $promotedCount++;
+                }
+            }
+        }
+
+        $msg = "Proses kenaikan kelas berhasil dijalankan.";
+        if ($promotedCount > 0) $msg .= " {$promotedCount} siswa berhasil dinaikkan kelas.";
+        if ($graduatedCount > 0) $msg .= " {$graduatedCount} siswa kelas XII berhasil dinyatakan lulus dan dipindahkan ke data kelulusan.";
+
+        return response()->json([
+            'status'          => 'success',
+            'message'         => $msg,
+            'promoted_count'  => $promotedCount,
+            'graduated_count' => $graduatedCount,
+        ], 200);
+    }
+
+    public function sendOtp(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user || !$user->email) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Email pengguna tidak ditemukan.'
+            ], 400);
+        }
+
+        $otp = sprintf('%06d', random_int(0, 999999));
+        $cacheKey = 'otp_user_' . $user->id_user;
+
+        Cache::put($cacheKey, [
+            'code' => (string) $otp,
+            'expires_at' => now()->addMinutes(5)->timestamp
+        ], now()->addMinutes(5));
+
+        try {
+            Mail::raw(
+                "Halo {$user->fullname},\n\n" .
+                "Kode verifikasi OTP ubah password Anda adalah: {$otp}\n\n" .
+                "Kode ini berlaku selama 5 menit.",
+                function ($message) use ($user) {
+                    $message->to($user->email)
+                        ->subject('Kode Verifikasi OTP Ubah Password');
+                }
+            );
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Kode OTP berhasil dikirim ke email.'
+            ], 200);
+        } catch (\Throwable $e) {
+            Cache::forget($cacheKey);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengirim OTP. Silakan coba lagi.'
+            ], 500);
+        }
+    }
+
+    public function verifyOtp(Request $request)
+    {
+        $request->validate([
+            'otp' => 'required|string|digits:6'
+        ]);
+
+        $user = $request->user();
+        $cacheKey = 'otp_user_' . $user->id_user;
+        $cachedOtpData = Cache::get($cacheKey);
+
+        if (!$cachedOtpData) {
+            return response()->json([
+                'status' => 'expired',
+                'message' => 'Kode verifikasi kadaluarsa.'
+            ], 422);
+        }
+
+        $code = is_array($cachedOtpData) ? ($cachedOtpData['code'] ?? null) : $cachedOtpData;
+
+        if ((string) $code !== (string) $request->otp) {
+            return response()->json([
+                'status' => 'invalid',
+                'message' => 'Kode verifikasi salah'
+            ], 422);
+        }
+
+        Cache::put('profile_verified_' . $user->id_user, (string)$request->otp, now()->addMinutes(15));
+        Cache::forget($cacheKey);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Verifikasi berhasil!'
+        ], 200);
+    }
+
+    public function changeEmail(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user || !$user->email) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Email pengguna tidak ditemukan.'
+            ], 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email:rfc,dns|max:255|unique:users,email'
+        ], [
+            'email.unique' => 'Email ini sudah digunakan oleh akun lain.'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'already_taken',
+                'message' => 'Email ini sudah digunakan oleh akun lain.'
+            ], 422);
+        }
+
+        $otp = sprintf('%06d', random_int(0, 999999));
+        $cacheKey = 'change_email_otp_' . $user->id_user;
+
+        Cache::put($cacheKey, [
+            'new_email' => $request->email,
+            'code' => (string) $otp,
+            'expires_at' => now()->addMinutes(5)->timestamp
+        ], now()->addMinutes(5));
+
+        try {
+            Mail::raw(
+                "Halo {$user->fullname},\n\n" .
+                "Anda meminta perubahan email ke: {$request->email}.\n" .
+                "Kode OTP Anda adalah: {$otp}",
+                function ($message) use ($user) {
+                    $message->to($user->email)
+                        ->subject('Kode Verifikasi Perubahan Email');
+                }
+            );
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Kode verifikasi telah dikirim.'
+            ], 200);
+        } catch (\Throwable $e) {
+            Cache::forget($cacheKey);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengirim OTP.'
+            ], 500);
+        }
+    }
+
+    public function verifyNewEmailOtp(Request $request)
+    {
+        $request->validate([
+            'otp' => 'required|string|digits:6'
+        ]);
+
+        $user = $request->user();
+        $cacheKey = 'change_email_otp_' . $user->id_user;
+        $cachedData = Cache::get($cacheKey);
+
+        if (!$cachedData || now()->timestamp > $cachedData['expires_at']) {
+            Cache::forget($cacheKey);
+            return response()->json([
+                'status' => 'expired',
+                'message' => 'Kode verifikasi kadaluarsa.'
+            ], 422);
+        }
+
+        $code = is_array($cachedData) ? ($cachedData['code'] ?? null) : $cachedData;
+
+        if ((string) $code !== (string) $request->otp) {
+            return response()->json([
+                'status' => 'invalid',
+                'message' => 'Kode verifikasi salah'
+            ], 422);
+        }
+
+        $user->email = $cachedData['new_email'];
+        $user->save();
+        Cache::forget($cacheKey);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Email telah diperbarui.',
+            'data' => $user
+        ], 200);
+    }
+
     public function updateProfile(Request $request)
     {
         $user = $request->user();
 
         $validator = Validator::make($request->all(), [
             'username' => 'nullable|string|max:100|unique:users,username,' . $user->id_user . ',id_user',
-            'password' => 'nullable|string|min:6',
-            'avatar'   => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // Maksimal 2MB
+            'password' => 'nullable|string|min:8',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
-                'status'  => 'error',
-                'message' => 'Validasi gagal',
-                'errors'  => $validator->errors()
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors()
             ], 422);
         }
 
-        // Update Username jika diisi
         if ($request->has('username') && $request->username) {
             $user->username = $request->username;
         }
 
-        // Update Password jika diisi
         if ($request->has('password') && $request->password) {
             $user->password = Hash::make($request->password);
         }
 
-        // Update Foto Profil / Avatar
         if ($request->hasFile('avatar')) {
             if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
                 Storage::disk('public')->delete($user->avatar);
             }
-
-            $path = $request->file('avatar')->store('avatars', 'public');
-            $user->avatar = $path;
+            $user->avatar = $request->file('avatar')->store('avatars', 'public');
         }
 
         $user->save();
 
-        $user->avatar_url = $user->avatar ? asset('storage/' . $user->avatar) : null;
-
         return response()->json([
-            'status'  => 'success',
+            'status' => 'success',
             'message' => 'Profil berhasil diperbarui',
-            'data'    => $user->load(['role', 'schoolClass'])
+            'data' => $user->load(['role', 'schoolClass'])
         ], 200);
     }
 }

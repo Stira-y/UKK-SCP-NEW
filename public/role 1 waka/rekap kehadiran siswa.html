@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rekap Kehadiran Siswa - Sistem SCP</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF & autoTable untuk Export PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col font-sans overflow-hidden">
+
+    <!-- 1. Navbar Universal -->
+    <div id="app-navbar"></div>
+
+    <!-- Layout Utama -->
+    <div class="flex flex-1 relative overflow-hidden h-[calc(100vh-57px)]">
+        <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-20 hidden md:hidden transition-opacity duration-300"></div>
+
+        <!-- 2. Sidebar Universal -->
+        <div id="app-sidebar"></div>
+
+        <!-- Konten Utama -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
+            <div class="max-w-7xl mx-auto space-y-6">
+
+                <!-- Header Halaman -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-slate-800">Rekap Kehadiran Siswa</h2>
+                        <p class="text-slate-500 text-xs md:text-sm mt-0.5">Akumulasi presensi siswa per minggu dalam periode 1 bulan kalender.</p>
+                    </div>
+
+                    <!-- Filter Bulan, Tahun, & Kelas -->
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center space-x-1.5">
+                            <span class="text-xs font-semibold text-slate-500">Bulan:</span>
+                            <select id="selectMonth" class="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                                <option value="1">Januari</option>
+                                <option value="2">Februari</option>
+                                <option value="3">Maret</option>
+                                <option value="4">April</option>
+                                <option value="5">Mei</option>
+                                <option value="6">Juni</option>
+                                <option value="7">Juli</option>
+                                <option value="8">Agustus</option>
+                                <option value="9">September</option>
+                                <option value="10">Oktober</option>
+                                <option value="11">November</option>
+                                <option value="12">Desember</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center space-x-1.5">
+                            <span class="text-xs font-semibold text-slate-500">Tahun:</span>
+                            <select id="selectYear" class="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                                <option value="2025">2025</option>
+                                <option value="2026">2026</option>
+                                <option value="2027">2027</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center space-x-1.5">
+                            <span class="text-xs font-semibold text-slate-500">Kelas:</span>
+                            <select id="selectClass" class="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                                <option value="all">Semua Kelas</option>
+                            </select>
+                        </div>
+
+                        <button type="button" id="btnFilterApply" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow">
+                            Tampilkan
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card Tabel Rekap Kehadiran -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+                        <div class="font-bold text-slate-800 text-sm md:text-base">
+                            Rekap kehadiran siswa selama 1 Bulan (<span id="labelPeriodText">-</span>)
+                        </div>
+
+                        <!-- Tombol Download PDF -->
+                        <button type="button" id="btnDownloadPdf" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow transition flex items-center space-x-1.5 shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            <span>Download</span>
+                        </button>
+                    </div>
+
+                    <!-- Tabel Sesuai Kolom Baru (Warna Netral) -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[950px]">
+                            <thead>
+                                <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="py-3.5 px-3 font-semibold text-center w-28">NISN</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-24">NIS</th>
+                                    <th class="py-3.5 px-4 font-semibold">Nama Lengkap</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-20">Izin</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-20">Alpa</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-20">Minggu 1</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-20">Minggu 2</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-20">Minggu 3</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-20">Minggu 4</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-24">Total Hadir</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-24">Total Izin</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-24">Total Alpa</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recapTableBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
+                                <tr>
+                                    <td colspan="12" class="py-8 text-center text-slate-400">Memuat data rekap kehadiran siswa...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Script Logika Rekap & Export PDF -->
+    <script>
+        const API_BASE_URL = 'http://localhost/ukk-scp-new/public/api';
+        const token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
+        const userData = JSON.parse(sessionStorage.getItem('user_data') || localStorage.getItem('user_data') || '{}');
+
+        if (!token || Number(userData.id_role) !== 1) {
+            alert('Akses ditolak! Silakan login sebagai Waka/Admin.');
+            window.location.href = '../login/login.html';
+        }
+
+        const selectMonth = document.getElementById('selectMonth');
+        const selectYear = document.getElementById('selectYear');
+        const selectClass = document.getElementById('selectClass');
+        const btnFilterApply = document.getElementById('btnFilterApply');
+        const btnDownloadPdf = document.getElementById('btnDownloadPdf');
+        const recapTableBody = document.getElementById('recapTableBody');
+        const labelPeriodText = document.getElementById('labelPeriodText');
+
+        let recapList = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const today = new Date();
+            selectMonth.value = String(today.getMonth() + 1);
+            selectYear.value = String(today.getFullYear());
+
+            await fetchClasses();
+            await loadAndCalculateRecap();
+        });
+
+        async function fetchClasses() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/classes`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                const classes = json.data || json || [];
+                classes.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id_class;
+                    opt.textContent = `${c.kelas_nomor} ${c.nama_kelas} ${c.nomor_kelas || ''}`.trim();
+                    selectClass.appendChild(opt);
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadAndCalculateRecap() {
+            const m = parseInt(selectMonth.value);
+            const y = parseInt(selectYear.value);
+            const cls = selectClass.value;
+            const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+            labelPeriodText.textContent = `${monthNames[m]} ${y}`;
+            recapTableBody.innerHTML = `<tr><td colspan="12" class="py-8 text-center text-slate-400">Menghitung data presensi siswa...</td></tr>`;
+
+            try {
+                // 1. Ambil seluruh data siswa
+                const resUsers = await fetch(`${API_BASE_URL}/users`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const jsonUsers = await resUsers.json();
+                const allUsers = jsonUsers.data || jsonUsers || [];
+
+                let students = allUsers.filter(u => Number(u.id_role) === 4);
+
+                if (cls !== 'all') {
+                    students = students.filter(u => String(u.id_class) === String(cls));
+                }
+
+                students.sort((a, b) => {
+                    const nA = parseInt(a.nisn) || 0;
+                    const nB = parseInt(b.nisn) || 0;
+                    if (nA !== nB) return nA - nB;
+                    return String(a.nisn || '').localeCompare(String(b.nisn || ''));
+                });
+
+                // 2. Ambil seluruh data presensi
+                const resAtt = await fetch(`${API_BASE_URL}/attendances`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const jsonAtt = await resAtt.json();
+                const allAttendances = jsonAtt.data || jsonAtt || [];
+
+                // 3. Ambil permohonan surat izin yang disetujui (kesiswaan role 3)
+                let approvedLeaves = [];
+                try {
+                    const resLeaves = await fetch(`${API_BASE_URL}/leave-requests`, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    });
+                    if (resLeaves.ok) {
+                        const jsonLeaves = await resLeaves.json();
+                        const rawLeaves = jsonLeaves.data || jsonLeaves || [];
+                        approvedLeaves = rawLeaves.filter(lv => {
+                            const statusApp = String(lv.status_approval || '').toLowerCase().trim();
+                            return statusApp === 'disetujui' || statusApp === 'di terima' || statusApp === 'diterima';
+                        });
+                    }
+                } catch (errLeave) {
+                    console.warn('Gagal memuat leave-requests:', errLeave);
+                }
+
+                // 4. Hitung Akumulasi Presensi
+                recapList = students.map(st => {
+                    let m1 = 0, m2 = 0, m3 = 0, m4 = 0;
+                    const countedHadirDays = new Set();
+                    const countedIzinDays = new Set();
+                    const countedAlpaDays = new Set();
+
+                    const studentAttendances = allAttendances.filter(att => {
+                        if (Number(att.id_siswa) !== Number(st.id_user) || !att.date) return false;
+                        const dateObj = new Date(att.date);
+                        return (dateObj.getMonth() + 1) === m && dateObj.getFullYear() === y;
+                    });
+
+                    studentAttendances.forEach(att => {
+                        const dateOnly = String(att.date).substring(0, 10);
+                        const statusLower = String(att.status || '').trim().toLowerCase();
+
+                        if (statusLower === 'hadir') {
+                            if (!countedHadirDays.has(dateOnly)) {
+                                countedHadirDays.add(dateOnly);
+                                const dayNum = parseInt(dateOnly.split('-')[2], 10);
+                                if (dayNum >= 1 && dayNum <= 7) m1 += 1;
+                                else if (dayNum >= 8 && dayNum <= 14) m2 += 1;
+                                else if (dayNum >= 15 && dayNum <= 21) m3 += 1;
+                                else m4 += 1;
+                            }
+                        } else if (statusLower === 'izin' || statusLower === 'sakit') {
+                            countedIzinDays.add(dateOnly);
+                        } else if (statusLower === 'alpa') {
+                            countedAlpaDays.add(dateOnly);
+                        }
+                    });
+
+                    const studentLeaves = approvedLeaves.filter(lv => Number(lv.id_siswa) === Number(st.id_user));
+                    studentLeaves.forEach(lv => {
+                        const start = new Date(lv.start_date);
+                        const end = new Date(lv.end_date || lv.start_date);
+                        
+                        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                            if ((d.getMonth() + 1) === m && d.getFullYear() === y) {
+                                const dStr = d.toISOString().substring(0, 10);
+                                countedIzinDays.add(dStr);
+                            }
+                        }
+                    });
+
+                    const totalHadir = m1 + m2 + m3 + m4;
+                    const totalIzin = countedIzinDays.size;
+                    const totalAlpa = countedAlpaDays.size;
+
+                    return {
+                        id_user: st.id_user,
+                        nisn: st.nisn || '-',
+                        nis: st.nis || '-',
+                        fullname: st.fullname || st.username,
+                        izin: totalIzin,
+                        alpa: totalAlpa,
+                        minggu_1: m1,
+                        minggu_2: m2,
+                        minggu_3: m3,
+                        minggu_4: m4,
+                        total_hadir: totalHadir,
+                        total_izin: totalIzin,
+                        total_alpa: totalAlpa
+                    };
+                });
+
+                renderRecapTable();
+            } catch (err) {
+                console.error(err);
+                recapTableBody.innerHTML = `<tr><td colspan="12" class="py-8 text-center text-red-500">Gagal memproses data rekap kehadiran.</td></tr>`;
+            }
+        }
+
+        function renderRecapTable() {
+            if (recapList.length === 0) {
+                recapTableBody.innerHTML = `<tr><td colspan="12" class="py-8 text-center text-slate-400">Tidak ada data siswa ditemukan untuk kelas ini.</td></tr>`;
+                return;
+            }
+
+            recapTableBody.innerHTML = recapList.map(item => `
+                <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                    <td class="py-3 px-3 font-mono font-medium text-center text-slate-700">${item.nisn}</td>
+                    <td class="py-3 px-3 font-mono text-center text-slate-600">${item.nis}</td>
+                    <td class="py-3 px-4 font-bold text-slate-800">${item.fullname}</td>
+                    <td class="py-3 px-3 text-center font-medium text-slate-700">${item.izin}</td>
+                    <td class="py-3 px-3 text-center font-medium text-slate-700">${item.alpa}</td>
+                    <td class="py-3 px-3 text-center font-semibold text-slate-700">${item.minggu_1}</td>
+                    <td class="py-3 px-3 text-center font-semibold text-slate-700">${item.minggu_2}</td>
+                    <td class="py-3 px-3 text-center font-semibold text-slate-700">${item.minggu_3}</td>
+                    <td class="py-3 px-3 text-center font-semibold text-slate-700">${item.minggu_4}</td>
+                    <td class="py-3 px-3 text-center font-bold text-slate-700">${item.total_hadir}</td>
+                    <td class="py-3 px-3 text-center font-bold text-slate-700">${item.total_izin}</td>
+                    <td class="py-3 px-3 text-center font-bold text-slate-700">${item.total_alpa}</td>
+                </tr>
+            `).join('');
+        }
+
+        selectMonth.addEventListener('change', loadAndCalculateRecap);
+        selectYear.addEventListener('change', loadAndCalculateRecap);
+        selectClass.addEventListener('change', loadAndCalculateRecap);
+        btnFilterApply.addEventListener('click', loadAndCalculateRecap);
+
+        // Download Rekap Ke Format PDF
+        btnDownloadPdf.addEventListener('click', () => {
+            if (recapList.length === 0) {
+                alert('Tidak ada data rekap untuk diunduh.');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape');
+
+            const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            const m = selectMonth.value;
+            const y = selectYear.value;
+            const selectedClassText = selectClass.options[selectClass.selectedIndex].textContent;
+
+            doc.setFontSize(14);
+            doc.text(`REKAP KEHADIRAN SISWA SELAMA 1 BULAN`, 14, 15);
+            doc.setFontSize(10);
+            doc.text(`Periode: ${monthNames[m]} ${y} | Kelas: ${selectedClassText}`, 14, 22);
+            doc.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, 14, 27);
+
+            const tableData = recapList.map(r => [
+                r.nisn,
+                r.nis,
+                r.fullname,
+                r.izin,
+                r.alpa,
+                r.minggu_1,
+                r.minggu_2,
+                r.minggu_3,
+                r.minggu_4,
+                r.total_hadir,
+                r.total_izin,
+                r.total_alpa
+            ]);
+
+            doc.autoTable({
+                startY: 32,
+                head: [['NISN', 'NIS', 'Nama Lengkap', 'Izin', 'Alpa', 'Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4', 'Total Hadir', 'Total Izin', 'Total Alpa']],
+                body: tableData,
+                styles: { fontSize: 8, cellPadding: 2, lineColor: [203, 213, 225], lineWidth: 0.1 },
+                headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 24 },
+                    1: { halign: 'center', cellWidth: 20 },
+                    2: { halign: 'left' },
+                    3: { halign: 'center', cellWidth: 16 },
+                    4: { halign: 'center', cellWidth: 16 },
+                    5: { halign: 'center', cellWidth: 16 },
+                    6: { halign: 'center', cellWidth: 16 },
+                    7: { halign: 'center', cellWidth: 16 },
+                    8: { halign: 'center', cellWidth: 16 },
+                    9: { halign: 'center', fontStyle: 'bold', cellWidth: 22 },
+                    10: { halign: 'center', fontStyle: 'bold', cellWidth: 20 },
+                    11: { halign: 'center', fontStyle: 'bold', cellWidth: 20 }
+                },
+                theme: 'grid'
+            });
+
+            doc.save(`Rekap_Kehadiran_Siswa_${monthNames[m]}_${y}.pdf`);
+        });
+    </script>
+    <script src="../js/global-layout.js"></script>
+</body>
+</html>

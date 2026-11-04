@@ -6,21 +6,15 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-    Schema::create('roles', function (Blueprint $table) {
-        $table->id('id_role');
-        $table->enum('name_role', ['Waka Kurikulum', 'Kesiswaan', 'BK & Walikelas', 'Guru', 'Siswa']);
-        $table->timestamps();
+        Schema::create('roles', function (Blueprint $table) {
+            $table->id('id_role');
+            $table->string('name_role', 255);
+            $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('roles');

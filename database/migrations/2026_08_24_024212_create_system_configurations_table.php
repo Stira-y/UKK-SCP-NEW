@@ -15,10 +15,11 @@ return new class extends Migration
             $table->id('id_config');
             $table->enum('active_cycle', ['1', '2'])->default('1');
             $table->boolean('is_schedule_locked')->default(false);
-            $table->foreignId('updated_by')->constrained('users', 'id_user')->onDelete('cascade');
+            $table->foreignId('updated_by')->nullable()->constrained('users', 'id_user')->onDelete('set null');
             $table->timestamps();
         });
     }
+
     /**
      * Reverse the migrations.
      */

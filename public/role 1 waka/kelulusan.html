@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Kelulusan Siswa - Sistem SCP</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF & autoTable untuk Export PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col font-sans overflow-hidden">
+
+    <!-- 1. Navbar Universal -->
+    <div id="app-navbar"></div>
+
+    <!-- Layout Utama -->
+    <div class="flex flex-1 relative overflow-hidden h-[calc(100vh-57px)]">
+        <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-20 hidden md:hidden transition-opacity duration-300"></div>
+
+        <!-- 2. Sidebar Universal -->
+        <div id="app-sidebar"></div>
+
+        <!-- Konten Utama -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
+            <div class="max-w-7xl mx-auto space-y-6">
+
+                <!-- Header & Search -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-slate-800">Data Kelulusan Siswa</h2>
+                        <p class="text-slate-500 text-xs md:text-sm mt-0.5">Riwayat arsip data alumni dan akumulasi kehadiran siswa selama bersekolah.</p>
+                    </div>
+
+                    <div class="w-full md:w-80">
+                        <div class="relative">
+                            <input type="text" id="searchInput" autocomplete="off" placeholder="Cari NISN, NIS, atau Nama Lengkap..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Tabel Kelulusan Siswa -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-slate-800 text-sm md:text-base">Daftar Siswa Lulus</span>
+                            <span id="totalGraduatesBadge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">
+                                0 Siswa
+                            </span>
+                        </div>
+
+                        <!-- Tombol Download PDF -->
+                        <button type="button" id="btnDownloadPdf" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow transition flex items-center space-x-1.5 shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            <span>Download Data</span>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[750px]">
+                            <thead>
+                                <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="py-3.5 px-4 font-semibold text-center w-16">No</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-36">NISN</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-28">NIS</th>
+                                    <th class="py-3.5 px-4 font-semibold">Nama Lengkap</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-32">Total Izin</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-36">Total Presensi</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-28">Tahun Lulus</th>
+                                </tr>
+                            </thead>
+                            <tbody id="graduationTableBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
+                                <tr>
+                                    <td colspan="7" class="py-8 text-center text-slate-400">Memuat data kelulusan siswa...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost/ukk-scp-new/public/api';
+        const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+        const userData = JSON.parse(localStorage.getItem('user_data') || sessionStorage.getItem('user_data') || '{}');
+
+        if (!token || Number(userData.id_role) !== 1) {
+            alert('Akses ditolak! Silakan login sebagai Waka / Admin.');
+            window.location.href = '../login/login.html';
+        }
+
+        const graduationTableBody = document.getElementById('graduationTableBody');
+        const totalGraduatesBadge = document.getElementById('totalGraduatesBadge');
+        const searchInput = document.getElementById('searchInput');
+        const btnDownloadPdf = document.getElementById('btnDownloadPdf');
+
+        let rawGraduations = [];
+
+        document.addEventListener('DOMContentLoaded', fetchGraduations);
+
+        async function fetchGraduations() {
+            try {
+                graduationTableBody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Memuat data kelulusan...</td></tr>`;
+
+                const res = await fetch(`${API_BASE_URL}/waka/graduations`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                rawGraduations = json.data || json || [];
+
+                rawGraduations.sort((a, b) => {
+                    const nA = parseInt(a.nisn) || 0;
+                    const nB = parseInt(b.nisn) || 0;
+                    if (nA !== nB) return nA - nB;
+                    return String(a.nisn || '').localeCompare(String(b.nisn || ''));
+                });
+
+                renderGraduationTable();
+            } catch (err) {
+                graduationTableBody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-red-500">Gagal memuat data kelulusan.</td></tr>`;
+            }
+        }
+
+        function highlightMatch(text, query) {
+            if (!text) return '-';
+            if (!query) return text;
+            const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            return text.toString().replace(regex, `<span class="bg-yellow-300 font-bold px-0.5 rounded">$1</span>`);
+        }
+
+        function renderGraduationTable() {
+            const query = searchInput.value.trim().toLowerCase();
+
+            let filtered = rawGraduations.filter(g => {
+                const nisn = (g.nisn || '').toLowerCase();
+                const nis = (g.nis || '').toLowerCase();
+                const name = (g.fullname || '').toLowerCase();
+                return nisn.includes(query) || nis.includes(query) || name.includes(query);
+            });
+
+            totalGraduatesBadge.textContent = `${filtered.length} Siswa`;
+
+            if (filtered.length === 0) {
+                graduationTableBody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Tidak ada data kelulusan siswa ditemukan.</td></tr>`;
+                return;
+            }
+
+            graduationTableBody.innerHTML = filtered.map((item, index) => `
+                <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                    <td class="py-3 px-4 font-bold text-center text-slate-500">${index + 1}</td>
+                    <td class="py-3 px-4 font-mono font-medium text-center text-slate-700">${highlightMatch(item.nisn, query)}</td>
+                    <td class="py-3 px-4 font-mono text-center text-slate-600">${highlightMatch(item.nis, query)}</td>
+                    <td class="py-3 px-4 font-bold text-slate-800">${highlightMatch(item.fullname, query)}</td>
+                    <td class="py-3 px-4 text-center font-semibold text-indigo-700">${item.total_izin}</td>
+                    <td class="py-3 px-4 text-center font-extrabold text-emerald-700 bg-emerald-50/40">${item.total_presensi}</td>
+                    <td class="py-3 px-4 text-center font-medium text-slate-600">${item.tahun_lulus || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        searchInput.addEventListener('input', renderGraduationTable);
+
+        btnDownloadPdf.addEventListener('click', () => {
+            if (rawGraduations.length === 0) {
+                alert('Tidak ada data kelulusan untuk diunduh.');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('portrait');
+
+            doc.setFontSize(14);
+            doc.text(`ARSIP DATA KELULUSAN SISWA (ALUMNI)`, 14, 15);
+            doc.setFontSize(10);
+            doc.text(`Sistem Informasi SCP Sekolah - Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
+
+            const tableData = rawGraduations.map((r, idx) => [
+                idx + 1,
+                r.nisn || '-',
+                r.nis || '-',
+                r.fullname || '-',
+                r.total_izin || '0',
+                r.total_presensi || '0',
+                r.tahun_lulus || '-'
+            ]);
+
+            doc.autoTable({
+                startY: 28,
+                head: [['No', 'NISN', 'NIS', 'Nama Lengkap', 'Total Izin', 'Total Presensi', 'Tahun Lulus']],
+                body: tableData,
+                styles: { fontSize: 8, cellPadding: 2.5, lineColor: [203, 213, 225], lineWidth: 0.1 },
+                headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 12 },
+                    1: { halign: 'center', cellWidth: 26 },
+                    2: { halign: 'center', cellWidth: 22 },
+                    3: { halign: 'left' },
+                    4: { halign: 'center', cellWidth: 22 },
+                    5: { halign: 'center', cellWidth: 24, fontStyle: 'bold' },
+                    6: { halign: 'center', cellWidth: 22 }
+                },
+                theme: 'grid'
+            });
+
+            doc.save(`Data_Kelulusan_Siswa_${new Date().getFullYear()}.pdf`);
+        });
+    </script>
+    <script src="../js/global-layout.js"></script>
+</body>
+</html>

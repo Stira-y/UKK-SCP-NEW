@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -11,10 +12,33 @@ class LeaveRequestController extends Controller
 {
     public function index(Request $request)
     {
-        $query = LeaveRequest::with(['student', 'applicant', 'verifier']);
+        $query = LeaveRequest::with([
+            'student' => function ($q) {
+                $q->with('schoolClass');
+            },
+            'applicant',
+            'verifier'
+        ]);
 
+        // Filter Siswa (Role 4)
         if ($request->has('id_siswa')) {
             $query->where('id_siswa', $request->id_siswa);
+        }
+
+        // Filter Wali Kelas (Role 3 - Wali Kelas)
+        if ($request->has('id_class')) {
+            $classId = $request->id_class;
+            $query->whereHas('student', function ($q) use ($classId) {
+                $q->where('id_class', $classId);
+            });
+        }
+
+        // Filter Guru BK (Role 3 - Guru BK)
+        if ($request->has('kelas_nomor') && in_array($request->kelas_nomor, ['X', 'XI', 'XII'])) {
+            $tingkat = $request->kelas_nomor;
+            $query->whereHas('student.schoolClass', function ($q) use ($tingkat) {
+                $q->where('kelas_nomor', $tingkat);
+            });
         }
 
         if ($request->has('status_approval')) {
@@ -38,19 +62,23 @@ class LeaveRequestController extends Controller
             'end_date'        => 'required|date|after_or_equal:start_date',
             'reason'          => 'required|string',
             'documents'       => 'nullable|array',
-            'documents.*'     => 'file|mimes:pdf,jpg,jpeg,png|max:5120', // Maksimal 5MB per file
-            'status_approval' => 'nullable|in:Disetujui,Pending,Ditolak',
+            'documents.*'     => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'status_approval' => 'nullable|string',
+            'reason_ditolak'  => 'nullable|string',
         ]);
 
-        if (!isset($validated['status_approval'])) {
+        if (empty($validated['status_approval'])) {
             $validated['status_approval'] = 'Pending';
         }
 
-        // Menyimpan array file dokumen jika diunggah
+        // Verifier saat awal dibuat selalu NULL
+        $validated['verified_by'] = null;
+
         if ($request->hasFile('documents')) {
             $uploadedPaths = [];
             foreach ($request->file('documents') as $file) {
-                $uploadedPaths[] = $file->store('leave_documents', 'public');
+                $fileName = time() . '_' . $file->getClientOriginalName();
+                $uploadedPaths[] = $file->storeAs('leave_documents', $fileName, 'public');
             }
             $validated['document_path'] = $uploadedPaths;
         }
@@ -60,13 +88,13 @@ class LeaveRequestController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Pengajuan izin berhasil dibuat',
-            'data' => $leaveRequest->load(['student', 'applicant'])
+            'data' => $leaveRequest->load(['student.schoolClass', 'applicant'])
         ], 201);
     }
 
     public function show($id)
     {
-        $leaveRequest = LeaveRequest::with(['student', 'applicant', 'verifier'])->find($id);
+        $leaveRequest = $this->findLeaveRequest($id);
 
         if (!$leaveRequest) {
             return response()->json([
@@ -77,13 +105,13 @@ class LeaveRequestController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => $leaveRequest
+            'data' => $leaveRequest->load(['student.schoolClass', 'applicant', 'verifier'])
         ], 200);
     }
 
     public function update(Request $request, $id)
     {
-        $leaveRequest = LeaveRequest::find($id);
+        $leaveRequest = $this->findLeaveRequest($id);
 
         if (!$leaveRequest) {
             return response()->json([
@@ -99,58 +127,103 @@ class LeaveRequestController extends Controller
             'start_date'        => 'sometimes|required|date',
             'end_date'          => 'sometimes|required|date|after_or_equal:start_date',
             'reason'            => 'sometimes|required|string',
-            'status_approval'   => 'sometimes|required|in:Disetujui,Pending,Ditolak',
+            'status_approval'   => 'sometimes|required|string',
+            'reason_ditolak'    => 'nullable|string',
             'documents'         => 'nullable|array',
             'documents.*'       => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
             'deleted_documents' => 'nullable|array',
         ]);
 
-        // 1. Ambil daftar file lama dari database
+        // =========================================================================
+        // ATURAN VERIFIER: HANYA BOLEH DIISI JIKA USER ADALAH ROLE 3 (WALI KELAS / BK)
+        // ROLE LAIN (ROLE 1, 2, 4) TIDAK BERHAK MENGISI, DI-SET NULL
+        // =========================================================================
+        $currentUser = $request->user();
+
+        if ($currentUser) {
+            if ((int) $currentUser->id_role === 3) {
+                $validated['verified_by'] = $currentUser->id_user;
+            } else {
+                $validated['verified_by'] = null;
+            }
+        } else {
+            if ($request->filled('verified_by')) {
+                $targetVerifier = User::find($request->input('verified_by'));
+                if ($targetVerifier && (int) $targetVerifier->id_role === 3) {
+                    $validated['verified_by'] = $targetVerifier->id_user;
+                } else {
+                    $validated['verified_by'] = null;
+                }
+            } else {
+                $validated['verified_by'] = null;
+            }
+        }
+
+        // Dokumen
         $currentPaths = $leaveRequest->document_path ?? [];
         if (is_string($currentPaths)) {
             $currentPaths = json_decode($currentPaths, true) ?? [];
         }
 
-        // 2. Hapus file yang ditandai dihapus dari storage & array
         if ($request->has('deleted_documents')) {
             $deletedDocs = $request->input('deleted_documents');
             foreach ($deletedDocs as $deletedPath) {
                 $trimmedPath = trim($deletedPath);
-                
-                // Hapus fisik berkas dari server
                 if (Storage::disk('public')->exists($trimmedPath)) {
                     Storage::disk('public')->delete($trimmedPath);
                 }
-                
-                // Keluarkan path dari array tersimpan
                 $currentPaths = array_values(array_filter($currentPaths, function ($p) use ($trimmedPath) {
                     return trim($p) !== $trimmedPath;
                 }));
             }
         }
 
-        // 3. Tambahkan file baru jika ada unggahan baru
         if ($request->hasFile('documents')) {
             foreach ($request->file('documents') as $file) {
-                $currentPaths[] = $file->store('leave_documents', 'public');
+                $fileName = time() . '_' . $file->getClientOriginalName();
+                $currentPaths[] = $file->storeAs('leave_documents', $fileName, 'public');
             }
         }
 
-        // 4. Set daftar path terbaru ke dalam data yang akan di-update
-        $validated['document_path'] = array_values($currentPaths);
+        if ($request->hasFile('documents') || $request->has('deleted_documents')) {
+            $validated['document_path'] = array_values($currentPaths);
+        }
 
-        $leaveRequest->update($validated);
+        // Simpan status approval dengan penanganan tipe data enum/varchar
+        $targetStatus = $request->input('status_approval');
+        if ($targetStatus) {
+            try {
+                $leaveRequest->update($validated);
+            } catch (\Throwable $e) {
+                if (str_contains($e->getMessage(), 'status_approval') || str_contains($e->getMessage(), '1265')) {
+                    $fallback = match ($targetStatus) {
+                        'Di Terima' => 'Disetujui',
+                        'Di Tolak' => 'Ditolak',
+                        default => 'Pending'
+                    };
+                    $validated['status_approval'] = $fallback;
+                    $leaveRequest->update($validated);
+                } else {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Gagal memperbarui status: ' . $e->getMessage()
+                    ], 500);
+                }
+            }
+        } else {
+            $leaveRequest->update($validated);
+        }
 
         return response()->json([
             'status' => 'success',
             'message' => 'Data pengajuan izin berhasil diperbarui',
-            'data' => $leaveRequest->load(['student', 'applicant', 'verifier'])
+            'data' => $leaveRequest->load(['student.schoolClass', 'applicant', 'verifier'])
         ], 200);
     }
 
     public function destroy($id)
     {
-        $leaveRequest = LeaveRequest::find($id);
+        $leaveRequest = $this->findLeaveRequest($id);
 
         if (!$leaveRequest) {
             return response()->json([
@@ -159,7 +232,6 @@ class LeaveRequestController extends Controller
             ], 404);
         }
 
-        // Hapus semua file terlampir dari storage saat data pengajuan dihapus
         $paths = $leaveRequest->document_path ?? [];
         if (is_string($paths)) {
             $paths = json_decode($paths, true) ?? [];
@@ -177,5 +249,25 @@ class LeaveRequestController extends Controller
             'status' => 'success',
             'message' => 'Data pengajuan izin berhasil dihapus'
         ], 200);
+    }
+
+    private function findLeaveRequest($id)
+    {
+        $possibleKeys = ['id_izin_keluar', 'id_leave_request', 'id_izin', 'id'];
+
+        try {
+            $pk = (new LeaveRequest)->getKeyName();
+            $found = LeaveRequest::where($pk, $id)->first();
+            if ($found) return $found;
+        } catch (\Throwable $e) {}
+
+        foreach ($possibleKeys as $key) {
+            try {
+                $found = LeaveRequest::where($key, $id)->first();
+                if ($found) return $found;
+            } catch (\Throwable $e) {}
+        }
+
+        return null;
     }
 }

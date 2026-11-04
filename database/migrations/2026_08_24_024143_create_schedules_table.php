@@ -18,12 +18,14 @@ return new class extends Migration
             $table->foreignId('id_room')->constrained('rooms', 'id_room')->onDelete('cascade');
             $table->string('mapel', 100);
             $table->enum('day_of_week', ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']);
+            $table->string('jam_ke', 20)->nullable();
             $table->time('start_time');
             $table->time('end_time');
             $table->enum('cycle_type', ['1', '2']);
             $table->timestamps();
         });
     }
+
     /**
      * Reverse the migrations.
      */

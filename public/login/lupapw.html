@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lupa Password - Sistem SCP Sekolah</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4 overflow-y-auto">
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-200 my-8">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold text-slate-800">Lupa Password</h1>
+            <p class="text-sm text-slate-500 mt-1">Masukkan username dan email yang terdaftar untuk verifikasi</p>
+        </div>
+
+        <!-- Alert Notifikasi Sukses / Umum -->
+        <div id="alertBox" class="hidden mb-4 p-3 rounded-lg text-sm font-medium"></div>
+
+        <!-- Form Lupa Password -->
+        <form id="lupaPwForm" class="space-y-4" novalidate>
+            <!-- Input Username -->
+            <div>
+                <label for="username" class="block text-sm font-medium text-slate-700 mb-1">Masukkan Username</label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    name="username" 
+                    required 
+                    placeholder="Masukkan username Anda"
+                    class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition duration-150"
+                >
+            </div>
+
+            <!-- Input Email -->
+            <div>
+                <label for="email" class="block text-sm font-medium text-slate-700 mb-1">Masukkan Email</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    required 
+                    placeholder="Masukkan email Anda"
+                    class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition duration-150"
+                >
+            </div>
+
+            <!-- Pesan Error Gabungan -->
+            <p id="matchError" class="text-xs text-red-500 italic hidden">Username/email yang Anda masukkan salah atau tidak terdaftar</p>
+
+            <!-- Input Password Baru -->
+            <div id="newPasswordContainer" class="hidden space-y-1 pt-2 border-t border-slate-200">
+                <label for="newPassword" class="block text-sm font-medium text-slate-700 mb-1">Masukkan Password Baru</label>
+                <div class="relative">
+                    <input 
+                        type="password" 
+                        id="newPassword" 
+                        name="newPassword" 
+                        placeholder="••••••••"
+                        class="w-full px-4 py-2.5 pr-11 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition duration-150"
+                    >
+                    <button 
+                        type="button" 
+                        id="toggleNewPassword" 
+                        class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+                    >
+                        <svg id="eyeOpen" class="hidden w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        <svg id="eyeClosed" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.03 10.03 0 013.122-.382c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21f-11 11L3 3l12 12z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <p id="passwordHint" class="text-[11px] text-slate-400 mt-1">Minimal 8 karakter, mengandung huruf besar, kecil, angka, & simbol.</p>
+                <p id="passwordError" class="text-[11px] text-red-500 italic hidden"></p>
+            </div>
+
+            <!-- Tombol Aksi Utama -->
+            <button 
+                type="submit" 
+                id="btnSubmit" 
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition duration-200 shadow-md flex items-center justify-center space-x-2 mt-6"
+            >
+                <span id="btnText">Verifikasi Akun</span>
+                <span id="btnSpinner" class="hidden animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></span>
+            </button>
+        </form>
+
+        <!-- Kembali ke Login -->
+        <div class="text-center mt-4">
+            <a href="login.html" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition duration-150">
+                &larr; Kembali ke Halaman Login
+            </a>
+        </div>
+    </div>
+
+    <!-- Modal Pop-up Verifikasi Kode OTP -->
+    <div id="otpModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform transition-all p-6">
+            <div class="relative mb-4">
+                <h3 class="text-lg font-bold text-slate-800 text-center">Verifikasi Kode</h3>
+                <button id="btnCloseOtp" class="absolute right-0 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xl font-bold focus:outline-none">&times;</button>
+            </div>
+
+            <p id="otpModalSubtext" class="text-xs text-slate-500 mb-6 text-center">
+                Kode verifikasi acak 6 angka telah dikirim via email.
+            </p>
+
+            <div class="flex items-center justify-center gap-1.5 mb-3" id="otpContainer">
+                <input type="text" maxlength="1" class="otp-input w-9 h-11 text-center text-lg font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" />
+                <input type="text" maxlength="1" class="otp-input w-9 h-11 text-center text-lg font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" />
+                <input type="text" maxlength="1" class="otp-input w-9 h-11 text-center text-lg font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" />
+                <input type="text" maxlength="1" class="otp-input w-9 h-11 text-center text-lg font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" />
+                <input type="text" maxlength="1" class="otp-input w-9 h-11 text-center text-lg font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" />
+                <input type="text" maxlength="1" class="otp-input w-9 h-11 text-center text-lg font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" />
+
+                <button type="button" id="btnManualRetryOtp" title="Kirim ulang kode verifikasi" class="w-9 h-11 flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg border border-blue-200 transition shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <p id="otpErrorMessage" class="text-[11px] text-red-500 text-center font-medium mb-3 hidden"></p>
+
+            <div class="text-center mb-6 space-y-1">
+                <button type="button" id="btnResendOtp" disabled class="text-xs font-medium text-slate-400 cursor-not-allowed focus:outline-none">
+                    Kirim ulang via email
+                </button>
+                <p id="cooldownText" class="text-[11px] text-slate-400">
+                    Cooldown pengiriman ulang: <span id="timerText" class="font-bold text-slate-600">30s</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost/ukk-scp-new/public/api';
+
+        const lupaPwForm = document.getElementById('lupaPwForm');
+        const usernameInput = document.getElementById('username');
+        const emailInput = document.getElementById('email');
+        const matchError = document.getElementById('matchError');
+        const alertBox = document.getElementById('alertBox');
+
+        const newPasswordContainer = document.getElementById('newPasswordContainer');
+        const newPasswordInput = document.getElementById('newPassword');
+        const passwordHint = document.getElementById('passwordHint');
+        const passwordError = document.getElementById('passwordError');
+
+        const toggleNewPasswordBtn = document.getElementById('toggleNewPassword');
+        const eyeOpen = document.getElementById('eyeOpen');
+        const eyeClosed = document.getElementById('eyeClosed');
+
+        const btnSubmit = document.getElementById('btnSubmit');
+        const btnText = document.getElementById('btnText');
+        const btnSpinner = document.getElementById('btnSpinner');
+
+        // Elements Modal OTP
+        const otpModal = document.getElementById('otpModal');
+        const otpModalSubtext = document.getElementById('otpModalSubtext');
+        const btnCloseOtp = document.getElementById('btnCloseOtp');
+        const otpInputs = document.querySelectorAll('.otp-input');
+        const btnResendOtp = document.getElementById('btnResendOtp');
+        const btnManualRetryOtp = document.getElementById('btnManualRetryOtp');
+        const timerText = document.getElementById('timerText');
+        const otpErrorMessage = document.getElementById('otpErrorMessage');
+        const btnOtherMethod = document.getElementById('btnOtherMethod');
+
+        // State variabel
+        let isOtpVerified = false;
+        let cooldownInterval = null;
+        let isSendingOtp = false;
+        let resetToken = '';
+
+        const BASE_COOLDOWN_SECONDS = 30;
+        const INCREMENT_COOLDOWN_SECONDS = 15;
+        const RESET_IDLE_TIME_MS = 10 * 60 * 1000;
+
+        // Toggle Show/Hide Password
+        toggleNewPasswordBtn.addEventListener('click', () => {
+            const isPassword = newPasswordInput.type === 'password';
+            newPasswordInput.type = isPassword ? 'text' : 'password';
+            
+            if (isPassword) {
+                eyeOpen.classList.remove('hidden');
+                eyeClosed.classList.add('hidden');
+            } else {
+                eyeOpen.classList.add('hidden');
+                eyeClosed.classList.remove('hidden');
+            }
+        });
+
+        // Mencegah Spasi pada Input Password Baru
+        newPasswordInput.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault();
+            }
+        });
+
+        function showAlert(message, isSuccess = false) {
+            alertBox.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+            if (isSuccess) {
+                alertBox.classList.add('bg-green-100', 'text-green-700');
+            } else {
+                alertBox.classList.add('bg-red-100', 'text-red-700');
+            }
+            alertBox.textContent = message;
+        }
+
+        function showMatchError(msg) {
+            if (msg) matchError.textContent = msg;
+            matchError.classList.remove('hidden');
+            usernameInput.classList.add('border-red-500');
+            emailInput.classList.add('border-red-500');
+        }
+
+        function hideMatchError() {
+            matchError.classList.add('hidden');
+            usernameInput.classList.remove('border-red-500');
+            emailInput.classList.remove('border-red-500');
+        }
+
+        usernameInput.addEventListener('input', hideMatchError);
+        emailInput.addEventListener('input', hideMatchError);
+
+        function setLoading(isLoading, text = 'Memproses...') {
+            btnSubmit.disabled = isLoading;
+            if (isLoading) {
+                btnText.textContent = text;
+                btnSpinner.classList.remove('hidden');
+            } else {
+                btnText.textContent = isOtpVerified ? 'Simpan Password Baru' : 'Verifikasi Akun';
+                btnSpinner.classList.add('hidden');
+            }
+        }
+
+        // Helper untuk Menginisialisasi Cooldown Pengiriman
+        function initNewCooldown() {
+            const state = getStoredState();
+            const now = Date.now();
+
+            let duration = BASE_COOLDOWN_SECONDS;
+            if (state.lastSentTime > 0 && (now - state.lastSentTime) <= RESET_IDLE_TIME_MS) {
+                duration = state.currentDuration + INCREMENT_COOLDOWN_SECONDS;
+            }
+
+            const nextEndTime = now + (duration * 1000);
+            localStorage.setItem('lupapw_otp_cooldown_end', nextEndTime.toString());
+            localStorage.setItem('lupapw_otp_current_duration', duration.toString());
+            localStorage.setItem('lupapw_otp_last_sent_time', now.toString());
+
+            startCooldownTimer();
+        }
+
+        // Form Submit Handler
+        lupaPwForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideMatchError();
+            alertBox.classList.add('hidden');
+
+            const usernameVal = usernameInput.value.trim();
+            const emailVal = emailInput.value.trim().toLowerCase();
+
+            if (!usernameVal || !emailVal) {
+                showMatchError('Username dan email wajib diisi.');
+                return;
+            }
+
+            // Kirim OTP
+            if (!isOtpVerified) {
+                setLoading(true, 'Mengecek akun...');
+                const res = await sendResetOtp(usernameVal, emailVal);
+                setLoading(false);
+
+                if (res.success) {
+                    otpModalSubtext.textContent = `Kode verifikasi acak 6 angka telah dikirim ke email (${emailVal}).`;
+                    otpInputs.forEach(input => input.value = '');
+                    otpErrorMessage.classList.add('hidden');
+                    otpModal.classList.remove('hidden');
+                    otpInputs[0].focus();
+
+                    // Set timer 30 detik saat pertama kali modal OTP terbuka
+                    const state = getStoredState();
+                    if (state.cooldownEndTime <= Date.now()) {
+                        initNewCooldown();
+                    } else {
+                        startCooldownTimer();
+                    }
+                } else {
+                    showMatchError(res.message || 'Username/email yang Anda masukkan salah atau tidak terdaftar.');
+                }
+            } 
+            // Update Password Baru
+            else {
+                const pwdVal = newPasswordInput.value.trim();
+                passwordError.classList.add('hidden');
+                passwordHint.classList.remove('hidden');
+
+                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[^\s]{8,}$/;
+                if (!passwordRegex.test(pwdVal)) {
+                    passwordError.textContent = 'Password baru minimal 8 karakter dan wajib terdiri dari huruf besar, huruf kecil, angka, serta simbol!';
+                    passwordError.classList.remove('hidden');
+                    passwordHint.classList.add('hidden');
+                    return;
+                }
+
+                setLoading(true, 'Menyimpan password baru...');
+                await updatePassword(pwdVal);
+                setLoading(false);
+            }
+        });
+
+        // API Request: Mengirim OTP Lupa Password
+        async function sendResetOtp(username, email) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/forgot-password/send-otp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ username, email })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    return { success: true, message: result.message };
+                } else {
+                    return { success: false, message: result.message || 'Username atau email tidak ditemukan.' };
+                }
+            } catch (error) {
+                console.error('Error sending reset OTP:', error);
+                return { success: false, message: 'Gagal terhubung ke server backend API.' };
+            }
+        }
+
+        // API Request: Verifikasi Kode OTP
+        async function verifyResetOtp(otpCode) {
+            const usernameVal = usernameInput.value.trim();
+            const emailVal = emailInput.value.trim().toLowerCase();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/forgot-password/verify-otp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: usernameVal,
+                        email: emailVal,
+                        otp: otpCode
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    otpErrorMessage.classList.add('hidden');
+                    otpModal.classList.add('hidden');
+
+                    isOtpVerified = true;
+                    if (result.reset_token) resetToken = result.reset_token;
+
+                    usernameInput.readOnly = true;
+                    emailInput.readOnly = true;
+                    usernameInput.classList.add('bg-slate-100', 'cursor-not-allowed');
+                    emailInput.classList.add('bg-slate-100', 'cursor-not-allowed');
+
+                    newPasswordContainer.classList.remove('hidden');
+                    btnText.textContent = 'Simpan Password Baru';
+                    newPasswordInput.focus();
+
+                    showAlert('Verifikasi berhasil! Silakan masukkan password baru Anda.', true);
+                } else {
+                    otpErrorMessage.textContent = result.message || 'Kode verifikasi salah';
+                    otpErrorMessage.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error verifying OTP:', error);
+                otpErrorMessage.textContent = 'Terjadi kesalahan koneksi saat memverifikasi kode.';
+                otpErrorMessage.classList.remove('hidden');
+            }
+        }
+
+        // API Request: Simpan Password Baru
+        async function updatePassword(newPassword) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/forgot-password/reset`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        password: newPassword,
+                        reset_token: resetToken
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('Password berhasil diperbarui! Mengalihkan ke halaman login...', true);
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 1500);
+                } else {
+                    showAlert(result.message || 'Gagal mereset password. Silakan coba lagi.', false);
+                }
+            } catch (error) {
+                console.error('Error updating password:', error);
+                showAlert('Tidak dapat terhubung ke server backend API.', false);
+            }
+        }
+
+        // System Handling untuk OTP inputs & Cooldown Timer
+        function getStoredState() {
+            return {
+                cooldownEndTime: parseInt(localStorage.getItem('lupapw_otp_cooldown_end') || '0'),
+                currentDuration: parseInt(localStorage.getItem('lupapw_otp_current_duration') || BASE_COOLDOWN_SECONDS.toString()),
+                lastSentTime: parseInt(localStorage.getItem('lupapw_otp_last_sent_time') || '0')
+            };
+        }
+
+        function updateTimerUI() {
+            const state = getStoredState();
+            const now = Date.now();
+            const secondsLeft = Math.ceil((state.cooldownEndTime - now) / 1000);
+
+            if (secondsLeft <= 0) {
+                clearInterval(cooldownInterval);
+                btnResendOtp.disabled = false;
+                btnResendOtp.innerText = "Kirim ulang via email";
+                btnResendOtp.className = "text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer focus:outline-none";
+                
+                btnManualRetryOtp.disabled = false;
+                btnManualRetryOtp.classList.remove('opacity-50', 'cursor-not-allowed');
+                timerText.textContent = "0s";
+            } else {
+                btnResendOtp.disabled = true;
+                btnResendOtp.innerText = "Kirim ulang via email";
+                btnResendOtp.className = "text-xs font-medium text-slate-400 cursor-not-allowed focus:outline-none";
+                
+                btnManualRetryOtp.disabled = true;
+                btnManualRetryOtp.classList.add('opacity-50', 'cursor-not-allowed');
+                timerText.textContent = `${secondsLeft}s`;
+            }
+        }
+
+        function startCooldownTimer() {
+            clearInterval(cooldownInterval);
+            updateTimerUI();
+            cooldownInterval = setInterval(updateTimerUI, 1000);
+        }
+
+        async function triggerOtpRequest() {
+            if (isSendingOtp) return;
+
+            const state = getStoredState();
+            const now = Date.now();
+
+            if (state.cooldownEndTime > now) {
+                startCooldownTimer();
+                return;
+            }
+
+            isSendingOtp = true;
+            btnResendOtp.disabled = true;
+            btnResendOtp.innerText = "Mengirim...";
+
+            const usernameVal = usernameInput.value.trim();
+            const emailVal = emailInput.value.trim().toLowerCase();
+
+            const res = await sendResetOtp(usernameVal, emailVal);
+            isSendingOtp = false;
+
+            if (res.success) {
+                initNewCooldown();
+            } else {
+                updateTimerUI();
+                otpErrorMessage.textContent = res.message || 'Gagal mengirim ulang OTP';
+                otpErrorMessage.classList.remove('hidden');
+            }
+        }
+
+        btnResendOtp.addEventListener('click', triggerOtpRequest);
+        btnManualRetryOtp.addEventListener('click', triggerOtpRequest);
+
+        // Auto focus & Auto submit OTP
+        otpInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                const val = e.target.value.replace(/[^0-9]/g, '');
+                e.target.value = val;
+
+                if (val && index < otpInputs.length - 1) {
+                    otpInputs[index + 1].focus();
+                }
+                checkAndAutoVerify();
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                    otpInputs[index - 1].focus();
+                }
+            });
+
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pastedData = (e.clipboardData || window.clipboardData).getData('text');
+                const digits = pastedData.replace(/[^0-9]/g, '').slice(0, 6);
+
+                if (digits.length > 0) {
+                    digits.split('').forEach((digit, i) => {
+                        if (otpInputs[i]) otpInputs[i].value = digit;
+                    });
+                    if (digits.length === 6) {
+                        otpInputs[5].focus();
+                        checkAndAutoVerify();
+                    }
+                }
+            });
+        });
+
+        function checkAndAutoVerify() {
+            let fullOtp = '';
+            otpInputs.forEach(i => fullOtp += i.value);
+            if (fullOtp.length === 6) {
+                verifyResetOtp(fullOtp);
+            }
+        }
+    
+        btnCloseOtp.addEventListener('click', () => otpModal.classList.add('hidden'));
+        btnOtherMethod.addEventListener('click', () => alert('Metode verifikasi lain sedang dalam pengembangan.'));
+    </script>
+</body>
+</html>

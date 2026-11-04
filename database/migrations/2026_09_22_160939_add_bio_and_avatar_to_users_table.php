@@ -10,14 +10,13 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->string('avatar')->nullable()->after('email');
-            $table->text('bio')->nullable()->after('avatar');
         });
     }
 
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['avatar', 'bio']);
+            $table->dropColumn('avatar');
         });
     }
 };

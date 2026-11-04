@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('id_schedule')->constrained('schedules', 'id_schedule')->onDelete('cascade');
             $table->date('date');
             $table->text('topic_description');
-            $table->string('photo_path', 255);
+            $table->text('photo_path')->nullable();
             $table->timestamps();
         });
     }

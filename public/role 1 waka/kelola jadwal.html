@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelola Jadwal - Sistem SCP</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF & autoTable untuk Export PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <!-- SheetJS untuk Membaca & Menghasilkan File Excel (.xlsx) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col font-sans overflow-hidden">
+
+    <!-- 1. Navbar Universal -->
+    <div id="app-navbar"></div>
+
+    <!-- Layout Utama -->
+    <div class="flex flex-1 relative overflow-hidden h-[calc(100vh-57px)]">
+        <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-20 hidden md:hidden transition-opacity duration-300"></div>
+
+        <!-- 2. Sidebar Universal -->
+        <div id="app-sidebar"></div>
+
+        <!-- Konten Utama -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
+            <div class="max-w-7xl mx-auto space-y-6">
+                
+                <!-- Header & Search -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-slate-800">Kelola Jadwal Pelajaran</h2>
+                        <p class="text-slate-500 text-xs md:text-sm mt-0.5">Manajemen jadwal pelajaran per kelas dan putaran waktu.</p>
+                    </div>
+                    <div class="w-full md:w-80">
+                        <div class="relative">
+                            <input type="text" id="searchInput" autocomplete="off" placeholder="Cari nama kelas atau mata pelajaran..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigasi Tabs & Tombol Aksi Header -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between overflow-x-auto pb-1 whitespace-nowrap gap-4 text-xs md:text-sm font-semibold text-slate-600">
+                        <div class="flex items-center space-x-6">
+                            <button class="tab-btn underline text-indigo-600 font-bold" data-tingkat="X">Jadwal X</button>
+                            <span class="text-slate-300">|</span>
+                            <button class="tab-btn" data-tingkat="XI">Jadwal XI</button>
+                            <span class="text-slate-300">|</span>
+                            <button class="tab-btn" data-tingkat="XII">Jadwal XII</button>
+                        </div>
+
+                        <div class="flex items-center space-x-3 shrink-0">
+                            <!-- Toggle Lock Jadwal -->
+                            <div class="flex items-center space-x-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm">
+                                <span class="text-xs font-bold text-slate-700">Lock Jadwal:</span>
+                                <button type="button" id="btnToggleLockJadwal" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-slate-300 transition-colors duration-200 ease-in-out focus:outline-none" role="switch" aria-checked="false">
+                                    <span id="toggleKnob" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
+                                </button>
+                            </div>
+
+                            <!-- Putaran Aktif -->
+                            <div class="flex items-center space-x-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm">
+                                <span class="text-xs font-bold text-slate-700">Putaran Aktif:</span>
+                                <select id="selectLockCycle" class="bg-white border border-slate-300 text-slate-800 text-xs font-bold px-2 py-1 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                </select>
+                                <button type="button" id="btnLockCycle" title="Kunci Putaran Ini Sebagai Putaran Aktif Digunakan" class="bg-emerald-600 hover:bg-emerald-700 text-white p-1.5 rounded-lg transition shadow flex items-center justify-center">
+                                    <svg class="w-4 h-4 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Tombol Room -->
+                            <button id="btnOpenRooms" onclick="handleOpenRooms()" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5">
+                                <span id="roomBtnIcon">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                </span>
+                                <span>Room</span>
+                            </button>
+
+                            <!-- Tombol Tambah Jadwal -->
+                            <button id="btnOpenAddSchedule" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5">
+                                <span id="addScheduleBtnIcon">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                </span>
+                                <span>Tambah Jadwal</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Tabel Jadwal Kelas -->
+                <div id="classTableCard" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-200">
+                    <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center space-x-3">
+                            <div id="tableHeaderTitle" class="font-bold text-slate-800 text-base">
+                                Jadwal Kelas X
+                            </div>
+                            <span id="cycleStatusBadge" class="text-xs px-2.5 py-1 rounded-full font-bold shadow-sm">
+                                Memuat status...
+                            </span>
+                        </div>
+
+                        <!-- Filter Putaran & Download PDF -->
+                        <div class="flex items-center space-x-3">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-semibold text-slate-500">Putaran:</span>
+                                <select id="selectCycle" class="bg-white border border-slate-300 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                                    <option value="1">Putaran 1</option>
+                                    <option value="2">Putaran 2</option>
+                                </select>
+                            </div>
+                            <button id="btnDownloadPdf" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold shadow transition flex items-center space-x-1.5">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                <span>Download Jadwal</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Daftar Kelas Terdaftar -->
+                    <div class="overflow-x-auto">
+                        <table id="mainClassTable" class="w-full text-left border-collapse min-w-[700px]">
+                            <thead>
+                                <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="py-3.5 px-4 font-semibold text-center w-24">Kelas</th>
+                                    <th class="py-3.5 px-4 font-semibold">Nama Kelas</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-36">Nomor Kelas</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-44">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="classTableBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
+                                <tr>
+                                    <td colspan="4" class="py-8 text-center text-slate-400">Memuat data kelas...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL LIST SEMUA JADWAL KELAS (SELURUH ROW BERWARNA BIRU & KLIK ROW UNTUK EDIT) -->
+    <div id="detailScheduleModal" class="fixed inset-0 bg-slate-900/60 z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                <h3 id="modalDetailTitle" class="font-bold text-base md:text-lg">Jadwal Pelajaran - X DKV 1</h3>
+                <button type="button" id="btnCloseDetailSchedule" class="text-indigo-200 hover:text-white text-2xl font-bold leading-none">&times;</button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto flex-1 space-y-4">
+                <div class="flex items-center justify-between text-xs font-semibold text-slate-500 pb-2 border-b border-slate-100">
+                    <span class="text-blue-700 font-bold flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                        Klik salah satu baris jadwal di bawah (warna biru) untuk mengedit
+                    </span>
+                    <span id="badgeCurrentCycle" class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full font-bold">Putaran 1</span>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="w-full text-left border-collapse text-xs md:text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200 sticky top-0">
+                                <th class="py-3 px-3 font-semibold text-center w-24">Hari</th>
+                                <th class="py-3 px-3 font-semibold text-center w-20">Jam Ke</th>
+                                <th class="py-3 px-3 font-semibold text-center w-32">Waktu</th>
+                                <th class="py-3 px-4 font-semibold">Mata Pelajaran</th>
+                                <th class="py-3 px-4 font-semibold">Guru Pengampu</th>
+                                <th class="py-3 px-3 font-semibold text-center w-28">Ruangan</th>
+                                <th class="py-3 px-3 font-semibold text-center w-20">Putaran</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleDetailTableBody" class="divide-y divide-blue-200">
+                            <tr>
+                                <td colspan="7" class="py-6 text-center text-slate-400">Tidak ada jadwal terdaftar untuk kelas ini.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 px-6 py-3.5 flex justify-end border-t border-slate-200 shrink-0">
+                <button type="button" id="btnOkDetailSchedule" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT SPESIFIK JADWAL (LANGSUNG TERISI DATA, TANPA IMPORT/TEMPLATE) -->
+    <div id="formEditScheduleModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[88vh]">
+            <div class="bg-indigo-600 px-6 py-3.5 flex justify-between items-center text-white shrink-0">
+                <h3 class="font-bold text-base md:text-lg">Edit Data Jadwal</h3>
+                <button type="button" id="btnCloseEditSchedule" class="text-indigo-200 hover:text-white text-2xl font-bold leading-none">&times;</button>
+            </div>
+            
+            <form id="editScheduleForm" class="p-6 space-y-3.5 overflow-y-auto flex-1">
+                <input type="hidden" id="editScheduleId">
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Kelas</label>
+                        <select id="editFormClass" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Pilih Kelas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Hari</label>
+                        <select id="editFormDay" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="Senin">Senin</option>
+                            <option value="Selasa">Selasa</option>
+                            <option value="Rabu">Rabu</option>
+                            <option value="Kamis">Kamis</option>
+                            <option value="Jumat">Jumat</option>
+                            <option value="Sabtu">Sabtu</option>
+                            <option value="Minggu">Minggu</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Jam Ke</label>
+                        <input type="text" id="editFormJamKe" placeholder="Cth: 1 / Istirahat" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Mulai</label>
+                        <input type="time" id="editFormStartTime" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Selesai</label>
+                        <input type="time" id="editFormEndTime" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Mata Pelajaran</label>
+                    <input type="text" id="editFormMapel" placeholder="Masukkan nama mata pelajaran..." required class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Guru Pengampu</label>
+                    <select id="editFormGuru" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Pilih Guru</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Ruangan (Room)</label>
+                        <select id="editFormRoom" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Pilih Ruangan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Putaran (Cycle)</label>
+                        <select id="editFormCycle" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="1">Putaran 1</option>
+                            <option value="2">Putaran 2</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+
+            <div class="bg-slate-50 px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 shrink-0">
+                <button type="button" id="btnCancelEditSchedule" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">Batal</button>
+                <button type="button" id="btnTriggerEditScheduleSave" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition shadow">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FORM TAMBAH JADWAL BARU (DENGAN IMPORT EXCEL & TEMPLATE) -->
+    <div id="formScheduleModal" class="fixed inset-0 bg-slate-900/60 z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[88vh]">
+            <div class="bg-indigo-600 px-6 py-3.5 flex justify-between items-center text-white shrink-0">
+                <h3 id="formModalTitle" class="font-bold text-base md:text-lg">Tambah Jadwal Baru</h3>
+                
+                <div class="flex items-center space-x-2">
+                    <button type="button" id="btnDownloadTemplate" title="Download Template Excel" class="bg-indigo-500/80 hover:bg-indigo-500 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg transition flex items-center space-x-1 shadow-sm">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        <span>Template</span>
+                    </button>
+
+                    <button type="button" id="btnTriggerExcelImport" title="Import File Excel" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-sm">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        <span>Import Excel</span>
+                    </button>
+
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden">
+
+                    <button type="button" id="btnCloseFormSchedule" class="text-indigo-200 hover:text-white text-2xl font-bold ml-2 leading-none">&times;</button>
+                </div>
+            </div>
+            
+            <form id="scheduleForm" class="p-6 space-y-3.5 overflow-y-auto flex-1">
+                <input type="hidden" id="scheduleId">
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Kelas</label>
+                        <select id="formClass" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Pilih Kelas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Hari</label>
+                        <select id="formDay" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="Senin">Senin</option>
+                            <option value="Selasa">Selasa</option>
+                            <option value="Rabu">Rabu</option>
+                            <option value="Kamis">Kamis</option>
+                            <option value="Jumat">Jumat</option>
+                            <option value="Sabtu">Sabtu</option>
+                            <option value="Minggu">Minggu</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Jam Ke</label>
+                        <input type="text" id="formJamKe" placeholder="Cth: 1 / Istirahat" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Mulai</label>
+                        <input type="time" id="formStartTime" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Selesai</label>
+                        <input type="time" id="formEndTime" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Mata Pelajaran</label>
+                    <input type="text" id="formMapel" placeholder="Masukkan nama mata pelajaran..." required class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Guru Pengampu</label>
+                    <select id="formGuru" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Pilih Guru</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Ruangan (Room)</label>
+                        <select id="formRoom" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Pilih Ruangan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Putaran (Cycle)</label>
+                        <select id="formCycle" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="1">Putaran 1</option>
+                            <option value="2">Putaran 2</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+
+            <div class="bg-slate-50 px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 shrink-0">
+                <button type="button" id="btnCancelFormSchedule" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">Batal</button>
+                <button type="button" id="btnTriggerScheduleSave" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition shadow">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POP-UP KONFIRMASI YAKIN & TIDAK (Z-INDEX 70) -->
+    <div id="confirmScheduleActionModal" class="fixed inset-0 bg-slate-950/70 z-[70] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center transform transition-all animate-in fade-in zoom-in duration-200">
+            <div id="confirmActionIconWrapper" class="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 mx-auto flex items-center justify-center mb-4">
+                <svg id="confirmActionSvg" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h3 id="confirmActionTitle" class="text-base font-bold text-slate-800 mb-1">Konfirmasi</h3>
+            <p id="confirmActionDesc" class="text-xs text-slate-500 mb-6 leading-relaxed">
+                Apakah Anda yakin?
+            </p>
+            <div class="flex items-center justify-center gap-3">
+                <button type="button" id="btnConfirmActionNo" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+                    Tidak
+                </button>
+                <button type="button" id="btnConfirmActionYes" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md">
+                    Yakin
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost/ukk-scp-new/public/api';
+        const token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
+        const userData = JSON.parse(sessionStorage.getItem('user_data') || localStorage.getItem('user_data') || '{}');
+
+        if (!token || Number(userData.id_role) !== 1) {
+            alert('Akses ditolak! Silakan login sebagai Waka/Admin.');
+            window.location.href = '../login/login.html';
+        }
+
+        let currentTingkat = 'X';
+        let currentCycle = '1';
+        let lockedActiveCycle = '1'; 
+        let isScheduleLocked = false; 
+        let allClasses = [];
+        let allTeachers = [];
+        let allRooms = [];
+        let allSchedules = [];
+
+        let pendingActionType = null; 
+        let pendingDeleteClassId = null;
+        let pendingLockCycleVal = null;
+        let pendingToggleLockVal = null;
+
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const classTableBody = document.getElementById('classTableBody');
+        const classTableCard = document.getElementById('classTableCard');
+        const mainClassTable = document.getElementById('mainClassTable');
+        const tableHeaderTitle = document.getElementById('tableHeaderTitle');
+        const cycleStatusBadge = document.getElementById('cycleStatusBadge');
+        const selectCycle = document.getElementById('selectCycle');
+        const searchInput = document.getElementById('searchInput');
+        const btnDownloadPdf = document.getElementById('btnDownloadPdf');
+
+        const btnToggleLockJadwal = document.getElementById('btnToggleLockJadwal');
+        const toggleKnob = document.getElementById('toggleKnob');
+
+        const selectLockCycle = document.getElementById('selectLockCycle');
+        const btnLockCycle = document.getElementById('btnLockCycle');
+
+        const btnOpenRooms = document.getElementById('btnOpenRooms');
+        const btnOpenAddSchedule = document.getElementById('btnOpenAddSchedule');
+        const roomBtnIcon = document.getElementById('roomBtnIcon');
+        const addScheduleBtnIcon = document.getElementById('addScheduleBtnIcon');
+
+        const detailScheduleModal = document.getElementById('detailScheduleModal');
+        const modalDetailTitle = document.getElementById('modalDetailTitle');
+        const badgeCurrentCycle = document.getElementById('badgeCurrentCycle');
+        const scheduleDetailTableBody = document.getElementById('scheduleDetailTableBody');
+        const btnCloseDetailSchedule = document.getElementById('btnCloseDetailSchedule');
+        const btnOkDetailSchedule = document.getElementById('btnOkDetailSchedule');
+
+        // Modal Edit Jadwal
+        const formEditScheduleModal = document.getElementById('formEditScheduleModal');
+        const editScheduleForm = document.getElementById('editScheduleForm');
+        const editScheduleId = document.getElementById('editScheduleId');
+        const editFormClass = document.getElementById('editFormClass');
+        const editFormDay = document.getElementById('editFormDay');
+        const editFormJamKe = document.getElementById('editFormJamKe');
+        const editFormStartTime = document.getElementById('editFormStartTime');
+        const editFormEndTime = document.getElementById('editFormEndTime');
+        const editFormMapel = document.getElementById('editFormMapel');
+        const editFormGuru = document.getElementById('editFormGuru');
+        const editFormRoom = document.getElementById('editFormRoom');
+        const editFormCycle = document.getElementById('editFormCycle');
+        const btnCloseEditSchedule = document.getElementById('btnCloseEditSchedule');
+        const btnCancelEditSchedule = document.getElementById('btnCancelEditSchedule');
+        const btnTriggerEditScheduleSave = document.getElementById('btnTriggerEditScheduleSave');
+
+        // Modal Tambah Jadwal
+        const formScheduleModal = document.getElementById('formScheduleModal');
+        const formModalTitle = document.getElementById('formModalTitle');
+        const scheduleForm = document.getElementById('scheduleForm');
+        const scheduleIdInput = document.getElementById('scheduleId');
+        const formClass = document.getElementById('formClass');
+        const formDay = document.getElementById('formDay');
+        const formJamKe = document.getElementById('formJamKe');
+        const formStartTime = document.getElementById('formStartTime');
+        const formEndTime = document.getElementById('formEndTime');
+        const formMapel = document.getElementById('formMapel');
+        const formGuru = document.getElementById('formGuru');
+        const formRoom = document.getElementById('formRoom');
+        const formCycle = document.getElementById('formCycle');
+
+        const btnCloseFormSchedule = document.getElementById('btnCloseFormSchedule');
+        const btnCancelFormSchedule = document.getElementById('btnCancelFormSchedule');
+        const btnTriggerScheduleSave = document.getElementById('btnTriggerScheduleSave');
+
+        const confirmScheduleActionModal = document.getElementById('confirmScheduleActionModal');
+        const confirmActionTitle = document.getElementById('confirmActionTitle');
+        const confirmActionDesc = document.getElementById('confirmActionDesc');
+        const confirmActionIconWrapper = document.getElementById('confirmActionIconWrapper');
+        const btnConfirmActionYes = document.getElementById('btnConfirmActionYes');
+        const btnConfirmActionNo = document.getElementById('btnConfirmActionNo');
+
+        const btnTriggerExcelImport = document.getElementById('btnTriggerExcelImport');
+        const excelFileInput = document.getElementById('excelFileInput');
+        const btnDownloadTemplate = document.getElementById('btnDownloadTemplate');
+
+        const SVG_PLUS = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>`;
+        const SVG_BAN = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.5 5.5l13 13"></path></svg>`;
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => b.classList.remove('underline', 'text-indigo-600', 'font-bold'));
+                btn.classList.add('underline', 'text-indigo-600', 'font-bold');
+                currentTingkat = btn.getAttribute('data-tingkat');
+                tableHeaderTitle.textContent = `Jadwal Kelas ${currentTingkat}`;
+                renderClassTable();
+            });
+        });
+
+        selectCycle.addEventListener('change', async () => {
+            currentCycle = selectCycle.value;
+            applyCycleVisualStatus();
+            await fetchSchedules();
+            renderClassTable();
+        });
+
+        searchInput.addEventListener('input', () => {
+            renderClassTable();
+        });
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await fetchSystemConfiguration();
+            await fetchClasses();
+            await fetchTeachers();
+            await fetchRooms();
+            await fetchSchedules();
+            renderClassTable();
+        });
+
+        async function fetchSystemConfiguration() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/system-config/active-cycle`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                if (json.data) {
+                    if (json.data.active_cycle) {
+                        lockedActiveCycle = String(json.data.active_cycle);
+                        selectLockCycle.value = lockedActiveCycle;
+                    }
+                    isScheduleLocked = Boolean(json.data.is_schedule_locked);
+                    updateScheduleLockUI();
+                }
+                applyCycleVisualStatus();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function updateScheduleLockUI() {
+            if (isScheduleLocked) {
+                btnToggleLockJadwal.className = 'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-emerald-600 transition-colors duration-200 ease-in-out focus:outline-none';
+                btnToggleLockJadwal.setAttribute('aria-checked', 'true');
+                toggleKnob.className = 'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-5';
+
+                btnOpenRooms.className = 'bg-slate-300 text-slate-500 cursor-not-allowed active:scale-95 px-3.5 py-1.5 rounded-xl font-semibold shadow-none transition flex items-center space-x-1.5';
+                roomBtnIcon.innerHTML = SVG_BAN;
+
+                btnOpenAddSchedule.className = 'bg-slate-300 text-slate-500 cursor-not-allowed active:scale-95 px-3.5 py-1.5 rounded-xl font-semibold shadow-none transition flex items-center space-x-1.5';
+                addScheduleBtnIcon.innerHTML = SVG_BAN;
+            } else {
+                btnToggleLockJadwal.className = 'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-slate-300 transition-colors duration-200 ease-in-out focus:outline-none';
+                btnToggleLockJadwal.setAttribute('aria-checked', 'false');
+                toggleKnob.className = 'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0';
+
+                btnOpenRooms.className = 'bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5 cursor-pointer';
+                roomBtnIcon.innerHTML = SVG_PLUS;
+
+                btnOpenAddSchedule.className = 'bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5 cursor-pointer';
+                addScheduleBtnIcon.innerHTML = SVG_PLUS;
+            }
+
+            renderClassTable();
+        }
+
+        btnToggleLockJadwal.addEventListener('click', () => {
+            const willLock = !isScheduleLocked;
+
+            pendingActionType = 'toggle_lock';
+            pendingToggleLockVal = willLock;
+
+            confirmActionTitle.textContent = willLock ? 'Konfirmasi Kunci Jadwal' : 'Konfirmasi Buka Kunci Jadwal';
+            confirmActionDesc.textContent = willLock 
+                ? 'Apakah Anda yakin ingin mengunci jadwal? Tombol Hapus, Room, dan Tambah Jadwal akan dinonaktifkan.' 
+                : 'Apakah Anda yakin ingin membuka kunci jadwal? Perubahan jadwal pelajaran akan diizinkan kembali.';
+            
+            confirmActionIconWrapper.className = willLock 
+                ? 'w-12 h-12 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center mb-4' 
+                : 'w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center mb-4';
+            
+            btnConfirmActionYes.className = willLock 
+                ? 'w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shadow-md' 
+                : 'w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-md';
+            btnConfirmActionYes.textContent = 'Yakin';
+
+            confirmScheduleActionModal.classList.remove('hidden');
+        });
+
+        window.handleOpenRooms = function() {
+            if (isScheduleLocked) return;
+            window.location.href = 'kelola ruangan.html';
+        };
+
+        btnOpenAddSchedule.addEventListener('click', () => {
+            if (isScheduleLocked) return;
+            scheduleForm.reset();
+            scheduleIdInput.value = '';
+            formCycle.value = currentCycle;
+            formModalTitle.textContent = 'Tambah Jadwal Baru';
+            formScheduleModal.classList.remove('hidden');
+        });
+
+        function applyCycleVisualStatus() {
+            const isCurrentCycleActive = String(currentCycle) === String(lockedActiveCycle);
+
+            if (isCurrentCycleActive) {
+                classTableCard.classList.remove('bg-slate-100', 'border-slate-300', 'opacity-80');
+                classTableCard.classList.add('bg-white', 'border-slate-200');
+
+                mainClassTable.classList.remove('bg-slate-100', 'opacity-70');
+                mainClassTable.classList.add('bg-white');
+
+                cycleStatusBadge.className = 'text-xs px-3 py-1 rounded-full font-bold shadow-sm bg-emerald-100 text-emerald-700 border border-emerald-300';
+                cycleStatusBadge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>Putaran ${lockedActiveCycle} Aktif`;
+            } else {
+                classTableCard.classList.remove('bg-white', 'border-slate-200');
+                classTableCard.classList.add('bg-slate-100', 'border-slate-300', 'opacity-80');
+
+                mainClassTable.classList.remove('bg-white');
+                mainClassTable.classList.add('bg-slate-100', 'opacity-70');
+
+                cycleStatusBadge.className = 'text-xs px-3 py-1 rounded-full font-bold shadow-sm bg-slate-200 text-slate-600 border border-slate-300';
+                cycleStatusBadge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-slate-400 mr-1.5"></span>Putaran Tidak Aktif`;
+            }
+        }
+
+        btnLockCycle.addEventListener('click', () => {
+            const targetCycle = selectLockCycle.value;
+
+            pendingActionType = 'lock_cycle';
+            pendingLockCycleVal = targetCycle;
+
+            confirmActionTitle.textContent = 'Kunci Putaran Aktif';
+            confirmActionDesc.textContent = `Apakah Anda yakin ingin mengunci Putaran ${targetCycle} sebagai putaran aktif yang digunakan sistem? Putaran lainnya akan dinonaktifkan (abu-abu).`;
+            confirmActionIconWrapper.className = 'w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center mb-4';
+            btnConfirmActionYes.className = 'w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-md';
+            btnConfirmActionYes.textContent = 'Yakin';
+
+            confirmScheduleActionModal.classList.remove('hidden');
+        });
+
+        async function fetchClasses() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/classes`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                allClasses = json.data || json || [];
+                populateClassSelect();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function fetchTeachers() {
+            try {
+                let teachersList = [];
+                const res = await fetch(`${API_BASE_URL}/waka/teachers?category=all`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                const raw = json.data || json;
+
+                if (Array.isArray(raw)) {
+                    teachersList = raw;
+                } else if (typeof raw === 'object' && raw !== null) {
+                    Object.values(raw).forEach(val => {
+                        if (Array.isArray(val)) {
+                            teachersList = teachersList.concat(val);
+                        } else if (typeof val === 'object' && val !== null && val.id_user) {
+                            teachersList.push(val);
+                        }
+                    });
+                }
+
+                if (teachersList.length === 0) {
+                    const fallbackRes = await fetch(`${API_BASE_URL}/users`, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    });
+                    const fallbackJson = await fallbackRes.json();
+                    const allUsers = fallbackJson.data || fallbackJson || [];
+                    teachersList = allUsers.filter(u => Number(u.id_role) === 2 || Number(u.id_role) === 3);
+                }
+
+                const uniqueMap = new Map();
+                teachersList.forEach(t => {
+                    if (t.id_user && !uniqueMap.has(t.id_user)) {
+                        uniqueMap.set(t.id_user, t);
+                    }
+                });
+
+                allTeachers = Array.from(uniqueMap.values());
+                populateTeacherSelect();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function fetchRooms() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/rooms`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                allRooms = json.data || json || [];
+                populateRoomSelect();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function fetchSchedules() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/schedules`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                allSchedules = json.data || [];
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function populateClassSelect() {
+            formClass.innerHTML = '<option value="">Pilih Kelas</option>';
+            editFormClass.innerHTML = '<option value="">Pilih Kelas</option>';
+            allClasses.forEach(cls => {
+                const text = `${cls.kelas_nomor} ${cls.nama_kelas} ${cls.nomor_kelas || ''}`.trim();
+                formClass.appendChild(new Option(text, cls.id_class));
+                editFormClass.appendChild(new Option(text, cls.id_class));
+            });
+        }
+
+        function populateTeacherSelect() {
+            formGuru.innerHTML = '<option value="">Pilih Guru</option>';
+            editFormGuru.innerHTML = '<option value="">Pilih Guru</option>';
+            allTeachers.forEach(t => {
+                const text = t.fullname || t.username;
+                formGuru.appendChild(new Option(text, t.id_user));
+                editFormGuru.appendChild(new Option(text, t.id_user));
+            });
+        }
+
+        function populateRoomSelect() {
+            formRoom.innerHTML = '<option value="">Pilih Ruangan</option>';
+            editFormRoom.innerHTML = '<option value="">Pilih Ruangan</option>';
+            allRooms.forEach(r => {
+                const rNum = r.nomor_room ? `(${r.nomor_room})` : '';
+                const text = `${r.nama_room || ''} ${rNum}`.trim();
+                formRoom.appendChild(new Option(text, r.id_room));
+                editFormRoom.appendChild(new Option(text, r.id_room));
+            });
+        }
+
+        function renderClassTable() {
+            const query = searchInput.value.trim().toLowerCase();
+
+            let filtered = allClasses.filter(c => c.kelas_nomor === currentTingkat);
+
+            filtered.sort((a, b) => {
+                const nameA = (a.nama_kelas || '').toLowerCase();
+                const nameB = (b.nama_kelas || '').toLowerCase();
+                const comp = nameA.localeCompare(nameB);
+                if (comp !== 0) return comp;
+                const numA = parseInt(a.nomor_kelas) || 0;
+                const numB = parseInt(b.nomor_kelas) || 0;
+                return numA - numB;
+            });
+
+            if (query) {
+                filtered = filtered.filter(c => {
+                    const fullClassName = `${c.kelas_nomor} ${c.nama_kelas} ${c.nomor_kelas || ''}`.toLowerCase();
+                    if (fullClassName.includes(query)) return true;
+
+                    const classSchedules = allSchedules.filter(s => Number(s.id_class) === Number(c.id_class) && String(s.cycle_type) === String(currentCycle));
+                    return classSchedules.some(s => {
+                        const mapel = (s.mapel || '').toLowerCase();
+                        const guru = (s.teacher ? (s.teacher.fullname || s.teacher.username) : '').toLowerCase();
+                        const room = (s.room ? `${s.room.nama_room || ''} ${s.room.nomor_room || ''}` : '').toLowerCase();
+                        return mapel.includes(query) || guru.includes(query) || room.includes(query);
+                    });
+                });
+            }
+
+            if (filtered.length === 0) {
+                classTableBody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-400">Tidak ada jadwal kelas atau mata pelajaran yang sesuai dengan pencarian "${query}".</td></tr>`;
+                return;
+            }
+
+            const isCurrentCycleActive = String(currentCycle) === String(lockedActiveCycle);
+            const rowHoverClass = isCurrentCycleActive ? 'hover:bg-slate-50' : 'hover:bg-slate-200/60 bg-slate-100/60';
+            const nameColorClass = isCurrentCycleActive ? 'text-indigo-600 hover:text-indigo-800' : 'text-slate-600 hover:text-slate-800';
+
+            classTableBody.innerHTML = filtered.map(c => {
+                const nomor = c.nomor_kelas || '-';
+
+                let actionButtonsHtml = '';
+                if (isScheduleLocked) {
+                    actionButtonsHtml = `
+                        <div class="inline-flex items-center justify-center space-x-2">
+                            <span class="text-slate-400 p-2 cursor-not-allowed" title="Jadwal Terkunci">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            </span>
+                            <span class="text-slate-400 p-2 cursor-not-allowed" title="Jadwal Terkunci">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </span>
+                        </div>
+                    `;
+                } else {
+                    actionButtonsHtml = `
+                        <div class="inline-flex items-center justify-center space-x-2">
+                            <!-- Tombol Edit Jadwal Kelas -->
+                            <button onclick="openClassScheduleModal(${c.id_class}, '${c.kelas_nomor}', '${c.nama_kelas}', '${nomor}')" class="text-amber-600 bg-amber-50 hover:bg-amber-100 p-2 rounded-lg transition active:scale-95 shadow-sm" title="Edit Jadwal Kelas">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            </button>
+                            <!-- Tombol Hapus Jadwal Kelas -->
+                            <button onclick="deleteSchedulesByClass(${c.id_class})" class="text-red-600 bg-red-50 hover:bg-red-100 p-2 rounded-lg transition active:scale-95 shadow-sm" title="Hapus Semua Jadwal Kelas Ini">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <tr class="${rowHoverClass} transition border-b border-slate-200/80">
+                        <td class="py-3.5 px-4 font-semibold text-center text-slate-800">${c.kelas_nomor}</td>
+                        <td class="py-3.5 px-4 font-bold ${nameColorClass} cursor-pointer" onclick="openClassScheduleModal(${c.id_class}, '${c.kelas_nomor}', '${c.nama_kelas}', '${nomor}')">
+                            ${c.nama_kelas}
+                        </td>
+                        <td class="py-3.5 px-4 font-medium text-center">${nomor}</td>
+                        <td class="py-3.5 px-4 text-center">
+                            ${actionButtonsHtml}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Tampilkan semua jadwal di modal dengan baris berwarna biru
+        window.openClassScheduleModal = function(idClass, tingkat, namaKelas, nomor) {
+            const classNameFull = `${tingkat} ${namaKelas} ${nomor !== '-' ? nomor : ''}`.trim();
+            modalDetailTitle.textContent = `Jadwal Pelajaran - ${classNameFull}`;
+            badgeCurrentCycle.textContent = `Putaran ${currentCycle}`;
+
+            const schedulesForClass = allSchedules.filter(s => Number(s.id_class) === Number(idClass) && String(s.cycle_type) === String(currentCycle));
+
+            if (schedulesForClass.length === 0) {
+                scheduleDetailTableBody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Belum ada jadwal untuk kelas ini di Putaran ${currentCycle}.</td></tr>`;
+            } else {
+                scheduleDetailTableBody.innerHTML = schedulesForClass.map(s => {
+                    const guru = s.teacher ? (s.teacher.fullname || s.teacher.username) : '-';
+                    const room = s.room ? `${s.room.nama_room || ''} ${s.room.nomor_room ? '(' + s.room.nomor_room + ')' : ''}`.trim() : '-';
+                    const jam = s.jam_ke || '-';
+                    const waktu = `${(s.start_time || '').substring(0, 5)} - ${(s.end_time || '').substring(0, 5)}`;
+
+                    return `
+                        <tr onclick="openSingleScheduleEdit(${s.id_schedule})" class="bg-blue-50/80 hover:bg-blue-100 text-blue-900 border-b border-blue-200 transition cursor-pointer font-medium" title="Klik baris ini untuk mengedit data jadwal">
+                            <td class="py-3 px-3 font-bold text-center">${s.day_of_week}</td>
+                            <td class="py-3 px-3 font-semibold text-center">${jam}</td>
+                            <td class="py-3 px-3 font-mono text-center text-xs">${waktu}</td>
+                            <td class="py-3 px-4 font-bold text-blue-950">${s.mapel}</td>
+                            <td class="py-3 px-4">${guru}</td>
+                            <td class="py-3 px-3 text-center">${room}</td>
+                            <td class="py-3 px-3 text-center font-bold text-blue-700">${s.cycle_type}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            detailScheduleModal.classList.remove('hidden');
+        };
+
+        // Buka form pop up edit tunggal saat baris jadwal biru diklik
+        window.openSingleScheduleEdit = function(idSchedule) {
+            if (isScheduleLocked) {
+                alert('Jadwal sedang terkunci!');
+                return;
+            }
+
+            const target = allSchedules.find(s => Number(s.id_schedule) === Number(idSchedule));
+            if (!target) return;
+
+            editScheduleId.value = target.id_schedule;
+            editFormClass.value = target.id_class;
+            editFormDay.value = target.day_of_week;
+            editFormJamKe.value = target.jam_ke || '';
+            editFormStartTime.value = (target.start_time || '').substring(0, 5);
+            editFormEndTime.value = (target.end_time || '').substring(0, 5);
+            editFormMapel.value = target.mapel || '';
+            editFormGuru.value = target.id_guru;
+            editFormRoom.value = target.id_room;
+            editFormCycle.value = target.cycle_type;
+
+            formEditScheduleModal.classList.remove('hidden');
+        };
+
+        btnCloseEditSchedule.addEventListener('click', () => formEditScheduleModal.classList.add('hidden'));
+        btnCancelEditSchedule.addEventListener('click', () => formEditScheduleModal.classList.add('hidden'));
+
+        btnCloseDetailSchedule.addEventListener('click', () => detailScheduleModal.classList.add('hidden'));
+        btnOkDetailSchedule.addEventListener('click', () => detailScheduleModal.classList.add('hidden'));
+
+        btnCloseFormSchedule.addEventListener('click', () => formScheduleModal.classList.add('hidden'));
+        btnCancelFormSchedule.addEventListener('click', () => formScheduleModal.classList.add('hidden'));
+
+        // =========================================================================
+        // LOGIKA KONFIRMASI (YAKIN & TIDAK)
+        // =========================================================================
+
+        btnTriggerEditScheduleSave.addEventListener('click', () => {
+            if (!editScheduleForm.checkValidity()) {
+                editScheduleForm.reportValidity();
+                return;
+            }
+
+            pendingActionType = 'save_edit';
+            confirmActionTitle.textContent = 'Konfirmasi Perubahan Jadwal';
+            confirmActionDesc.textContent = 'Apakah Anda yakin ingin menyimpan perubahan data jadwal pelajaran ini?';
+            confirmActionIconWrapper.className = 'w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 mx-auto flex items-center justify-center mb-4';
+            btnConfirmActionYes.className = 'w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md';
+            btnConfirmActionYes.textContent = 'Yakin';
+
+            confirmScheduleActionModal.classList.remove('hidden');
+        });
+
+        btnTriggerScheduleSave.addEventListener('click', () => {
+            if (!scheduleForm.checkValidity()) {
+                scheduleForm.reportValidity();
+                return;
+            }
+
+            pendingActionType = 'save';
+            confirmActionTitle.textContent = 'Konfirmasi Simpan Jadwal';
+            confirmActionDesc.textContent = 'Apakah Anda yakin ingin menyimpan jadwal pelajaran baru ini?';
+            confirmActionIconWrapper.className = 'w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 mx-auto flex items-center justify-center mb-4';
+            btnConfirmActionYes.className = 'w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md';
+            btnConfirmActionYes.textContent = 'Yakin';
+
+            confirmScheduleActionModal.classList.remove('hidden');
+        });
+
+        window.deleteSchedulesByClass = function(idClass) {
+            if (isScheduleLocked) return;
+
+            const classObj = allClasses.find(c => c.id_class === idClass);
+            const cName = classObj ? `${classObj.kelas_nomor} ${classObj.nama_kelas} ${classObj.nomor_kelas || ''}`.trim() : 'kelas ini';
+
+            const targets = allSchedules.filter(s => Number(s.id_class) === Number(idClass) && String(s.cycle_type) === String(currentCycle));
+
+            if (targets.length === 0) {
+                alert(`Tidak ada jadwal pelajaran terdaftar untuk ${cName} pada Putaran ${currentCycle}.`);
+                return;
+            }
+
+            pendingActionType = 'delete';
+            pendingDeleteClassId = idClass;
+
+            confirmActionTitle.textContent = 'Konfirmasi Hapus Jadwal';
+            confirmActionDesc.textContent = `Apakah Anda yakin ingin menghapus seluruh jadwal pelajaran untuk ${cName} pada Putaran ${currentCycle}?`;
+            confirmActionIconWrapper.className = 'w-12 h-12 rounded-full bg-red-50 text-red-600 mx-auto flex items-center justify-center mb-4';
+            btnConfirmActionYes.className = 'w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-md';
+            btnConfirmActionYes.textContent = 'Yakin';
+
+            confirmScheduleActionModal.classList.remove('hidden');
+        };
+
+        btnConfirmActionNo.addEventListener('click', () => {
+            confirmScheduleActionModal.classList.add('hidden');
+            pendingActionType = null;
+            pendingDeleteClassId = null;
+            pendingLockCycleVal = null;
+            pendingToggleLockVal = null;
+        });
+
+        btnConfirmActionYes.addEventListener('click', async () => {
+            confirmScheduleActionModal.classList.add('hidden');
+
+            if (pendingActionType === 'save') {
+                await executeSaveSchedule();
+            } else if (pendingActionType === 'save_edit') {
+                await executeSaveEditSchedule();
+            } else if (pendingActionType === 'delete') {
+                await executeDeleteSchedules(pendingDeleteClassId);
+            } else if (pendingActionType === 'lock_cycle') {
+                await executeLockActiveCycle(pendingLockCycleVal);
+            } else if (pendingActionType === 'toggle_lock') {
+                await executeToggleScheduleLock(pendingToggleLockVal);
+            }
+
+            pendingActionType = null;
+            pendingDeleteClassId = null;
+            pendingLockCycleVal = null;
+            pendingToggleLockVal = null;
+        });
+
+        async function executeSaveEditSchedule() {
+            const sid = editScheduleId.value;
+            const targetCycle = editFormCycle.value;
+            const targetClassId = editFormClass.value;
+
+            const payload = {
+                id_class: targetClassId,
+                day_of_week: editFormDay.value,
+                jam_ke: editFormJamKe.value.trim(),
+                start_time: editFormStartTime.value,
+                end_time: editFormEndTime.value,
+                mapel: editFormMapel.value.trim(),
+                id_guru: editFormGuru.value,
+                id_room: editFormRoom.value,
+                cycle_type: targetCycle
+            };
+
+            try {
+                btnTriggerEditScheduleSave.disabled = true;
+                btnTriggerEditScheduleSave.textContent = 'Menyimpan...';
+
+                const res = await fetch(`${API_BASE_URL}/schedules/${sid}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+
+                if (res.ok) {
+                    alert('Jadwal berhasil diperbarui!');
+                    formEditScheduleModal.classList.add('hidden');
+                    detailScheduleModal.classList.add('hidden');
+                    await fetchSchedules();
+                    renderClassTable();
+                } else {
+                    alert(result.message || 'Gagal memperbarui jadwal.');
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan koneksi server.');
+            } finally {
+                btnTriggerEditScheduleSave.disabled = false;
+                btnTriggerEditScheduleSave.textContent = 'Simpan';
+            }
+        }
+
+        async function executeToggleScheduleLock(lockVal) {
+            try {
+                btnToggleLockJadwal.disabled = true;
+
+                const res = await fetch(`${API_BASE_URL}/system-config/toggle-schedule-lock`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ is_schedule_locked: lockVal })
+                });
+
+                const json = await res.json();
+
+                if (res.ok) {
+                    isScheduleLocked = lockVal;
+                    updateScheduleLockUI();
+                } else {
+                    alert(json.message || 'Gagal memperbarui status kunci jadwal.');
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan koneksi saat mengubah status kunci jadwal.');
+            } finally {
+                btnToggleLockJadwal.disabled = false;
+            }
+        }
+
+        async function executeLockActiveCycle(cycleVal) {
+            try {
+                btnLockCycle.disabled = true;
+
+                const res = await fetch(`${API_BASE_URL}/system-config/set-active-cycle`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ active_cycle: cycleVal })
+                });
+
+                const json = await res.json();
+
+                if (res.ok) {
+                    lockedActiveCycle = String(cycleVal);
+                    selectLockCycle.value = lockedActiveCycle;
+                    applyCycleVisualStatus();
+                    await fetchSchedules();
+                    renderClassTable();
+                    alert(json.message || `Putaran ${cycleVal} berhasil dikunci sebagai putaran aktif!`);
+                } else {
+                    alert(json.message || 'Gagal mengubah putaran aktif.');
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan koneksi saat mengunci putaran.');
+            } finally {
+                btnLockCycle.disabled = false;
+            }
+        }
+
+        async function executeSaveSchedule() {
+            const payload = {
+                id_class: formClass.value,
+                day_of_week: formDay.value,
+                jam_ke: formJamKe.value.trim(),
+                start_time: formStartTime.value,
+                end_time: formEndTime.value,
+                mapel: formMapel.value.trim(),
+                id_guru: formGuru.value,
+                id_room: formRoom.value,
+                cycle_type: formCycle.value
+            };
+
+            const sid = scheduleIdInput.value;
+            const url = sid ? `${API_BASE_URL}/schedules/${sid}` : `${API_BASE_URL}/schedules`;
+            const method = sid ? 'PUT' : 'POST';
+
+            try {
+                btnTriggerScheduleSave.disabled = true;
+                btnTriggerScheduleSave.textContent = 'Menyimpan...';
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+
+                if (res.ok) {
+                    alert('Jadwal berhasil disimpan!');
+                    formScheduleModal.classList.add('hidden');
+                    await fetchSchedules();
+                    renderClassTable();
+                } else {
+                    alert(result.message || 'Gagal menyimpan jadwal.');
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan koneksi ke server.');
+            } finally {
+                btnTriggerScheduleSave.disabled = false;
+                btnTriggerScheduleSave.textContent = 'Simpan';
+            }
+        }
+
+        async function executeDeleteSchedules(idClass) {
+            const targets = allSchedules.filter(s => Number(s.id_class) === Number(idClass) && String(s.cycle_type) === String(currentCycle));
+
+            try {
+                for (const item of targets) {
+                    await fetch(`${API_BASE_URL}/schedules/${item.id_schedule}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    });
+                }
+                alert('Jadwal kelas berhasil dihapus!');
+                await fetchSchedules();
+                renderClassTable();
+            } catch (err) {
+                alert('Terjadi kesalahan saat menghapus jadwal.');
+            }
+        }
+
+        btnTriggerExcelImport.addEventListener('click', () => {
+            if (isScheduleLocked) return;
+            excelFileInput.value = '';
+            excelFileInput.click();
+        });
+
+        excelFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+                    if (rows.length === 0) {
+                        alert('File Excel kosong atau tidak memiliki baris data!');
+                        return;
+                    }
+
+                    const payloadItems = [];
+
+                    for (const row of rows) {
+                        const findVal = (keyNames) => {
+                            for (const k in row) {
+                                for (const target of keyNames) {
+                                    if (k.trim().toLowerCase() === target.toLowerCase()) {
+                                        return String(row[k]).trim();
+                                    }
+                                }
+                            }
+                            return '';
+                        };
+
+                        const kelas = findVal(['Kelas', 'Class']);
+                        const hari = findVal(['Hari', 'Day']);
+                        const jamKe = findVal(['Jam Ke', 'Jam', 'Jam_Ke']);
+                        const waktu = findVal(['Waktu', 'Time']);
+                        const mapel = findVal(['Mata Pelajaran', 'Mapel']);
+                        const guru = findVal(['Guru Pengampu', 'Guru', 'Pengampu']);
+                        const ruangan = findVal(['Ruangan', 'Ruang', 'Room']);
+                        let putaran = findVal(['Putaran', 'Cycle', 'Putaran (Cycle)', 'Cycle Type']);
+
+                        if (!putaran) putaran = currentCycle;
+
+                        if (kelas && hari && waktu && mapel && guru && ruangan) {
+                            payloadItems.push({
+                                kelas: kelas,
+                                hari: hari,
+                                jam_ke: jamKe,
+                                waktu: waktu,
+                                mapel: mapel,
+                                guru: guru,
+                                ruangan: ruangan,
+                                cycle_type: putaran
+                            });
+                        }
+                    }
+
+                    if (payloadItems.length === 0) {
+                        alert('Tidak ditemukan data yang valid pada file Excel! Pastikan susunan kolom sesuai: Kelas, Hari, Jam Ke, Waktu, Mata Pelajaran, Guru Pengampu, Ruangan, Putaran.');
+                        return;
+                    }
+
+                    if (!confirm(`Ditemukan ${payloadItems.length} baris jadwal pada Excel. Lanjutkan proses import ke database?`)) {
+                        return;
+                    }
+
+                    btnTriggerExcelImport.disabled = true;
+                    btnTriggerExcelImport.innerHTML = `<span>Mengimpor...</span>`;
+
+                    const res = await fetch(`${API_BASE_URL}/schedules/import-batch`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ items: payloadItems })
+                    });
+
+                    const resJson = await res.json();
+
+                    if (res.ok) {
+                        let msg = resJson.message || 'Import data jadwal berhasil!';
+                        if (resJson.errors && resJson.errors.length > 0) {
+                            msg += '\n\nCatatan baris dilewati (bentrok/tidak ditemukan):\n' + resJson.errors.slice(0, 5).join('\n');
+                            if (resJson.errors.length > 5) {
+                                msg += `\n...dan ${resJson.errors.length - 5} kendala lainnya.`;
+                            }
+                        }
+                        alert(msg);
+                        formScheduleModal.classList.add('hidden');
+                        await fetchSchedules();
+                        renderClassTable();
+                    } else {
+                        let errorMsg = resJson.message || 'Gagal mengimpor file Excel.';
+                        if (resJson.errors && Array.isArray(resJson.errors)) {
+                            errorMsg += '\n' + resJson.errors.slice(0, 5).join('\n');
+                        }
+                        alert(errorMsg);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Gagal membaca file Excel. Pastikan format file .xlsx valid.');
+                } finally {
+                    btnTriggerExcelImport.disabled = false;
+                    btnTriggerExcelImport.innerHTML = `
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        <span>Import Excel</span>
+                    `;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        btnDownloadTemplate.addEventListener('click', () => {
+            const sampleClass = allClasses.length > 0 ? `${allClasses[0].kelas_nomor} ${allClasses[0].nama_kelas} ${allClasses[0].nomor_kelas || ''}`.trim() : 'X RPL 1';
+            const sampleClass2 = allClasses.length > 1 ? `${allClasses[1].kelas_nomor} ${allClasses[1].nama_kelas} ${allClasses[1].nomor_kelas || ''}`.trim() : 'X RPL 2';
+            const sampleGuru1 = allTeachers.length > 0 ? (allTeachers[0].fullname || allTeachers[0].username) : 'Budi Santoso, S.Pd';
+            const sampleGuru2 = allTeachers.length > 1 ? (allTeachers[1].fullname || allTeachers[1].username) : 'Siti Aminah, M.Pd';
+            const sampleRoom1 = allRooms.length > 0 ? `${allRooms[0].nama_room} ${allRooms[0].nomor_room || ''}`.trim() : 'Ruang 1';
+            const sampleRoom2 = allRooms.length > 1 ? `${allRooms[1].nama_room} ${allRooms[1].nomor_room || ''}`.trim() : 'Lab 1';
+
+            const templateData = [
+                {
+                    'Kelas': sampleClass,
+                    'Hari': 'Senin',
+                    'Jam Ke': '1',
+                    'Waktu': '07:00 - 07:45',
+                    'Mata Pelajaran': 'Bahasa Indonesia',
+                    'Guru Pengampu': sampleGuru1,
+                    'Ruangan': sampleRoom1,
+                    'Putaran': '1'
+                },
+                {
+                    'Kelas': sampleClass,
+                    'Hari': 'Senin',
+                    'Jam Ke': '2',
+                    'Waktu': '07:45 - 08:30',
+                    'Mata Pelajaran': 'Bahasa Indonesia',
+                    'Guru Pengampu': sampleGuru1,
+                    'Ruangan': sampleRoom1,
+                    'Putaran': '1'
+                },
+                {
+                    'Kelas': sampleClass2,
+                    'Hari': 'Senin',
+                    'Jam Ke': '1',
+                    'Waktu': '07:00 - 07:45',
+                    'Mata Pelajaran': 'Matematika',
+                    'Guru Pengampu': sampleGuru2,
+                    'Ruangan': sampleRoom2,
+                    'Putaran': '1'
+                },
+                {
+                    'Kelas': sampleClass2,
+                    'Hari': 'Senin',
+                    'Jam Ke': '2',
+                    'Waktu': '07:45 - 08:30',
+                    'Mata Pelajaran': 'Matematika',
+                    'Guru Pengampu': sampleGuru2,
+                    'Ruangan': sampleRoom2,
+                    'Putaran': '1'
+                }
+            ];
+
+            const ws = XLSX.utils.json_to_sheet(templateData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Jadwal Pelajaran");
+
+            XLSX.writeFile(wb, "Template_Jadwal_Pelajaran.xlsx");
+        });
+
+        btnDownloadPdf.addEventListener('click', () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape');
+
+            doc.setFontSize(16);
+            doc.text(`JADWAL PELAJARAN KELAS ${currentTingkat} (PUTARAN ${currentCycle})`, 14, 15);
+            doc.setFontSize(10);
+            doc.text(`Sistem Informasi SCP Sekolah - Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
+
+            const filteredClasses = allClasses.filter(c => c.kelas_nomor === currentTingkat);
+            filteredClasses.sort((a, b) => {
+                const nameA = (a.nama_kelas || '').toLowerCase();
+                const nameB = (b.nama_kelas || '').toLowerCase();
+                const comp = nameA.localeCompare(nameB);
+                if (comp !== 0) return comp;
+                return (parseInt(a.nomor_kelas) || 0) - (parseInt(b.nomor_kelas) || 0);
+            });
+
+            const dayOrder = { 'Senin': 1, 'Selasa': 2, 'Rabu': 3, 'Kamis': 4, 'Jumat': 5, 'Sabtu': 6, 'Minggu': 7 };
+
+            let rawRows = [];
+
+            filteredClasses.forEach(cls => {
+                const cFull = `${cls.kelas_nomor} ${cls.nama_kelas} ${cls.nomor_kelas || ''}`.trim();
+                let schedules = allSchedules.filter(s => Number(s.id_class) === Number(cls.id_class) && String(s.cycle_type) === String(currentCycle));
+
+                if (schedules.length > 0) {
+                    schedules.sort((a, b) => {
+                        const ordA = dayOrder[a.day_of_week] || 99;
+                        const ordB = dayOrder[b.day_of_week] || 99;
+                        if (ordA === ordB) return (a.start_time || '').localeCompare(b.start_time || '');
+                        return ordA - ordB;
+                    });
+
+                    schedules.forEach(s => {
+                        const guru = s.teacher ? (s.teacher.fullname || s.teacher.username) : '-';
+                        const room = s.room ? `${s.room.nama_room || ''} ${s.room.nomor_room ? '(' + s.room.nomor_room + ')' : ''}`.trim() : '-';
+                        const waktu = `${(s.start_time || '').substring(0, 5)} - ${(s.end_time || '').substring(0, 5)}`;
+                        rawRows.push({
+                            kelas: cFull,
+                            hari: s.day_of_week,
+                            jam: s.jam_ke || '-',
+                            waktu: waktu,
+                            mapel: s.mapel,
+                            guru: guru,
+                            ruang: room
+                        });
+                    });
+                } else {
+                    rawRows.push({
+                        kelas: cFull,
+                        hari: '-',
+                        jam: '-',
+                        waktu: '-',
+                        mapel: 'Belum ada jadwal',
+                        guru: '-',
+                        ruang: '-'
+                    });
+                }
+            });
+
+            let bodyTable = [];
+            let i = 0;
+            while (i < rawRows.length) {
+                let classSpan = 0;
+                let currentClass = rawRows[i].kelas;
+
+                for (let k = i; k < rawRows.length; k++) {
+                    if (rawRows[k].kelas === currentClass) {
+                        classSpan++;
+                    } else {
+                        break;
+                    }
+                }
+
+                let j = i;
+                let classEnd = i + classSpan;
+                let isFirstRowOfClass = true;
+
+                while (j < classEnd) {
+                    let daySpan = 0;
+                    let currentDay = rawRows[j].hari;
+
+                    for (let d = j; d < classEnd; d++) {
+                        if (rawRows[d].hari === currentDay) {
+                            daySpan++;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    for (let r = 0; r < daySpan; r++) {
+                        let rowObj = rawRows[j + r];
+                        let tableRow = [];
+
+                        if (isFirstRowOfClass) {
+                            tableRow.push({
+                                content: currentClass,
+                                rowSpan: classSpan,
+                                styles: { valign: 'middle', halign: 'center', fontStyle: 'bold' }
+                            });
+                            isFirstRowOfClass = false;
+                        }
+
+                        if (r === 0) {
+                            tableRow.push({
+                                content: currentDay,
+                                rowSpan: daySpan,
+                                styles: { valign: 'middle', halign: 'center', fontStyle: 'bold' }
+                            });
+                        }
+
+                        tableRow.push(
+                            { content: rowObj.jam, styles: { halign: 'center', valign: 'middle' } },
+                            { content: rowObj.waktu, styles: { halign: 'center', valign: 'middle' } },
+                            { content: rowObj.mapel, styles: { valign: 'middle' } },
+                            { content: rowObj.guru, styles: { valign: 'middle' } },
+                            { content: rowObj.ruang, styles: { halign: 'center', valign: 'middle' } }
+                        );
+
+                        bodyTable.push(tableRow);
+                    }
+
+                    j += daySpan;
+                }
+
+                i += classSpan;
+            }
+
+            doc.autoTable({
+                startY: 28,
+                head: [['Kelas', 'Hari', 'Jam Ke', 'Waktu', 'Mata Pelajaran', 'Guru Pengampu', 'Ruangan']],
+                body: bodyTable,
+                styles: { fontSize: 8, cellPadding: 2.5, lineColor: [203, 213, 225], lineWidth: 0.1 },
+                headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+                theme: 'grid'
+            });
+
+            doc.save(`Jadwal_Kelas_${currentTingkat}_Putaran_${currentCycle}.pdf`);
+        });
+    </script>
+    <script src="../js/global-layout.js"></script>
+</body>
+</html>

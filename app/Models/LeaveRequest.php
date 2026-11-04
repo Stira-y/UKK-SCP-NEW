@@ -21,6 +21,7 @@ class LeaveRequest extends Model
         'reason',
         'document_path',
         'status_approval',
+        'reason_ditolak',
     ];
 
     protected $casts = [

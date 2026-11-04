@@ -13,7 +13,8 @@ class Room extends Model
     protected $primaryKey = 'id_room';
 
     protected $fillable = [
-        'room_name',
+        'nama_room',
+        'nomor_room',
     ];
 
     public function schedules()

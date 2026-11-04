@@ -19,10 +19,11 @@ return new class extends Migration
             $table->string('password', 255);
             $table->string('fullname', 255);
             $table->string('email', 255);
+            $table->string('avatar', 255)->nullable();
             $table->string('nis', 20)->nullable();
             $table->string('nisn', 20)->nullable();
             $table->string('nip', 30)->nullable();
-            $table->enum('title', ['Walikelas', 'Guru BK', 'Waka', 'Guru Biasa'])->nullable();
+            $table->string('title', 100)->nullable();
             $table->timestamps();
         });
     }

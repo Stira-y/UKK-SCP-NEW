@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id('id_presensi');
             $table->foreignId('id_jurnal')->constrained('journals', 'id_jurnal')->onDelete('cascade');
             $table->foreignId('id_siswa')->constrained('users', 'id_user')->onDelete('cascade');
-            $table->enum('status', ['Hadir', 'Sakit', 'Izin', 'Alpa']);
+            $table->enum('status', ['Hadir', 'Sakit', 'Izin', 'Alpa', 'Terlambat']);
             $table->date('date');
             $table->timestamps();
         });

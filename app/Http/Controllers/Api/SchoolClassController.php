@@ -19,6 +19,7 @@ class SchoolClassController extends Controller
         $request->validate([
             'kelas_nomor' => 'required|in:X,XI,XII',
             'nama_kelas' => 'required|string|max:50',
+            'nomor_kelas' => 'nullable|string|max:10',
         ]);
 
         $class = SchoolClass::create($request->all());
@@ -44,6 +45,7 @@ class SchoolClassController extends Controller
         $request->validate([
             'kelas_nomor' => 'sometimes|in:X,XI,XII',
             'nama_kelas' => 'sometimes|string|max:50',
+            'nomor_kelas' => 'nullable|string|max:10',
         ]);
 
         $class->update($request->all());

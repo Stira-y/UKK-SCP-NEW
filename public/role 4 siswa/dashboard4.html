@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Siswa - Sistem SCP</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Cropper.js CSS & JS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col font-sans overflow-hidden">
+
+    <!-- Navbar Utama -->
+    <nav class="bg-indigo-600 text-white px-4 md:px-6 py-3 flex justify-between items-center shadow-md z-30 shrink-0">
+        <div class="flex items-center space-x-3 md:space-x-4">
+            <button id="toggleSidebarNav" class="p-2 text-indigo-100 hover:text-white hover:bg-indigo-700/50 rounded-lg focus:outline-none transition md:pointer-events-none md:opacity-50 md:cursor-not-allowed" aria-label="Toggle Navigation">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+
+            <!-- Trigger Modal Profil -->
+            <div id="btnOpenProfile" onclick="openProfileModal()" class="flex items-center space-x-2 bg-indigo-700/60 hover:bg-indigo-700/90 px-3 py-1.5 rounded-full border border-indigo-400/30 cursor-pointer transition">
+                <div class="w-7 h-7 rounded-full bg-indigo-200 text-indigo-800 flex items-center justify-center font-bold text-xs shadow-sm overflow-hidden flex-shrink-0">
+                    <img id="navAvatarImg" src="" class="w-full h-full object-cover hidden" alt="Avatar">
+                    <svg id="navAvatarSvg" class="w-5 h-5 text-indigo-600 mt-1" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                <div class="text-xs md:text-sm font-medium flex items-center space-x-1.5 leading-none truncate max-w-[150px] sm:max-w-[250px] md:max-w-none">
+                    <span id="navFullname" class="font-semibold truncate leading-none">Siswa</span>
+                    <span class="text-indigo-300 leading-none">|</span>
+                    <span id="navNis" class="text-indigo-200 leading-none">-</span>
+                </div>
+            </div>
+
+            <h1 class="hidden lg:block text-base md:text-lg font-bold border-l border-indigo-400/40 pl-4">
+                SCP Sekolah - Panel Siswa
+            </h1>
+        </div>
+
+        <!-- Tombol Keluar -->
+        <button id="btnLogout" onclick="handleLogout()" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition flex-shrink-0">
+            Keluar
+        </button>
+    </nav>
+
+    <!-- Layout Utama -->
+    <div class="flex flex-1 relative overflow-hidden h-[calc(100vh-57px)]">
+        <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-20 hidden md:hidden transition-opacity duration-300"></div>
+
+        <aside id="sidebar" class="fixed md:static top-[57px] bottom-0 left-0 w-64 bg-white border-r border-slate-200 p-5 flex flex-col justify-between transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-20 h-full shrink-0">
+            <div class="space-y-6">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Navigasi Utama</span>
+                </div>
+
+                <nav class="space-y-2">
+                    <a href="dashboard4.html" class="flex items-center space-x-3 px-4 py-3 bg-indigo-50 text-indigo-600 font-semibold rounded-xl transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 001 1m-6 0h6"></path>
+                        </svg>
+                        <span>Dashboard</span>
+                    </a>
+
+                    <a href="suratizin.html" class="flex items-center space-x-3 px-4 py-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium rounded-xl transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span>Surat Izin</span>
+                    </a>
+                </nav>
+            </div>
+            
+            <div class="border-t border-slate-100 pt-4 text-xs text-slate-400 text-center">
+                Sistem SCP &copy; 2026
+            </div>
+        </aside>
+
+        <!-- Konten Utama Dashboard Siswa -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full">
+            <div class="max-w-6xl mx-auto space-y-6">
+
+                <!-- Kartu Ucapan Selamat Datang, Shortcut Surat Izin & Ringkasan Siswa -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-slate-800">
+                            Selamat Datang, <span id="userName" class="text-indigo-600">Siswa</span>!
+                        </h2>
+                        <p class="text-slate-500 text-xs md:text-sm mt-0.5" id="userClassIdentity">Memuat info kelas...</p>
+                    </div>
+
+                    <!-- Area Aksi & Status: Tombol Shortcut Surat Izin di Samping Kiri Status Kehadiran Lengkap -->
+                    <div class="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+                        <a href="suratizin.html" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold shadow-sm transition flex items-center space-x-2 shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            <span>Surat Izin</span>
+                        </a>
+
+                        <div class="bg-indigo-50/70 border border-indigo-100 rounded-xl p-3 flex items-center space-x-3.5 shrink-0 shadow-xs">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Status Harian Rekap</span>
+                                <div class="flex items-center space-x-2 mt-0.5">
+                                    <span id="dailyRecapBadge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-600">
+                                        Memeriksa...
+                                    </span>
+                                    <span id="dailyScoreBadge" class="text-xs font-extrabold text-indigo-700 bg-white px-2 py-0.5 rounded-md border border-indigo-200 shadow-xs">
+                                        +0
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KARTU INFORMASI IZIN KHUSUS HARI INI (READ-ONLY) -->
+                <div id="studentSpecialLeaveCard" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 p-5 transition-all">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div class="flex items-center space-x-3.5">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <h4 class="font-bold text-sm text-slate-800">Izin Khusus KBM Hari Ini</h4>
+                                    <span class="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full">Disetujui Guru Pengajar</span>
+                                </div>
+                                <p class="text-xs text-slate-600 mt-0.5">
+                                    Alasan: <span id="studentSpecialLeaveReasonText" class="font-bold text-slate-800">-</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="text-xs text-slate-500 font-medium self-end sm:self-auto" id="studentSpecialLeaveTeacherText">
+                            Dicatat oleh: Guru Pengajar
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1. TABEL REKAP KEHADIRAN SISWA ITU SENDIRI (WARNA NETRAL) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/60">
+                        <div class="font-bold text-slate-800 text-sm md:text-base">
+                            Rekap Kehadiran Saya Selama 1 Bulan (<span id="recapPeriodText">Memuat...</span>)
+                        </div>
+                        <span class="text-xs font-semibold text-slate-500">
+                            Akumulasi Presensi Hadir, Izin, dan Alpa
+                        </span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[950px]">
+                            <thead>
+                                <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="py-3.5 px-3 font-semibold text-center w-28">NISN</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-24">NIS</th>
+                                    <th class="py-3.5 px-4 font-semibold">Nama Lengkap</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-20">Izin</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-20">Alpa</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-20">Minggu 1</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-20">Minggu 2</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-20">Minggu 3</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-20">Minggu 4</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-24">Total Hadir</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-24">Total Izin</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-24">Total Alpa</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentRecapBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
+                                <tr>
+                                    <td colspan="12" class="py-6 text-center text-slate-400">Memuat rekap kehadiran Anda...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 2. JADWAL PELAJARAN HARI INI & STATUS PRESENSI TIAP MAPEL -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/60">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-slate-800 text-sm md:text-base">Jadwal Pelajaran Hari Ini</span>
+                            <span id="todayInfoBadge" class="text-xs font-bold text-indigo-600 bg-indigo-100/70 px-2.5 py-0.5 rounded-full">
+                                Memuat hari...
+                            </span>
+                        </div>
+                        <span id="activeCycleBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 self-start sm:self-auto">
+                            Putaran Aktif: -
+                        </span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[700px]">
+                            <thead>
+                                <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="py-3.5 px-4 font-semibold text-center w-20">Jam Ke</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-36">Waktu</th>
+                                    <th class="py-3.5 px-4 font-semibold">Mata Pelajaran</th>
+                                    <th class="py-3.5 px-4 font-semibold">Guru Pengampu</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-28">Ruangan</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-44">Status Presensi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentScheduleBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
+                                <tr>
+                                    <td colspan="6" class="py-8 text-center text-slate-400">Memuat jadwal pelajaran kelas Anda...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL PROFIL -->
+    <div id="profileModal" class="fixed inset-0 bg-slate-900/60 z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden transform transition-all">
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                <h3 class="font-bold text-lg">Profil Saya</h3>
+                <button id="btnCloseProfile" class="text-indigo-200 hover:text-white text-xl font-bold">&times;</button>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <div class="flex flex-col items-center justify-center">
+                    <div class="relative group">
+                        <div class="w-24 h-24 rounded-full bg-slate-200 border-4 border-indigo-100 flex items-center justify-center overflow-hidden shadow-md">
+                            <img id="modalAvatarImg" src="" class="w-full h-full object-cover hidden" alt="Foto Profil">
+                            <svg id="modalAvatarSvg" class="w-16 h-16 text-slate-400 mt-2" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            </svg>
+                        </div>
+                        <label for="inputAvatar" class="absolute bottom-0 right-0 bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-full cursor-pointer shadow-md transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                <circle cx="12" cy="13" r="3" stroke-width="2"></circle>
+                            </svg>
+                        </label>
+                        <input type="file" id="inputAvatar" accept=".jpg,.jpeg,.png" class="hidden">
+                    </div>
+                    <span class="text-xs text-slate-400 mt-2">Maks 5 MB (JPG, PNG, JPEG)</span>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Nama Lengkap</label>
+                    <input type="text" id="modalFullname" readonly class="w-full px-3.5 py-2 rounded-lg bg-slate-100 border border-slate-300 text-slate-700 text-sm font-semibold outline-none cursor-not-allowed">
+                </div>
+                <div>
+                    <label for="modalUsername" class="block text-xs font-semibold text-slate-500 uppercase mb-1">Username</label>
+                    <input type="text" id="modalUsername" placeholder="Masukkan username baru..." class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                    <p id="usernameError" class="text-[11px] text-red-500 italic mt-1 hidden"></p>
+                </div>
+                <div id="initEmailContainer" class="flex items-center justify-between border border-slate-200 p-3 rounded-xl bg-slate-50">
+                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">EMAIL</span>
+                    <button type="button" id="btnInitChangeEmail" class="w-32 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm flex items-center justify-center">Ganti Email</button>
+                </div>
+                <div id="initVerifyContainer" class="flex items-center justify-between border border-slate-200 p-3 rounded-xl bg-slate-50">
+                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">PASSWORD</span>
+                    <button type="button" id="btnInitChangePassword" class="w-32 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm flex items-center justify-center">Ganti Password</button>
+                </div>
+                <div id="passwordContainer" class="hidden space-y-1">
+                    <div class="flex items-center justify-between mb-1">
+                        <label for="modalPassword" class="block text-xs font-bold text-slate-600 uppercase">PASSWORD BARU</label>
+                        <span class="text-[11px] text-indigo-600 font-semibold">OTP Terverifikasi</span>
+                    </div>
+                    <div class="relative">
+                        <input type="password" id="modalPassword" placeholder="Biarkan kosong jika tidak diganti" class="w-full pl-3.5 pr-10 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                        <button type="button" id="togglePasswordBtn" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-indigo-600 focus:outline-none">
+                            <svg id="eyeOffIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22"></path></svg>
+                            <svg id="eyeOnIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                        </button>
+                    </div>
+                    <p id="passwordHint" class="text-[11px] text-slate-400">Minimal 8 karakter, huruf besar, kecil, angka, simbol, tanpa spasi.</p>
+                    <p id="passwordError" class="text-[11px] text-red-500 italic hidden"></p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">NIS</label>
+                        <input type="text" id="modalNis" readonly class="w-full px-3.5 py-2 rounded-lg bg-slate-100 border border-slate-300 text-slate-700 text-sm outline-none cursor-not-allowed">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">NISN</label>
+                        <input type="text" id="modalNisn" readonly class="w-full px-3.5 py-2 rounded-lg bg-slate-100 border border-slate-300 text-slate-700 text-sm outline-none cursor-not-allowed">
+                    </div>
+                </div>
+            </div>
+            <div class="bg-slate-50 px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 shrink-0">
+                <button id="btnCancelProfile" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition">Batal</button>
+                <button id="btnSaveProfile" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Input Email Baru -->
+    <div id="emailGuideModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col transform transition-all">
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                <h3 class="font-bold text-lg">Ganti Email Akun</h3>
+                <button id="btnCloseEmailGuide" class="text-indigo-200 hover:text-white text-xl font-bold">&times;</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="space-y-2">
+                    <label class="block text-xs font-bold text-slate-700 uppercase">Masukkan Email Baru</label>
+                    <input type="email" id="inputNewEmail" placeholder="contoh: user@gmail.com" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                    <p id="newEmailError" class="text-[11px] text-red-500 font-medium hidden"></p>
+                    <div class="flex justify-end pt-3">
+                        <button type="button" id="btnSubmitNewEmail" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition shadow">Kirim Kode OTP</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Verifikasi OTP -->
+    <div id="otpModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform transition-all p-6 relative">
+            <button id="btnCloseOtp" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold focus:outline-none">&times;</button>
+            <h3 id="otpModalTitle" class="text-lg font-bold text-slate-800 text-center mb-1 pr-6 pl-6">Verifikasi Kode OTP</h3>
+            <p id="otpModalSubtext" class="text-xs text-slate-500 mb-6 text-center">Kode verifikasi 6 angka telah dikirim via email.</p>
+            <div class="flex items-center justify-center gap-1.5 mb-3" id="otpContainer">
+                <input type="text" maxlength="1" class="otp-input w-9 h-11 text-center text-lg font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" />
+                <input type="text" maxlength="1" class="otp-input w-9 h-11 text-center text-lg font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" />
+                <input type="text" maxlength="1" class="otp-input w-9 h-11 text-center text-lg font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" />
+                <input type="text" maxlength="1" class="otp-input w-9 h-11 text-center text-lg font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" />
+                <input type="text" maxlength="1" class="otp-input w-9 h-11 text-center text-lg font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" />
+                <input type="text" maxlength="1" class="otp-input w-9 h-11 text-center text-lg font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" />
+                <button type="button" id="btnManualRetryOtp" title="Kirim ulang" class="w-9 h-11 flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg border border-blue-200 transition shrink-0">
+                    <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+            </div>
+            <p id="otpErrorMessage" class="text-[11px] text-red-500 text-center font-medium mb-3 hidden"></p>
+            <div class="text-center mb-6 space-y-1">
+                <button type="button" id="btnResendOtp" disabled class="text-xs font-medium text-slate-400 cursor-not-allowed">Kirim ulang via email</button>
+                <p class="text-[11px] text-slate-400">Cooldown: <span id="timerText" class="font-bold text-slate-600">30s</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Crop Image -->
+    <div id="cropModal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-slate-800 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                <h3 class="font-bold text-base">Potong & Putar Foto</h3>
+                <button id="btnCloseCrop" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+            </div>
+            <div class="p-4 flex-1 overflow-hidden flex items-center justify-center bg-slate-950">
+                <div class="max-h-[60vh] w-full flex items-center justify-center">
+                    <img id="cropImage" class="max-w-full max-h-[50vh] block" alt="Crop">
+                </div>
+            </div>
+            <div class="bg-slate-100 p-3 flex justify-center space-x-4 border-t border-slate-200 shrink-0">
+                <button id="btnRotateLeft" class="px-3.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold">Putar Kiri</button>
+                <button id="btnRotateRight" class="px-3.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold">Putar Kanan</button>
+            </div>
+            <div class="bg-white px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 shrink-0">
+                <button id="btnCancelCrop" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium">Batal</button>
+                <button id="btnApplyCrop" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium shadow">Gunakan Foto Ini</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Utama (Modular Profil & Logout) -->
+    <script src="../js/profile-role siswa.js"></script>
+
+    <!-- Script Khusus Dashboard Siswa: Rekap Siswa, Jadwal Hari Ini, Status Presensi & Izin Khusus Realtime -->
+    <script>
+        const API_BASE = 'http://localhost/ukk-scp-new/public/api';
+        const authToken = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+        const studentData = JSON.parse(localStorage.getItem('user_data') || sessionStorage.getItem('user_data') || '{}');
+
+        const studentRecapBody = document.getElementById('studentRecapBody');
+        const recapPeriodText = document.getElementById('recapPeriodText');
+        const studentScheduleBody = document.getElementById('studentScheduleBody');
+        const userClassIdentity = document.getElementById('userClassIdentity');
+        const dailyRecapBadge = document.getElementById('dailyRecapBadge');
+        const dailyScoreBadge = document.getElementById('dailyScoreBadge');
+        const todayInfoBadge = document.getElementById('todayInfoBadge');
+        const activeCycleBadge = document.getElementById('activeCycleBadge');
+
+        // Komponen Izin Khusus Read-Only
+        const studentSpecialLeaveCard = document.getElementById('studentSpecialLeaveCard');
+        const studentSpecialLeaveReasonText = document.getElementById('studentSpecialLeaveReasonText');
+        const studentSpecialLeaveTeacherText = document.getElementById('studentSpecialLeaveTeacherText');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            renderStudentClassInfo();
+            await loadStudentDashboardData();
+            setInterval(async () => {
+                await loadStudentDashboardData();
+            }, 30000);
+        });
+
+        function renderStudentClassInfo() {
+            let className = 'Kelas Belum Ditentukan';
+            if (studentData.school_class) {
+                const sc = studentData.school_class;
+                className = `${sc.kelas_nomor || ''} ${sc.nama_kelas || ''} ${sc.nomor_kelas || ''}`.trim();
+            } else if (studentData.kelas) {
+                className = studentData.kelas;
+            }
+            userClassIdentity.textContent = `Kelas: ${className} | NISN: ${studentData.nisn || '-'}`;
+        }
+
+        async function loadStudentDashboardData() {
+            const daysIndo = { 0: 'Minggu', 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu' };
+            const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            
+            const today = new Date();
+            const todayName = daysIndo[today.getDay()] || 'Senin';
+            const todayStr = today.toISOString().split('T')[0];
+            const currentMonth = today.getMonth() + 1;
+            const currentYear = today.getFullYear();
+
+            todayInfoBadge.textContent = `${todayName}, ${todayStr}`;
+            recapPeriodText.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+
+            let activeCycle = '1';
+
+            try {
+                const resConfig = await fetch(`${API_BASE}/system-config/active-cycle`, {
+                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                });
+                const jsonConfig = await resConfig.json();
+                if (jsonConfig.data && jsonConfig.data.active_cycle) {
+                    activeCycle = String(jsonConfig.data.active_cycle);
+                }
+            } catch (e) {
+                activeCycle = '1';
+            }
+
+            activeCycleBadge.textContent = `Putaran Aktif: ${activeCycle}`;
+
+            // Periksa Izin Khusus yang diberikan guru hari ini untuk siswa ini
+            try {
+                const resLeaves = await fetch(`${API_BASE}/leave-requests?id_siswa=${studentData.id_user}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                });
+                const jsonLeaves = await resLeaves.json();
+                const rawLeaves = jsonLeaves.data || jsonLeaves || [];
+
+                const mySpecialLeaveToday = rawLeaves.find(l => {
+                    const start = (l.start_date || '').substring(0, 10);
+                    const end = (l.end_date || l.start_date || '').substring(0, 10);
+                    const isToday = todayStr >= start && todayStr <= end;
+                    const isSpecial = (l.reason || '').startsWith('[Izin Khusus]');
+                    return isToday && isSpecial;
+                });
+
+                if (mySpecialLeaveToday) {
+                    const cleanReason = (mySpecialLeaveToday.reason || '').replace(/^\[Izin Khusus\]\s*/i, '');
+                    const teacherName = mySpecialLeaveToday.applicant ? (mySpecialLeaveToday.applicant.fullname || mySpecialLeaveToday.applicant.username) : 'Guru Pengajar';
+                    studentSpecialLeaveReasonText.textContent = cleanReason;
+                    studentSpecialLeaveTeacherText.textContent = `Dicatat oleh: ${teacherName}`;
+                    studentSpecialLeaveCard.classList.remove('hidden');
+                } else {
+                    studentSpecialLeaveCard.classList.add('hidden');
+                }
+            } catch (e) {
+                studentSpecialLeaveCard.classList.add('hidden');
+            }
+
+            // Rekap Kehadiran Siswa
+            try {
+                const resAttRecap = await fetch(`${API_BASE}/attendances`, {
+                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                });
+                const jsonAttRecap = await resAttRecap.json();
+                const allAtt = jsonAttRecap.data || jsonAttRecap || [];
+
+                let m1 = 0, m2 = 0, m3 = 0, m4 = 0;
+                const countedHadirDays = new Set();
+                const countedIzinDays = new Set();
+                const countedAlpaDays = new Set();
+
+                allAtt.forEach(att => {
+                    const isStudentMatch = Number(att.id_siswa) === Number(studentData.id_user);
+                    if (isStudentMatch && att.date) {
+                        const dateOnly = String(att.date).substring(0, 10);
+                        const [attY, attM, attD] = dateOnly.split('-').map(Number);
+
+                        if (attM === currentMonth && attY === currentYear) {
+                            const statusLower = String(att.status || '').trim().toLowerCase();
+                            if (statusLower === 'hadir') {
+                                if (!countedHadirDays.has(dateOnly)) {
+                                    countedHadirDays.add(dateOnly);
+                                    if (attD >= 1 && attD <= 7) m1 += 1;
+                                    else if (attD >= 8 && attD <= 14) m2 += 1;
+                                    else if (attD >= 15 && attD <= 21) m3 += 1;
+                                    else m4 += 1;
+                                }
+                            } else if (statusLower === 'izin' || statusLower === 'sakit') {
+                                countedIzinDays.add(dateOnly);
+                            } else if (statusLower === 'alpa') {
+                                countedAlpaDays.add(dateOnly);
+                            }
+                        }
+                    }
+                });
+
+                try {
+                    const resLeaves = await fetch(`${API_BASE}/leave-requests?id_siswa=${studentData.id_user}`, {
+                        headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                    });
+                    if (resLeaves.ok) {
+                        const jsonLeaves = await resLeaves.json();
+                        const rawLeaves = jsonLeaves.data || jsonLeaves || [];
+                        rawLeaves.forEach(lv => {
+                            const statusApp = String(lv.status_approval || '').toLowerCase().trim();
+                            if (statusApp === 'disetujui' || statusApp === 'di terima' || statusApp === 'diterima') {
+                                const start = new Date(lv.start_date);
+                                const end = new Date(lv.end_date || lv.start_date);
+                                for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                                    if ((d.getMonth() + 1) === currentMonth && d.getFullYear() === currentYear) {
+                                        countedIzinDays.add(d.toISOString().substring(0, 10));
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } catch (e) {}
+
+                const totalHadir = m1 + m2 + m3 + m4;
+                const totalIzin = countedIzinDays.size;
+                const totalAlpa = countedAlpaDays.size;
+
+                studentRecapBody.innerHTML = `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="py-3.5 px-3 font-mono font-medium text-center text-slate-700">${studentData.nisn || '-'}</td>
+                        <td class="py-3.5 px-3 font-mono text-center text-slate-600">${studentData.nis || '-'}</td>
+                        <td class="py-3.5 px-4 font-bold text-slate-800">${studentData.fullname || studentData.username}</td>
+                        <td class="py-3.5 px-3 text-center font-medium text-slate-700">${totalIzin}</td>
+                        <td class="py-3.5 px-3 text-center font-medium text-slate-700">${totalAlpa}</td>
+                        <td class="py-3.5 px-3 text-center font-semibold text-slate-700">${m1}</td>
+                        <td class="py-3.5 px-3 text-center font-semibold text-slate-700">${m2}</td>
+                        <td class="py-3.5 px-3 text-center font-semibold text-slate-700">${m3}</td>
+                        <td class="py-3.5 px-3 text-center font-semibold text-slate-700">${m4}</td>
+                        <td class="py-3.5 px-3 text-center font-bold text-slate-700">${totalHadir}</td>
+                        <td class="py-3.5 px-3 text-center font-bold text-slate-700">${totalIzin}</td>
+                        <td class="py-3.5 px-3 text-center font-bold text-slate-700">${totalAlpa}</td>
+                    </tr>
+                `;
+            } catch (err) {
+                studentRecapBody.innerHTML = `<tr><td colspan="12" class="py-6 text-center text-red-500">Gagal memuat rekap kehadiran Anda.</td></tr>`;
+            }
+
+            // Jadwal Pelajaran
+            let todaySchedules = [];
+            try {
+                const classId = studentData.id_class;
+                const resSched = await fetch(`${API_BASE}/schedules?id_class=${classId}&cycle_type=${activeCycle}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                });
+                const jsonSched = await resSched.json();
+                const allSchedules = jsonSched.data || [];
+                todaySchedules = allSchedules.filter(s => s.day_of_week === todayName);
+            } catch (e) {
+                console.error(e);
+            }
+
+            // Presensi Siswa Hari Ini
+            let myAttendancesToday = [];
+            try {
+                const resAtt = await fetch(`${API_BASE}/attendances?id_siswa=${studentData.id_user}&date=${todayStr}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                });
+                const jsonAtt = await resAtt.json();
+                myAttendancesToday = jsonAtt.data || [];
+            } catch (e) {
+                console.error(e);
+            }
+
+            // Status Harian
+            const hasHadirToday = myAttendancesToday.some(a => String(a.status).toLowerCase() === 'hadir');
+            const hasAnyAttendance = myAttendancesToday.length > 0;
+
+            if (hasHadirToday) {
+                dailyRecapBadge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300';
+                dailyRecapBadge.textContent = 'Hadir Hari Ini';
+                dailyScoreBadge.className = 'text-xs font-extrabold text-emerald-700 bg-white px-2 py-0.5 rounded-md border border-emerald-300 shadow-xs';
+                dailyScoreBadge.textContent = '+1';
+            } else if (hasAnyAttendance) {
+                const latestStatus = myAttendancesToday[myAttendancesToday.length - 1].status;
+                let colorCls = 'bg-amber-100 text-amber-700 border border-amber-300';
+                if (latestStatus === 'Alpa') colorCls = 'bg-red-100 text-red-700 border border-red-300';
+
+                dailyRecapBadge.className = `text-xs font-bold px-2.5 py-0.5 rounded-full ${colorCls}`;
+                dailyRecapBadge.textContent = latestStatus;
+                dailyScoreBadge.className = 'text-xs font-extrabold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-300 shadow-xs';
+                dailyScoreBadge.textContent = '+0';
+            } else {
+                dailyRecapBadge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200';
+                dailyRecapBadge.textContent = 'Belum Ada Presensi';
+                dailyScoreBadge.className = 'text-xs font-extrabold text-slate-400 bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-xs';
+                dailyScoreBadge.textContent = '+0';
+            }
+
+            // Render Jadwal
+            if (todaySchedules.length === 0) {
+                studentScheduleBody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Tidak ada jadwal KBM untuk kelas Anda hari ini (${todayName}).</td></tr>`;
+                return;
+            }
+
+            studentScheduleBody.innerHTML = todaySchedules.map(s => {
+                const timeRange = `${(s.start_time || '').substring(0, 5)} - ${(s.end_time || '').substring(0, 5)}`;
+                const guruName = s.teacher ? (s.teacher.fullname || s.teacher.username) : '-';
+                const roomName = s.room ? `${s.room.nama_room || ''} ${s.room.nomor_room ? '(' + s.room.nomor_room + ')' : ''}`.trim() : '-';
+
+                const matchingAttendance = myAttendancesToday.find(a => a.journal && Number(a.journal.id_schedule) === Number(s.id_schedule));
+
+                let statusBadge = '';
+                if (matchingAttendance) {
+                    const st = matchingAttendance.status;
+                    if (st === 'Hadir') {
+                        statusBadge = `<span class="bg-emerald-100 text-emerald-700 font-bold px-3 py-1 rounded-full text-xs">Hadir (+1)</span>`;
+                    } else if (st === 'Terlambat') {
+                        statusBadge = `<span class="bg-amber-100 text-amber-700 font-bold px-3 py-1 rounded-full text-xs">Terlambat (+0)</span>`;
+                    } else if (st === 'Izin' || st === 'Sakit') {
+                        statusBadge = `<span class="bg-indigo-100 text-indigo-700 font-bold px-3 py-1 rounded-full text-xs">${st} (+0)</span>`;
+                    } else if (st === 'Alpa') {
+                        statusBadge = `<span class="bg-red-100 text-red-700 font-bold px-3 py-1 rounded-full text-xs">Alpa (+0)</span>`;
+                    }
+                } else {
+                    statusBadge = `<span class="bg-slate-100 text-slate-400 font-medium px-2.5 py-1 rounded-full text-xs italic">Belum Dipresensi</span>`;
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="py-3 px-4 text-center font-bold text-slate-700">Jam ${s.jam_ke || '-'}</td>
+                        <td class="py-3 px-4 text-center font-mono text-xs text-slate-600">${timeRange}</td>
+                        <td class="py-3 px-4 font-bold text-slate-800">${s.mapel}</td>
+                        <td class="py-3 px-4 text-slate-700">${guruName}</td>
+                        <td class="py-3 px-4 text-center text-indigo-600 font-medium">${roomName}</td>
+                        <td class="py-3 px-4 text-center">${statusBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>
