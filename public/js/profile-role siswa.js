@@ -26,6 +26,14 @@ const BASE_COOLDOWN_SECONDS = 30;
 const INCREMENT_COOLDOWN_SECONDS = 15;
 const RESET_IDLE_TIME_MS = 10 * 60 * 1000;
 
+// Helper: Ambil nama depan saja untuk tampilan navbar & sapaan
+function getFirstName(fullName) {
+    if (!fullName) return 'Siswa';
+    const clean = String(fullName).trim();
+    const parts = clean.split(/\s+/);
+    return parts[0] || clean;
+}
+
 // Fungsi Global Logout
 window.handleLogout = function() {
     if (confirm('Apakah Anda yakin ingin keluar dari akun ini?')) {
@@ -56,6 +64,7 @@ function renderProfileData() {
     );
 
     const fullname = currentData.fullname || currentData.username || 'Siswa';
+    const firstName = getFirstName(fullname);
     const username = currentData.username || '';
     const nis = currentData.nis || '-';
     const nisn = currentData.nisn || '-';
@@ -76,9 +85,10 @@ function renderProfileData() {
     const modalNis = document.getElementById('modalNis');
     const modalNisn = document.getElementById('modalNisn');
 
-    if (navFullname) navFullname.textContent = fullname;
+    // Menampilkan nama depan di navbar dan sapaan dashboard
+    if (navFullname) navFullname.textContent = firstName;
     if (navNis) navNis.textContent = nis;
-    if (userNameDisplay) userNameDisplay.textContent = fullname;
+    if (userNameDisplay) userNameDisplay.textContent = firstName;
 
     if (modalFullname) modalFullname.value = fullname;
     if (modalUsername) modalUsername.value = username;
@@ -212,10 +222,7 @@ function initProfileEvents() {
         btnCancelProfile.addEventListener('click', closeProfileModal);
     }
 
-    // ==========================================
-    // GANTI EMAIL
-    // ==========================================
-
+    // Ganti Email
     if (btnInitChangeEmail) {
         btnInitChangeEmail.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -360,10 +367,7 @@ function initProfileEvents() {
         });
     }
 
-    // ==========================================
-    // FUNGSI OTP
-    // ==========================================
-
+    // Fungsi OTP
     function clearOtpInputs() {
         otpInputs.forEach((input) => {
             input.value = '';
@@ -522,10 +526,7 @@ function initProfileEvents() {
         }
     }
 
-    // ==========================================
-    // COOLDOWN OTP
-    // ==========================================
-
+    // Cooldown OTP
     function updateTimerUI() {
         const timerText = document.getElementById('timerText');
         const state = getStoredState();
@@ -678,10 +679,7 @@ function initProfileEvents() {
         }
     }
 
-    // ==========================================
-    // MEMBUKA MODAL VERIFIKASI PASSWORD
-    // ==========================================
-
+    // Modal Verifikasi Password
     if (btnInitChangePassword) {
         btnInitChangePassword.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -744,10 +742,6 @@ function initProfileEvents() {
         });
     }
 
-    // ==========================================
-    // FITUR PASTE OTP ENAM ANGKA
-    // ==========================================
-
     function distributeOtpDigits(rawValue) {
         const digits = String(rawValue || '')
             .replace(/\D/g, '')
@@ -775,10 +769,6 @@ function initProfileEvents() {
             verifyOtpCode(digits);
         }
     }
-
-    // ==========================================
-    // EVENT LISTENER INPUT OTP
-    // ==========================================
 
     otpInputs.forEach((input, index) => {
         input.addEventListener('paste', (e) => {
@@ -857,10 +847,7 @@ function initProfileEvents() {
         });
     }
 
-    // ==========================================
-    // TOGGLE PASSWORD
-    // ==========================================
-
+    // Toggle Password
     if (togglePasswordBtn) {
         togglePasswordBtn.addEventListener('click', () => {
             const eyeOffIcon = document.getElementById('eyeOffIcon');
@@ -884,10 +871,7 @@ function initProfileEvents() {
         });
     }
 
-    // ==========================================
-    // SIMPAN PERUBAHAN PROFIL
-    // ==========================================
-
+    // Simpan Perubahan Profil
     if (btnSaveProfile) {
         btnSaveProfile.addEventListener('click', async () => {
             const authToken = localStorage.getItem('auth_token');
@@ -1009,10 +993,7 @@ function initProfileEvents() {
         });
     }
 
-    // ==========================================
-    // FOTO PROFIL DAN CROPPER
-    // ==========================================
-
+    // Foto Profil & Cropper
     if (inputAvatar) {
         inputAvatar.addEventListener('change', (e) => {
             const files = e.target.files;
@@ -1119,10 +1100,7 @@ function initProfileEvents() {
         });
     }
 
-    // ==========================================
-    // SIDEBAR RESPONSIVE
-    // ==========================================
-
+    // Sidebar Responsive
     const toggleSidebarNav =
         document.getElementById('toggleSidebarNav');
 
@@ -1158,10 +1136,6 @@ function initProfileEvents() {
         );
     }
 }
-
-// ==========================================
-// RESET ERROR FORM
-// ==========================================
 
 function resetModalErrors() {
     const modalPassword =
@@ -1217,10 +1191,6 @@ function resetModalErrors() {
     }
 }
 
-// ==========================================
-// TAMPILKAN ERROR USERNAME
-// ==========================================
-
 function showUsernameError(msg) {
     const usernameError =
         document.getElementById('usernameError');
@@ -1238,10 +1208,6 @@ function showUsernameError(msg) {
         modalUsername.classList.remove('border-slate-300');
     }
 }
-
-// ==========================================
-// TAMPILKAN ERROR PASSWORD
-// ==========================================
 
 function showPasswordError(msg) {
     const passwordError =
@@ -1267,9 +1233,5 @@ function showPasswordError(msg) {
         modalPassword.classList.remove('border-slate-300');
     }
 }
-
-// ==========================================
-// INISIALISASI
-// ==========================================
 
 initProfileEvents();

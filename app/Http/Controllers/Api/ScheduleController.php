@@ -19,6 +19,11 @@ class ScheduleController extends Controller
             $query->where('id_class', $request->id_class);
         }
 
+        // Filter berdasarkan Guru Pengampu (agar tidak mengambil jadwal milik guru lain)
+        if ($request->has('id_guru')) {
+            $query->where('id_guru', $request->id_guru);
+        }
+
         if ($request->has('cycle_type')) {
             $query->where('cycle_type', $request->cycle_type);
         }

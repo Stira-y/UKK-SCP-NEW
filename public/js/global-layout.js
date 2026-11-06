@@ -15,6 +15,24 @@ document.addEventListener("DOMContentLoaded", function() {
 
     let isDropdownOpen = localStorage.getItem('waka_dropdown_open') === 'true' || isKelolaUserPage;
 
+    // Helper: Ambil nama depan saja
+    function getFirstName(fullName) {
+        if (!fullName) return 'User';
+        const clean = String(fullName).trim();
+        const parts = clean.split(/\s+/);
+        return parts[0] || clean;
+    }
+
+    // Helper: Pangkas NIP menjadi 5 digit + ...
+    function formatNipOrNis(identity, isStudent) {
+        if (!identity || identity === '-') return '-';
+        const str = String(identity).trim();
+        if (!isStudent && str.length > 5) {
+            return str.substring(0, 5) + '...';
+        }
+        return str;
+    }
+
     if (!document.getElementById('cropper-css')) {
         const link = document.createElement('link');
         link.id = 'cropper-css';
@@ -31,7 +49,9 @@ document.addEventListener("DOMContentLoaded", function() {
     // 1. Suntikkan Navbar ke placeholder
     const navPlaceholder = document.getElementById('app-navbar');
     if (navPlaceholder) {
-        let identityVal = role === 4 ? (userData.nis || '-') : (userData.nip || '-');
+        const rawIdentity = role === 4 ? (userData.nis || '-') : (userData.nip || '-');
+        const identityVal = formatNipOrNis(rawIdentity, role === 4);
+        const displayName = getFirstName(userData.fullname || userData.username);
 
         navPlaceholder.innerHTML = `
             <nav class="bg-indigo-600 text-white px-4 md:px-6 py-3 flex justify-between items-center shadow-md z-30 shrink-0">
@@ -45,7 +65,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             <svg id="navAvatarSvg" class="w-5 h-5 text-indigo-600 mt-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                         </div>
                         <div class="text-xs md:text-sm font-medium flex items-center space-x-1.5 leading-none truncate max-w-[150px]">
-                            <span id="navFullname" class="font-semibold truncate leading-none">User</span>
+                            <span id="navFullname" class="font-semibold truncate leading-none">${displayName}</span>
                             <span class="text-indigo-300">|</span>
                             <span id="navRoleIdentity" class="text-indigo-200">${identityVal}</span>
                         </div>
@@ -457,19 +477,21 @@ document.addEventListener("DOMContentLoaded", function() {
     function renderProfileData() {
         const currentData = JSON.parse(localStorage.getItem('user_data') || '{}');
         const fullname = currentData.fullname || currentData.username || 'User';
-        const identityVal = role === 4 ? (currentData.nis || '-') : (currentData.nip || '-');
+        const firstName = getFirstName(fullname);
+        const rawIdentity = role === 4 ? (currentData.nis || '-') : (currentData.nip || '-');
+        const identityDisplay = formatNipOrNis(rawIdentity, role === 4);
         
         let avatarSrc = currentData.avatar_url || null;
         if (!avatarSrc && currentData.avatar) {
             avatarSrc = `${API_BASE_URL.replace('/api', '')}/storage/${currentData.avatar}`;
         }
 
-        if (document.getElementById('navFullname')) document.getElementById('navFullname').textContent = fullname;
-        if (document.getElementById('navRoleIdentity')) document.getElementById('navRoleIdentity').textContent = identityVal;
-        if (document.getElementById('userName')) document.getElementById('userName').textContent = fullname;
+        if (document.getElementById('navFullname')) document.getElementById('navFullname').textContent = firstName;
+        if (document.getElementById('navRoleIdentity')) document.getElementById('navRoleIdentity').textContent = identityDisplay;
+        if (document.getElementById('userName')) document.getElementById('userName').textContent = firstName;
         if (document.getElementById('modalFullname')) document.getElementById('modalFullname').value = fullname;
         if (document.getElementById('modalUsername')) document.getElementById('modalUsername').value = currentData.username || '';
-        if (document.getElementById('modalIdentityValue')) document.getElementById('modalIdentityValue').value = identityVal;
+        if (document.getElementById('modalIdentityValue')) document.getElementById('modalIdentityValue').value = rawIdentity;
         if (document.getElementById('identityLabel')) document.getElementById('identityLabel').textContent = role === 4 ? 'NIS' : 'NIP';
 
         if (avatarSrc) {
@@ -582,6 +604,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     otpMode = 'new_email';
                     pendingNewEmail = emailVal;
 
+                    const otpModalTitle = document.getElementById('otpModalTitle');
+                    const otpModalSubtext = document.getElementById('otpModalSubtext');
                     if (otpModalTitle) otpModalTitle.textContent = 'Verifikasi Kode OTP';
                     if (otpModalSubtext) otpModalSubtext.textContent = 'Kode verifikasi 6 angka telah dikirim ke email Anda.';
 
