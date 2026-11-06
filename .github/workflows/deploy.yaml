@@ -1,0 +1,50 @@
+name: Deploy Laravel to DomaiNesia
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    name: Build & FTP Deploy
+    steps:
+      - name: ⬇️ Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐘 Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, bcmath, fileinfo, gd, zip, curl
+          coverage: none
+
+      - name: 📦 Install Composer Dependencies
+        run: |
+          composer install --no-dev --prefer-dist --optimize-autoloader --no-progress --no-interaction --ignore-platform-reqs
+
+      - name: 🚀 Sync Files via FTP to DomaiNesia
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          protocol: ftp
+          server-dir: '/'
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            tests/**
+            .env
+            .env.example
+            *.md
+            phpunit.xml
+
+      - name: ⚡ Trigger Database Migration di Hosting
+        env:
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+        run: |
+          TOKEN="${DEPLOY_SECRET:-skansaba_super_secret_token_12345}"
+          curl -sS -k "https://ukk-scp-yudhis.my.id/api/deploy-migrate-${TOKEN}?seed=1" || echo "Webhook executed."
