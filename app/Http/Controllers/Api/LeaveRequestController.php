@@ -25,19 +25,11 @@ class LeaveRequestController extends Controller
             $query->where('id_siswa', $request->id_siswa);
         }
 
-        // Filter Wali Kelas (Role 3 - Wali Kelas)
+        // Filter Kelas (Wali Kelas & Guru BK Pengajar)
         if ($request->has('id_class')) {
-            $classId = $request->id_class;
-            $query->whereHas('student', function ($q) use ($classId) {
-                $q->where('id_class', $classId);
-            });
-        }
-
-        // Filter Guru BK (Role 3 - Guru BK)
-        if ($request->has('kelas_nomor') && in_array($request->kelas_nomor, ['X', 'XI', 'XII'])) {
-            $tingkat = $request->kelas_nomor;
-            $query->whereHas('student.schoolClass', function ($q) use ($tingkat) {
-                $q->where('kelas_nomor', $tingkat);
+            $classIds = explode(',', $request->id_class);
+            $query->whereHas('student', function ($q) use ($classIds) {
+                $q->whereIn('id_class', $classIds);
             });
         }
 
@@ -71,7 +63,6 @@ class LeaveRequestController extends Controller
             $validated['status_approval'] = 'Pending';
         }
 
-        // Verifier saat awal dibuat selalu NULL
         $validated['verified_by'] = null;
 
         if ($request->hasFile('documents')) {
@@ -134,10 +125,6 @@ class LeaveRequestController extends Controller
             'deleted_documents' => 'nullable|array',
         ]);
 
-        // =========================================================================
-        // ATURAN VERIFIER: HANYA BOLEH DIISI JIKA USER ADALAH ROLE 3 (WALI KELAS / BK)
-        // ROLE LAIN (ROLE 1, 2, 4) TIDAK BERHAK MENGISI, DI-SET NULL
-        // =========================================================================
         $currentUser = $request->user();
 
         if ($currentUser) {
@@ -159,7 +146,6 @@ class LeaveRequestController extends Controller
             }
         }
 
-        // Dokumen
         $currentPaths = $leaveRequest->document_path ?? [];
         if (is_string($currentPaths)) {
             $currentPaths = json_decode($currentPaths, true) ?? [];
@@ -189,7 +175,6 @@ class LeaveRequestController extends Controller
             $validated['document_path'] = array_values($currentPaths);
         }
 
-        // Simpan status approval dengan penanganan tipe data enum/varchar
         $targetStatus = $request->input('status_approval');
         if ($targetStatus) {
             try {

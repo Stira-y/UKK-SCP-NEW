@@ -14,4 +14,9 @@ class SchoolClass extends Model
     {
         return $this->hasMany(User::class, 'id_class', 'id_class');
     }
+
+    public function counselors()
+    {
+        return $this->belongsToMany(User::class, 'counselor_classes', 'id_class', 'id_user');
+    }
 }

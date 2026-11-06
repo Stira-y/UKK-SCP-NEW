@@ -59,7 +59,7 @@
                     </div>
                 </div>
 
-                <!-- Filter Kategori & Status Putaran Aktif (Dropdown Dihapus) -->
+                <!-- Filter Kategori & Status Putaran Aktif -->
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div class="flex items-center space-x-6 text-xs md:text-sm font-semibold text-slate-600 overflow-x-auto pb-1">
                         <button class="filter-tingkat-btn underline text-indigo-600 font-bold" data-tingkat="all">Semua Kelas</button>
@@ -72,7 +72,6 @@
                     </div>
 
                     <div class="flex items-center shrink-0">
-                        <!-- Badge Indikator Putaran Aktif Otomatis Sesuai Database -->
                         <span id="cycleStatusBadge" class="text-xs px-3 py-1 rounded-full font-bold shadow-sm bg-emerald-100 text-emerald-700 border border-emerald-300 flex items-center">
                             <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
                             <span id="cycleStatusText">Memuat status...</span>
@@ -87,7 +86,7 @@
                             <thead>
                                 <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
                                     <th class="py-3.5 px-4 font-semibold text-center w-28">Kelas</th>
-                                    <th class="py-3.5 px-4 font-semibold text-center w-36">Jam & Waktu</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-36">Waktu KBM</th>
                                     <th class="py-3.5 px-4 font-semibold">Mata Pelajaran</th>
                                     <th class="py-3.5 px-4 font-semibold">Guru Pengampu</th>
                                     <th class="py-3.5 px-4 font-semibold text-center w-28">Ruangan</th>
@@ -148,7 +147,7 @@
         }
 
         let currentTingkat = 'all';
-        let activeCycle = '1'; // Mengikuti putaran yang dikunci pada database
+        let activeCycle = '1';
         let monitoringData = [];
 
         const monitoringTableBody = document.getElementById('monitoringTableBody');
@@ -166,7 +165,6 @@
         const btnCloseDetailModal = document.getElementById('btnCloseDetailModal');
         const btnOkDetailModal = document.getElementById('btnOkDetailModal');
 
-        // Jam Realtime
         setInterval(() => {
             const now = new Date();
             currentTimeClock.textContent = now.toTimeString().split(' ')[0];
@@ -191,7 +189,6 @@
             await fetchMonitoringData();
         });
 
-        // Ambil data active_cycle dari database
         async function fetchSystemActiveCycle() {
             try {
                 const res = await fetch(`${API_BASE_URL}/system-config/active-cycle`, {
@@ -261,7 +258,7 @@
                 return `
                     <tr class="hover:bg-slate-50 transition border-b border-slate-100">
                         <td class="py-3.5 px-4 font-bold text-center text-slate-800">${item.class_name}</td>
-                        <td class="py-3.5 px-4 text-center font-medium text-xs text-slate-600">Jam ${item.jam_ke}<br><span class="font-mono text-[11px] text-slate-400">${item.time_range}</span></td>
+                        <td class="py-3.5 px-4 text-center font-mono font-medium text-xs text-slate-700">${item.time_range}</td>
                         <td class="py-3.5 px-4 font-semibold text-slate-800">${item.mapel}</td>
                         <td class="py-3.5 px-4 font-medium text-slate-700">${item.teacher_name}</td>
                         <td class="py-3.5 px-4 text-center font-medium text-indigo-600">${item.room_name}</td>
@@ -277,7 +274,7 @@
             if (!item) return;
 
             document.getElementById('detailTeacher').textContent = item.teacher_name;
-            document.getElementById('detailClassTime').textContent = `${item.class_name} | Jam ${item.jam_ke} (${item.time_range})`;
+            document.getElementById('detailClassTime').textContent = `${item.class_name} | ${item.time_range}`;
             document.getElementById('detailMapel').textContent = item.mapel;
             document.getElementById('detailStatus').textContent = item.status_jurnal;
             document.getElementById('detailTopic').textContent = item.topic_description || 'Tidak ada deskripsi.';

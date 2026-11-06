@@ -17,7 +17,6 @@ class Schedule extends Model
         'id_class',
         'mapel',
         'day_of_week',
-        'jam_ke',
         'start_time',
         'end_time',
         'cycle_type',

@@ -63,7 +63,6 @@ class ScheduleController extends Controller
             'id_room'     => 'required|exists:rooms,id_room',
             'mapel'       => 'required|string|max:100',
             'day_of_week' => 'required|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
-            'jam_ke'      => 'required|string|max:20',
             'start_time'  => 'required',
             'end_time'    => 'required|after:start_time',
             'cycle_type'  => 'required|in:1,2',
@@ -71,24 +70,20 @@ class ScheduleController extends Controller
 
         $day   = $validated['day_of_week'];
         $cycle = $validated['cycle_type'];
-        $jamKe = trim($validated['jam_ke']);
         
         $start = substr(trim($validated['start_time']), 0, 5) . ':00';
         $end   = substr(trim($validated['end_time']), 0, 5) . ':00';
         $validated['start_time'] = $start;
         $validated['end_time']   = $end;
 
-        // 1. Cek bentrok Kelas: overlap waktu (> 1 menit) ATAU jam_ke sama pada hari & putaran yang sama
+        // 1. Cek bentrok Kelas: overlap waktu (> 1 menit) pada hari & putaran yang sama
         $conflictClass = Schedule::with(['schoolClass', 'teacher'])
             ->where('id_class', $validated['id_class'])
             ->where('day_of_week', $day)
             ->where('cycle_type', $cycle)
-            ->where(function ($q) use ($start, $end, $jamKe) {
-                $q->where(function ($timeQ) use ($start, $end) {
-                    $timeQ->where('start_time', '<', $end)
-                          ->where('end_time', '>', $start);
-                })
-                ->orWhere('jam_ke', $jamKe);
+            ->where(function ($timeQ) use ($start, $end) {
+                $timeQ->where('start_time', '<', $end)
+                      ->where('end_time', '>', $start);
             })
             ->first();
 
@@ -100,7 +95,7 @@ class ScheduleController extends Controller
 
             return response()->json([
                 'status'  => 'error',
-                'message' => "Jadwal bentrok! {$namaKelas} sudah memiliki mata pelajaran '{$conflictClass->mapel}' (Guru: {$guruName}, Jam Ke: {$conflictClass->jam_ke}) pada hari {$day} pukul " . substr($conflictClass->start_time, 0, 5) . " - " . substr($conflictClass->end_time, 0, 5)
+                'message' => "Jadwal bentrok! {$namaKelas} sudah memiliki mata pelajaran '{$conflictClass->mapel}' (Guru: {$guruName}) pada hari {$day} pukul " . substr($conflictClass->start_time, 0, 5) . " - " . substr($conflictClass->end_time, 0, 5)
             ], 422);
         }
 
@@ -109,12 +104,9 @@ class ScheduleController extends Controller
             ->where('id_guru', $validated['id_guru'])
             ->where('day_of_week', $day)
             ->where('cycle_type', $cycle)
-            ->where(function ($q) use ($start, $end, $jamKe) {
-                $q->where(function ($timeQ) use ($start, $end) {
-                    $timeQ->where('start_time', '<', $end)
-                          ->where('end_time', '>', $start);
-                })
-                ->orWhere('jam_ke', $jamKe);
+            ->where(function ($timeQ) use ($start, $end) {
+                $timeQ->where('start_time', '<', $end)
+                      ->where('end_time', '>', $start);
             })
             ->first();
 
@@ -193,7 +185,6 @@ class ScheduleController extends Controller
             'id_room'     => 'sometimes|required|exists:rooms,id_room',
             'mapel'       => 'sometimes|required|string|max:100',
             'day_of_week' => 'sometimes|required|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
-            'jam_ke'      => 'sometimes|required|string|max:20',
             'start_time'  => 'sometimes|required',
             'end_time'    => 'sometimes|required',
             'cycle_type'  => 'sometimes|required|in:1,2',
@@ -204,7 +195,6 @@ class ScheduleController extends Controller
         $roomId  = $validated['id_room'] ?? $schedule->id_room;
         $day     = $validated['day_of_week'] ?? $schedule->day_of_week;
         $cycle   = $validated['cycle_type'] ?? $schedule->cycle_type;
-        $jamKe   = trim($validated['jam_ke'] ?? ($schedule->jam_ke ?? ''));
 
         $start   = isset($validated['start_time']) ? substr(trim($validated['start_time']), 0, 5) . ':00' : substr($schedule->start_time, 0, 5) . ':00';
         $end     = isset($validated['end_time']) ? substr(trim($validated['end_time']), 0, 5) . ':00' : substr($schedule->end_time, 0, 5) . ':00';
@@ -218,12 +208,9 @@ class ScheduleController extends Controller
             ->where('day_of_week', $day)
             ->where('cycle_type', $cycle)
             ->where('id_schedule', '!=', $id)
-            ->where(function ($q) use ($start, $end, $jamKe) {
-                $q->where(function ($timeQ) use ($start, $end) {
-                    $timeQ->where('start_time', '<', $end)
-                          ->where('end_time', '>', $start);
-                })
-                ->orWhere('jam_ke', $jamKe);
+            ->where(function ($timeQ) use ($start, $end) {
+                $timeQ->where('start_time', '<', $end)
+                      ->where('end_time', '>', $start);
             })
             ->first();
 
@@ -235,7 +222,7 @@ class ScheduleController extends Controller
 
             return response()->json([
                 'status'  => 'error',
-                'message' => "Jadwal bentrok! {$namaKelas} sudah memiliki mata pelajaran '{$conflictClass->mapel}' (Guru: {$guruName}, Jam Ke: {$conflictClass->jam_ke}) pada hari {$day} pukul " . substr($conflictClass->start_time, 0, 5) . " - " . substr($conflictClass->end_time, 0, 5)
+                'message' => "Jadwal bentrok! {$namaKelas} sudah memiliki mata pelajaran '{$conflictClass->mapel}' (Guru: {$guruName}) pada hari {$day} pukul " . substr($conflictClass->start_time, 0, 5) . " - " . substr($conflictClass->end_time, 0, 5)
             ], 422);
         }
 
@@ -245,12 +232,9 @@ class ScheduleController extends Controller
             ->where('day_of_week', $day)
             ->where('cycle_type', $cycle)
             ->where('id_schedule', '!=', $id)
-            ->where(function ($q) use ($start, $end, $jamKe) {
-                $q->where(function ($timeQ) use ($start, $end) {
-                    $timeQ->where('start_time', '<', $end)
-                          ->where('end_time', '>', $start);
-                })
-                ->orWhere('jam_ke', $jamKe);
+            ->where(function ($timeQ) use ($start, $end) {
+                $timeQ->where('start_time', '<', $end)
+                      ->where('end_time', '>', $start);
             })
             ->first();
 
@@ -321,7 +305,6 @@ class ScheduleController extends Controller
             'items' => 'required|array|min:1',
             'items.*.kelas'         => 'required|string',
             'items.*.hari'          => 'required|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
-            'items.*.jam_ke'        => 'nullable|string',
             'items.*.waktu'         => 'required|string',
             'items.*.mapel'         => 'required|string',
             'items.*.guru'          => 'required|string',
@@ -397,26 +380,20 @@ class ScheduleController extends Controller
 
             $day = $item['hari'];
             $cycle = $item['cycle_type'];
-            $jamKe = trim($item['jam_ke'] ?? '');
 
             $conflictClass = Schedule::with('schoolClass')
                 ->where('id_class', $matchedClass->id_class)
                 ->where('day_of_week', $day)
                 ->where('cycle_type', $cycle)
-                ->where(function ($q) use ($startTime, $endTime, $jamKe) {
-                    $q->where(function ($timeQ) use ($startTime, $endTime) {
-                        $timeQ->where('start_time', '<', $endTime)
-                              ->where('end_time', '>', $startTime);
-                    });
-                    if ($jamKe !== '') {
-                        $q->orWhere('jam_ke', $jamKe);
-                    }
+                ->where(function ($timeQ) use ($startTime, $endTime) {
+                    $timeQ->where('start_time', '<', $endTime)
+                          ->where('end_time', '>', $startTime);
                 })
                 ->first();
 
             if ($conflictClass) {
                 $cName = $conflictClass->schoolClass ? ($conflictClass->schoolClass->kelas_nomor . ' ' . $conflictClass->schoolClass->nama_kelas . ' ' . ($conflictClass->schoolClass->nomor_kelas ?? '')) : 'kelas ini';
-                $errors[] = "Baris {$rowNum}: Bentrok! {$cName} sudah memiliki mata pelajaran '{$conflictClass->mapel}' (Jam Ke: {$conflictClass->jam_ke}) pada {$day} ({$startTime} - {$endTime}).";
+                $errors[] = "Baris {$rowNum}: Bentrok! {$cName} sudah memiliki mata pelajaran '{$conflictClass->mapel}' pada {$day} ({$startTime} - {$endTime}).";
                 continue;
             }
 
@@ -424,14 +401,9 @@ class ScheduleController extends Controller
                 ->where('id_guru', $matchedGuru->id_user)
                 ->where('day_of_week', $day)
                 ->where('cycle_type', $cycle)
-                ->where(function ($q) use ($startTime, $endTime, $jamKe) {
-                    $q->where(function ($timeQ) use ($startTime, $endTime) {
-                        $timeQ->where('start_time', '<', $endTime)
-                              ->where('end_time', '>', $startTime);
-                    });
-                    if ($jamKe !== '') {
-                        $q->orWhere('jam_ke', $jamKe);
-                    }
+                ->where(function ($timeQ) use ($startTime, $endTime) {
+                    $timeQ->where('start_time', '<', $endTime)
+                          ->where('end_time', '>', $startTime);
                 })
                 ->first();
 
@@ -463,7 +435,6 @@ class ScheduleController extends Controller
                 'id_room'     => $matchedRoom->id_room,
                 'mapel'       => trim($item['mapel']),
                 'day_of_week' => $day,
-                'jam_ke'      => $jamKe,
                 'start_time'  => $startTime,
                 'end_time'    => $endTime,
                 'cycle_type'  => $cycle,

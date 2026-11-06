@@ -15,7 +15,6 @@ class JournalController extends Controller
 {
     public function index(Request $request)
     {
-        // Menyertakan attendances untuk memastikan jurnal sudah final dengan presensi
         $query = Journal::with(['schedule.schoolClass', 'schedule.teacher', 'schedule.room', 'attendances.student']);
 
         if ($request->has('id_schedule')) {
@@ -63,7 +62,6 @@ class JournalController extends Controller
             }
         }
 
-        // Simpan atau perbarui draf jurnal sebelum presensi disimpan
         $journal = Journal::updateOrCreate(
             [
                 'id_schedule' => $validated['id_schedule'],
@@ -224,7 +222,6 @@ class JournalController extends Controller
                 $statusJurnal = 'Belum Dimulai';
                 $isLate = false;
 
-                // Jurnal baru dianggap selesai bila presensi siswa sudah tersimpan (> 0)
                 $hasCompletedAttendance = $journal && $journal->attendances_count > 0;
 
                 if ($hasCompletedAttendance) {
@@ -270,7 +267,6 @@ class JournalController extends Controller
                     'id_schedule'       => $sch->id_schedule,
                     'class_name'        => $className,
                     'tingkat'           => $tingkat,
-                    'jam_ke'            => $sch->jam_ke ?? ($index + 1),
                     'time_range'        => substr($sch->start_time, 0, 5) . ' - ' . substr($sch->end_time, 0, 5),
                     'mapel'             => $sch->mapel,
                     'teacher_name'      => $teacherName,

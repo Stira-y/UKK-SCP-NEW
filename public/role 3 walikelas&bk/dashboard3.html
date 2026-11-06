@@ -121,44 +121,9 @@
                     </div>
                 </div>
 
-                <!-- TAMPILAN KHUSUS GURU BK REGULER (Statistik Izin & Kehadiran Siswa) -->
-                <div id="bkRegulerSection" class="hidden space-y-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                            <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-lg">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            </div>
-                            <div>
-                                <span class="text-xs font-semibold text-slate-500 uppercase">Izin Menunggu Verifikasi</span>
-                                <h4 id="bkPendingCount" class="text-xl font-bold text-slate-800 mt-0.5">0</h4>
-                            </div>
-                        </div>
-
-                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                            <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-lg">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            </div>
-                            <div>
-                                <span class="text-xs font-semibold text-slate-500 uppercase">Izin Disetujui Bulan Ini</span>
-                                <h4 id="bkApprovedCount" class="text-xl font-bold text-slate-800 mt-0.5">0</h4>
-                            </div>
-                        </div>
-
-                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                            <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-lg">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                            </div>
-                            <div>
-                                <span class="text-xs font-semibold text-slate-500 uppercase">Siswa Terpantau BK</span>
-                                <h4 id="bkStudentsCount" class="text-xl font-bold text-slate-800 mt-0.5">0</h4>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAMPILAN JADWAL KBM & PRESENSI SISWA TERLAMBAT (Wali Kelas & Guru BK Pengajar) -->
+                <!-- TAMPILAN JADWAL KBM & PRESENSI SISWA TERLAMBAT -->
                 <div id="teachingSection" class="space-y-6">
-                    <!-- 1. JADWAL KBM HARI INI TANPA TOMBOL -->
+                    <!-- 1. JADWAL KBM HARI INI (TANPA KOLOM JAM KE) -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
                             <div class="flex items-center space-x-2">
@@ -172,7 +137,6 @@
                             <table class="w-full text-left border-collapse min-w-[700px]">
                                 <thead>
                                     <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
-                                        <th class="py-3 px-4 font-semibold text-center w-20">Jam Ke</th>
                                         <th class="py-3 px-4 font-semibold text-center w-36">Waktu</th>
                                         <th class="py-3 px-4 font-semibold text-center w-36">Kelas</th>
                                         <th class="py-3 px-4 font-semibold">Mata Pelajaran</th>
@@ -182,7 +146,7 @@
                                 </thead>
                                 <tbody id="myTodayScheduleBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
                                     <tr>
-                                        <td colspan="6" class="py-8 text-center text-slate-400">Memuat jadwal KBM...</td>
+                                        <td colspan="5" class="py-8 text-center text-slate-400">Memuat jadwal KBM...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -226,7 +190,7 @@
         </main>
     </div>
 
-    <!-- MODAL POP UP KONFIRMASI SIMPAN IZIN KHUSUS (YAKIN & TIDAK) -->
+    <!-- MODAL POP UP KONFIRMASI SIMPAN IZIN KHUSUS -->
     <div id="confirmSpecialLeaveModal" class="fixed inset-0 bg-slate-900/70 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col p-6 text-center transform transition-all animate-in fade-in zoom-in duration-150">
             <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 mx-auto flex items-center justify-center mb-4">
@@ -241,7 +205,7 @@
         </div>
     </div>
 
-    <!-- MODAL POP UP KONFIRMASI UBAH KE HADIR (YAKIN & TIDAK) -->
+    <!-- MODAL POP UP KONFIRMASI UBAH KE HADIR -->
     <div id="confirmHadirModal" class="fixed inset-0 bg-slate-900/70 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col p-6 text-center transform transition-all animate-in fade-in zoom-in duration-150">
             <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center mb-4">
@@ -265,10 +229,14 @@
         const userTitle = (userObj.title || '').replace(/\s+/g, '').toLowerCase();
         const isWaliKelas = userTitle === 'walikelas';
         const isGuruBkPengajar = userTitle === 'gurubkpengajar';
-        const isGuruBkReguler = !isWaliKelas && !isGuruBkPengajar;
+
+        // Validasi: Tolak jika bukan Wali Kelas dan bukan Guru BK Pengajar
+        if (!isWaliKelas && !isGuruBkPengajar) {
+            alert('Akses ditolak! Akun ini bukan Wali Kelas atau Guru BK Pengajar.');
+            window.location.href = '../login/login.html';
+        }
 
         const topShortcutWrapper = document.getElementById('topShortcutWrapper');
-        const bkRegulerSection = document.getElementById('bkRegulerSection');
         const teachingSection = document.getElementById('teachingSection');
         const myTodayScheduleBody = document.getElementById('myTodayScheduleBody');
         const lateStudentsBody = document.getElementById('lateStudentsBody');
@@ -277,17 +245,14 @@
         const lateCountBadge = document.getElementById('lateCountBadge');
         const userRoleSubtext = document.getElementById('userRoleSubtext');
 
-        // Komponen Notifikasi Jurnal Terlambat
         const lateJournalAlertBox = document.getElementById('lateJournalAlertBox');
         const lateJournalAlertText = document.getElementById('lateJournalAlertText');
 
-        // Modal Elements Hadir
         const confirmHadirModal = document.getElementById('confirmHadirModal');
         const confirmHadirDesc = document.getElementById('confirmHadirDesc');
         const btnConfirmHadirYes = document.getElementById('btnConfirmHadirYes');
         const btnConfirmHadirNo = document.getElementById('btnConfirmHadirNo');
 
-        // Komponen Izin Khusus
         const specialLeaveTargetClassText = document.getElementById('specialLeaveTargetClassText');
         const specialLeaveDateBadge = document.getElementById('specialLeaveDateBadge');
         const selectSpecialLeaveStudent = document.getElementById('selectSpecialLeaveStudent');
@@ -297,7 +262,6 @@
         const specialLeaveErrorText = document.getElementById('specialLeaveErrorText');
         const specialLeaveTableBody = document.getElementById('specialLeaveTableBody');
 
-        // Modal Izin Khusus
         const confirmSpecialLeaveModal = document.getElementById('confirmSpecialLeaveModal');
         const confirmSpecialLeaveTitle = document.getElementById('confirmSpecialLeaveTitle');
         const confirmSpecialLeaveDesc = document.getElementById('confirmSpecialLeaveDesc');
@@ -312,71 +276,29 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             initTopShortcuts();
-            if (isGuruBkReguler) {
-                userRoleSubtext.textContent = 'Panel Bimbingan Konseling Sekolah.';
-                bkRegulerSection.classList.remove('hidden');
-                teachingSection.classList.add('hidden');
-                await loadBkRegulerData();
-            } else {
-                userRoleSubtext.textContent = isWaliKelas ? 'Panel Wali Kelas & Guru Pengajar.' : 'Panel Guru BK Pengajar.';
-                bkRegulerSection.classList.add('hidden');
-                teachingSection.classList.remove('hidden');
+            userRoleSubtext.textContent = isWaliKelas ? 'Panel Wali Kelas & Guru Pengajar.' : 'Panel Guru BK Pengajar.';
+            teachingSection.classList.remove('hidden');
+            await loadTeachingData();
+            setInterval(async () => {
                 await loadTeachingData();
-                setInterval(async () => {
-                    await loadTeachingData();
-                }, 30000);
-            }
+            }, 30000);
         });
 
         function initTopShortcuts() {
-            if (isGuruBkReguler) {
-                topShortcutWrapper.innerHTML = `
-                    <a href="persetujuan-izin.html" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow flex items-center space-x-1.5">
-                        <span>Persetujuan Izin</span>
-                    </a>
-                    <a href="rekap kehadiran siswa2.html" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow flex items-center space-x-1.5">
-                        <span>Rekap Kehadiran</span>
-                    </a>
-                `;
-            } else {
-                topShortcutWrapper.innerHTML = `
-                    <a href="persetujuan-izin.html" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow flex items-center space-x-1.5">
-                        <span>Persetujuan Izin</span>
-                    </a>
-                    <a href="jurnal2.html" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow flex items-center space-x-1.5">
-                        <span>Upload Jurnal</span>
-                    </a>
-                `;
-            }
+            topShortcutWrapper.innerHTML = `
+                <a href="persetujuan-izin.html" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow flex items-center space-x-1.5">
+                    <span>Persetujuan Izin</span>
+                </a>
+                <a href="jurnal2.html" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow flex items-center space-x-1.5">
+                    <span>Upload Jurnal</span>
+                </a>
+            `;
         }
 
         function timeStrToMinutes(timeStr) {
             if (!timeStr) return 0;
             const parts = timeStr.substring(0, 5).split(':');
             return (parseInt(parts[0], 10) * 60) + parseInt(parts[1], 10);
-        }
-
-        async function loadBkRegulerData() {
-            try {
-                const resLeaves = await fetch(`${API_BASE}/leave-requests`, {
-                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
-                });
-                const jsonL = await resLeaves.json();
-                const leaves = jsonL.data || jsonL || [];
-
-                const pending = leaves.filter(l => (l.status_approval || '').toLowerCase() === 'pending').length;
-                const approved = leaves.filter(l => (l.status_approval || '').toLowerCase() === 'di terima' || (l.status_approval || '').toLowerCase() === 'disetujui').length;
-
-                document.getElementById('bkPendingCount').textContent = pending;
-                document.getElementById('bkApprovedCount').textContent = approved;
-
-                const resUsers = await fetch(`${API_BASE}/users`, {
-                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
-                });
-                const jsonU = await resUsers.json();
-                const students = (jsonU.data || jsonU || []).filter(u => Number(u.id_role) === 4);
-                document.getElementById('bkStudentsCount').textContent = students.length;
-            } catch (e) {}
         }
 
         async function loadTeachingData() {
@@ -442,7 +364,7 @@
                 activeTeachingClassId = Number(activeSched.id_class);
                 const sc = activeSched.school_class;
                 const className = `${sc.kelas_nomor} ${sc.nama_kelas} ${sc.nomor_kelas || ''}`.trim();
-                specialLeaveTargetClassText.textContent = `Kelas Diajar: ${className} (Jam ${activeSched.jam_ke || '-'}, Mapel: ${activeSched.mapel})`;
+                specialLeaveTargetClassText.textContent = `Kelas Diajar: ${className} (Mapel: ${activeSched.mapel})`;
                 await loadClassStudentsForSpecialLeave(activeTeachingClassId);
                 await loadSpecialLeavesForClass(activeTeachingClassId, todayStr);
             } else if (isWaliKelas && userObj.id_class) {
@@ -462,7 +384,7 @@
             let lateJournalAlerts = [];
 
             if (mySchedulesToday.length === 0) {
-                myTodayScheduleBody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Tidak ada jadwal KBM mengajar untuk Anda hari ini (${todayName}).</td></tr>`;
+                myTodayScheduleBody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">Tidak ada jadwal KBM mengajar untuk Anda hari ini (${todayName}).</td></tr>`;
                 lateJournalAlertBox.classList.add('hidden');
             } else {
                 myTodayScheduleBody.innerHTML = mySchedulesToday.map(s => {
@@ -480,14 +402,13 @@
                         statusBadge = `<span class="bg-emerald-100 text-emerald-700 font-bold px-2.5 py-1 rounded-full text-xs">Sudah Diisi</span>`;
                     } else if (isLateMoreThan15Min) {
                         statusBadge = `<span class="bg-red-100 text-red-700 border border-red-300 font-black px-2.5 py-1 rounded-full text-xs animate-pulse">Terlambat Mengisi</span>`;
-                        lateJournalAlerts.push(`Jam ${s.jam_ke || '-'} (${s.mapel} di ${className})`);
+                        lateJournalAlerts.push(`${s.mapel} di ${className}`);
                     } else {
                         statusBadge = `<span class="bg-slate-100 text-slate-600 font-bold px-2.5 py-1 rounded-full text-xs">Belum Diisi</span>`;
                     }
 
                     return `
                         <tr class="hover:bg-slate-50 transition border-b border-slate-100 ${isLateMoreThan15Min ? 'bg-red-50/40' : ''}">
-                            <td class="py-3 px-4 text-center font-bold text-slate-700">Jam ${s.jam_ke || '-'}</td>
                             <td class="py-3 px-4 text-center font-mono text-xs text-slate-600">${start} - ${end}</td>
                             <td class="py-3 px-4 text-center font-bold text-indigo-700">${className}</td>
                             <td class="py-3 px-4 font-semibold text-slate-800">${s.mapel}</td>
@@ -588,7 +509,6 @@
             selectSpecialLeaveStudent.value = studentId;
             inputSpecialLeaveReason.value = reason;
             
-            // Tombol berubah jadi warna kuning saat klik aksi edit
             btnSubmitSpecialLeave.textContent = 'Update';
             btnSubmitSpecialLeave.className = 'w-full py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow';
 
@@ -601,7 +521,6 @@
             selectSpecialLeaveStudent.value = '';
             inputSpecialLeaveReason.value = '';
             
-            // Kembalikan tombol ke default
             btnSubmitSpecialLeave.textContent = 'Simpan';
             btnSubmitSpecialLeave.className = 'w-full py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow';
 

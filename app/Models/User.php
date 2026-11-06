@@ -45,8 +45,15 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class, 'id_role', 'id_role');
     }
 
+    // Untuk Siswa & Wali Kelas (1 Kelas)
     public function schoolClass()
     {
         return $this->belongsTo(SchoolClass::class, 'id_class', 'id_class');
+    }
+
+    // Untuk Guru BK & Guru BK Pengajar (Multi Kelas)
+    public function counselorClasses()
+    {
+        return $this->belongsToMany(SchoolClass::class, 'counselor_classes', 'id_user', 'id_class');
     }
 }

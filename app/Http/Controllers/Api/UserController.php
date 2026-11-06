@@ -19,7 +19,7 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::with(['role', 'schoolClass']);
+        $query = User::with(['role', 'schoolClass', 'counselorClasses']);
 
         if ($request->has('id_role')) {
             $query->where('id_role', $request->id_role);
@@ -116,7 +116,7 @@ class UserController extends Controller
     {
         $category = $request->query('category', 'all');
 
-        $query = User::with(['role', 'schoolClass'])
+        $query = User::with(['role', 'schoolClass', 'counselorClasses'])
             ->whereIn('id_role', [1, 2, 3])
             ->orWhereNotNull('nip');
 
@@ -125,14 +125,26 @@ class UserController extends Controller
                 $query->where('id_role', 1);
             } elseif ($category === 'Walikelas') {
                 $query->where('id_role', 3)->where('title', 'Walikelas');
-            } elseif ($category === 'Guru BK') {
-                $query->where('id_role', 3)->where('title', 'Guru BK');
+            } elseif ($category === 'Guru BK Pengajar') {
+                $query->where('id_role', 3)->where('title', 'Guru BK Pengajar');
+            } elseif ($category === 'Guru Normada') {
+                $query->where('id_role', 2)->whereIn('title', ['Guru Normada', 'Guru Biasa']);
+            } elseif ($category === 'Guru Produktif') {
+                $query->where('id_role', 2)->where('title', 'Guru Produktif');
             } elseif ($category === 'Guru Biasa' || $category === 'Guru') {
                 $query->where('id_role', 2);
             }
         }
 
         $teachers = $query->get()->sortBy('fullname')->values();
+
+        // Menyertakan format id_class gabungan agar frontend yang membaca string koma tetap berjalan
+        $teachers->transform(function ($t) {
+            if ($t->counselorClasses && $t->counselorClasses->count() > 0) {
+                $t->id_class = $t->counselorClasses->pluck('id_class')->implode(',');
+            }
+            return $t;
+        });
 
         return response()->json([
             'status' => 'success',
@@ -154,7 +166,7 @@ class UserController extends Controller
             'fullname' => 'required|string|max:255',
             'nip' => 'nullable|string|max:50|unique:users,nip',
             'id_role' => 'required|integer|in:1,2,3',
-            'id_class' => 'nullable|exists:classes,id_class',
+            'id_class' => 'nullable',
             'title' => 'required|string|max:100',
             'username' => 'required|string|max:100|unique:users,username',
             'email' => 'required|string|email:rfc,dns|max:255|unique:users,email',
@@ -173,12 +185,30 @@ class UserController extends Controller
         $plainPassword = !empty($data['password']) ? $data['password'] : 'Peh_1234';
         $data['password'] = Hash::make($plainPassword);
 
+        // Parsing multi-kelas jika dikirim dalam bentuk string '1,3,21'
+        $multiClasses = [];
+        if (!empty($request->id_class)) {
+            if (is_string($request->id_class) && str_contains($request->id_class, ',')) {
+                $multiClasses = array_filter(array_map('trim', explode(',', $request->id_class)));
+                $data['id_class'] = null; // Tabel users tetap aman dengan nilai null
+            } elseif (is_numeric($request->id_class)) {
+                $data['id_class'] = (int) $request->id_class;
+            } else {
+                $data['id_class'] = null;
+            }
+        }
+
         $teacher = User::create($data);
+
+        // Simpan ke tabel relasi counselor_classes
+        if (!empty($multiClasses)) {
+            $teacher->counselorClasses()->sync($multiClasses);
+        }
 
         return response()->json([
             'status' => 'success',
             'message' => 'Data guru baru berhasil ditambahkan',
-            'data' => $teacher->load(['role', 'schoolClass'])
+            'data' => $teacher->load(['role', 'schoolClass', 'counselorClasses'])
         ], 201);
     }
 
@@ -226,7 +256,27 @@ class UserController extends Controller
             $data['password'] = Hash::make($data['password']);
         }
 
+        // Parsing multi-kelas saat update
+        $multiClasses = null;
+        if (array_key_exists('id_class', $data)) {
+            if (is_string($request->id_class) && str_contains($request->id_class, ',')) {
+                $multiClasses = array_filter(array_map('trim', explode(',', $request->id_class)));
+                $data['id_class'] = null; // Menghindari error integer pada kolom users.id_class
+            } elseif (is_numeric($request->id_class)) {
+                $data['id_class'] = (int) $request->id_class;
+                $multiClasses = [];
+            } else {
+                $data['id_class'] = null;
+                $multiClasses = [];
+            }
+        }
+
         $teacher->update($data);
+
+        // Perbarui tabel relasi counselor_classes
+        if ($multiClasses !== null) {
+            $teacher->counselorClasses()->sync($multiClasses);
+        }
 
         $wakaUser = $request->user();
         if ($wakaUser) {
@@ -239,7 +289,7 @@ class UserController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Data guru berhasil diperbarui',
-            'data' => $teacher->load(['role', 'schoolClass'])
+            'data' => $teacher->load(['role', 'schoolClass', 'counselorClasses'])
         ], 200);
     }
 
@@ -292,6 +342,8 @@ class UserController extends Controller
             $isWali = strcasecmp(str_replace(' ', '', $title), 'walikelas') === 0;
 
             $matchedClassId = null;
+            $bkClassIds = [];
+
             if ($isWali) {
                 if (empty($item['kelas']) || trim($item['kelas']) === '-') {
                     $errors[] = "Baris {$rowNum}: Wali Kelas wajib menentukan kelas binaan.";
@@ -312,11 +364,26 @@ class UserController extends Controller
                     $errors[] = "Baris {$rowNum}: Kelas binaan '{$item['kelas']}' tidak ditemukan di database.";
                     continue;
                 }
+            } else {
+                $rawKelasBk = trim($item['kelas'] ?? '');
+                if (!empty($rawKelasBk) && $rawKelasBk !== '-') {
+                    $parts = array_map('trim', explode(',', $rawKelasBk));
+                    foreach ($parts as $p) {
+                        foreach ($classes as $c) {
+                            $fullC1 = trim($c->kelas_nomor . ' ' . $c->nama_kelas . ' ' . ($c->nomor_kelas ?? ''));
+                            $fullC2 = trim($c->kelas_nomor . ' ' . $c->nama_kelas . ($c->nomor_kelas ?? ''));
+                            if (strcasecmp($p, $fullC1) === 0 || strcasecmp($p, $fullC2) === 0) {
+                                $bkClassIds[] = $c->id_class;
+                                break;
+                            }
+                        }
+                    }
+                }
             }
 
             $plainPassword = !empty($item['password']) ? trim($item['password']) : 'Peh_1234';
 
-            User::create([
+            $user = User::create([
                 'fullname' => trim($item['fullname']),
                 'nip'      => !empty($item['nip']) && trim($item['nip']) !== '-' ? trim($item['nip']) : null,
                 'username' => trim($item['username']),
@@ -326,6 +393,10 @@ class UserController extends Controller
                 'title'    => $title,
                 'id_class' => $matchedClassId
             ]);
+
+            if (!empty($bkClassIds)) {
+                $user->counselorClasses()->sync($bkClassIds);
+            }
 
             $importedCount++;
         }
@@ -431,73 +502,115 @@ class UserController extends Controller
 
     public function importStudentsBatch(Request $request)
     {
+        // 1. Matikan limit eksekusi agar tidak timeout jika memproses ribuan data
+        set_time_limit(300);
+
+        // Validasi payload (tanpa dns dan tanpa min:8 agar fleksibel untuk semua format password)
         $request->validate([
-            'items' => 'required|array|min:1',
+            'items'            => 'required|array|min:1',
             'items.*.kelas'    => 'required|string',
             'items.*.fullname' => 'required|string|max:255',
             'items.*.username' => 'required|string|max:100',
-            'items.*.email'    => 'required|string|email:rfc,dns|max:255',
-            'items.*.password' => 'required|string|min:8',
+            'items.*.email'    => 'required|string|email|max:255',
+            'items.*.password' => 'required|string',
             'items.*.nis'      => 'nullable|string|max:50',
             'items.*.nisn'     => 'nullable|string|max:50',
         ]);
 
-        $classes = SchoolClass::all();
         $importedCount = 0;
         $errors = [];
+
+        // 2. KUNCI OPTIMASI #1: Muat seluruh kelas ke memory RAM
+        $classes = SchoolClass::all();
+        $classMap = [];
+        foreach ($classes as $c) {
+            $c1 = strtolower(trim($c->kelas_nomor . ' ' . $c->nama_kelas . ' ' . ($c->nomor_kelas ?? '')));
+            $c2 = strtolower(trim($c->kelas_nomor . ' ' . $c->nama_kelas . ($c->nomor_kelas ?? '')));
+            $classMap[$c1] = $c->id_class;
+            $classMap[$c2] = $c->id_class;
+        }
+
+        // Ambil data unik yang sudah ada di database ke array PHP (O(1) hash map lookup di RAM)
+        $existingEmails    = array_flip(User::pluck('email')->map(fn($e) => strtolower(trim($e)))->toArray());
+        $existingUsernames = array_flip(User::pluck('username')->map(fn($u) => strtolower(trim($u)))->toArray());
+        $existingNis       = array_flip(User::whereNotNull('nis')->pluck('nis')->map(fn($n) => trim($n))->toArray());
+        $existingNisn      = array_flip(User::whereNotNull('nisn')->pluck('nisn')->map(fn($n) => trim($n))->toArray());
+
+        $rowsToInsert = [];
+        $now = now();
 
         foreach ($request->items as $idx => $item) {
             $rowNum = $idx + 2;
 
-            $cleanClassStr = preg_replace('/\s+/', ' ', trim($item['kelas']));
-            $matchedClass = null;
+            // Cocokkan kelas langsung di memory RAM
+            $cleanClassStr = strtolower(preg_replace('/\s+/', ' ', trim($item['kelas'])));
+            $matchedClassId = $classMap[$cleanClassStr] ?? null;
 
-            foreach ($classes as $c) {
-                $fullC1 = trim($c->kelas_nomor . ' ' . $c->nama_kelas . ' ' . ($c->nomor_kelas ?? ''));
-                $fullC2 = trim($c->kelas_nomor . ' ' . $c->nama_kelas . ($c->nomor_kelas ?? ''));
-                if (strcasecmp($cleanClassStr, $fullC1) === 0 || strcasecmp($cleanClassStr, $fullC2) === 0) {
-                    $matchedClass = $c;
-                    break;
-                }
-            }
-
-            if (!$matchedClass) {
+            if (!$matchedClassId) {
                 $errors[] = "Baris {$rowNum}: Kelas '{$item['kelas']}' tidak terdaftar di sistem.";
                 continue;
             }
 
-            if (User::where('email', $item['email'])->exists()) {
+            $cleanEmail = strtolower(trim($item['email']));
+            $cleanUser  = strtolower(trim($item['username']));
+            $cleanNis   = (!empty($item['nis']) && trim($item['nis']) !== '-') ? trim($item['nis']) : null;
+            $cleanNisn  = (!empty($item['nisn']) && trim($item['nisn']) !== '-') ? trim($item['nisn']) : null;
+
+            // Pengecekan duplikat instan di RAM (0 ms, tanpa query SQL bolak-balik)
+            if (isset($existingEmails[$cleanEmail])) {
                 $errors[] = "Baris {$rowNum}: Email '{$item['email']}' sudah terdaftar.";
                 continue;
             }
 
-            if (User::where('username', $item['username'])->exists()) {
+            if (isset($existingUsernames[$cleanUser])) {
                 $errors[] = "Baris {$rowNum}: Username '{$item['username']}' sudah digunakan.";
                 continue;
             }
 
-            if (!empty($item['nis']) && User::where('nis', $item['nis'])->exists()) {
-                $errors[] = "Baris {$rowNum}: NIS '{$item['nis']}' sudah terdaftar.";
+            if ($cleanNis && isset($existingNis[$cleanNis])) {
+                $errors[] = "Baris {$rowNum}: NIS '{$cleanNis}' sudah terdaftar.";
                 continue;
             }
 
-            if (!empty($item['nisn']) && User::where('nisn', $item['nisn'])->exists()) {
-                $errors[] = "Baris {$rowNum}: NISN '{$item['nisn']}' sudah terdaftar.";
+            if ($cleanNisn && isset($existingNisn[$cleanNisn])) {
+                $errors[] = "Baris {$rowNum}: NISN '{$cleanNisn}' sudah terdaftar.";
                 continue;
             }
 
-            User::create([
-                'fullname' => trim($item['fullname']),
-                'username' => trim($item['username']),
-                'email'    => strtolower(trim($item['email'])),
-                'password' => Hash::make(trim($item['password'])),
-                'nis'      => !empty($item['nis']) ? trim($item['nis']) : null,
-                'nisn'     => !empty($item['nisn']) ? trim($item['nisn']) : null,
-                'id_class' => $matchedClass->id_class,
-                'id_role'  => 4
-            ]);
+            // Tandai terpakai di memori agar baris di bawahnya tidak menabrak baris sekarang
+            $existingEmails[$cleanEmail] = true;
+            $existingUsernames[$cleanUser] = true;
+            if ($cleanNis)  $existingNis[$cleanNis] = true;
+            if ($cleanNisn) $existingNisn[$cleanNisn] = true;
+
+            // 3. KUNCI OPTIMASI #2: Hashing Bcrypt cepat (cost 4) agar 1.711 baris selesai dalam hitungan detik
+            $pass = password_hash(trim($item['password']), PASSWORD_BCRYPT, ['cost' => 4]);
+
+            $rowsToInsert[] = [
+                'fullname'   => trim($item['fullname']),
+                'username'   => trim($item['username']),
+                'email'      => $cleanEmail,
+                'password'   => $pass,
+                'nis'        => $cleanNis,
+                'nisn'       => $cleanNisn,
+                'id_class'   => $matchedClassId,
+                'id_role'    => 4,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
 
             $importedCount++;
+
+            // 4. KUNCI OPTIMASI #3: Insert bertahap per 200 baris agar progres langsung masuk ke phpMyAdmin
+            if (count($rowsToInsert) >= 200) {
+                User::insert($rowsToInsert);
+                $rowsToInsert = [];
+            }
+        }
+
+        // Masukkan sisa baris terakhir
+        if (!empty($rowsToInsert)) {
+            User::insert($rowsToInsert);
         }
 
         if ($importedCount === 0 && count($errors) > 0) {
@@ -518,7 +631,7 @@ class UserController extends Controller
 
     public function show($id)
     {
-        $user = User::with(['role', 'schoolClass'])->find($id);
+        $user = User::with(['role', 'schoolClass', 'counselorClasses'])->find($id);
 
         if (!$user) {
             return response()->json([
@@ -586,7 +699,7 @@ class UserController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Data user berhasil diperbarui',
-            'data' => $user->load(['role', 'schoolClass'])
+            'data' => $user->load(['role', 'schoolClass', 'counselorClasses'])
         ], 200);
     }
 
@@ -639,7 +752,6 @@ class UserController extends Controller
         }
 
         $otp = sprintf('%06d', random_int(0, 999999));
-        
         $cacheKey = "waka_edit_otp_{$type}_{$wakaUser->id_user}_{$targetUserId}";
 
         Cache::put($cacheKey, [

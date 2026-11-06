@@ -254,14 +254,14 @@
                             textClass = 'text-red-500 bg-red-50 font-normal';
                         }
 
-                        return `<option value="${s.id_schedule}" data-class="${s.id_class}" data-filled="${isFilled}" data-expired="${isExpired}" class="${textClass}">Jam ${s.jam_ke} (${w}) | ${c} - ${s.mapel}${statusLabel}</option>`;
+                        // Sudah diselaraskan tanpa 
+                        return `<option value="${s.id_schedule}" data-class="${s.id_class}" data-filled="${isFilled}" data-expired="${isExpired}" class="${textClass}">${w} | ${c} - ${s.mapel}${statusLabel}</option>`;
                     }).join('');
             } catch (err) {
                 selectSchedule.innerHTML = `<option value="" disabled selected>Gagal memuat jadwal.</option>`;
             }
         }
 
-        // Validasi: Wajib Jadwal + Wajib Materi + WAJIB UPLOAD FOTO DARI KAMERA
         function validateFormState() {
             const hasSchedule = selectSchedule.value !== '';
             const hasTopic = topicDescription.value.trim().length > 0;

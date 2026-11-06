@@ -30,42 +30,40 @@
         <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
             <div class="max-w-7xl mx-auto space-y-6">
                 
+                <!-- Header Atas -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <h2 class="text-xl md:text-2xl font-bold text-slate-800">Kelola data guru</h2>
                         <p class="text-slate-500 text-xs md:text-sm mt-0.5">Manajemen akun dan data guru terintegrasi SCP.</p>
                     </div>
-                    <div class="w-full md:w-80">
-                        <div class="relative">
+                    
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <div class="relative w-full md:w-72">
                             <input type="text" id="searchInput" autocomplete="off" placeholder="Cari NIP, Nama, Username, Email, Title, Kelas..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition">
                             <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                         </div>
+
+                        <button id="btnOpenAddUser" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs md:text-sm font-semibold shadow transition flex items-center space-x-1.5 shrink-0 whitespace-nowrap">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <span>Tambah User</span>
+                        </button>
                     </div>
                 </div>
 
+                <!-- Bilah Kategori Navigasi Tab (Tanpa Guru BK Reguler) -->
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                    <div class="flex items-center justify-between overflow-x-auto category-scroll pb-2 whitespace-nowrap gap-4 text-xs md:text-sm font-semibold text-slate-600">
-                        <div class="flex items-center space-x-6">
-                            <button class="cat-btn underline text-indigo-600 font-bold" data-cat="all">Semua Guru</button>
-                            <span class="text-slate-300">|</span>
-                            <button class="cat-btn" data-cat="Guru">Guru</button>
-                            <span class="text-slate-300">|</span>
-                            <button class="cat-btn" data-cat="Walikelas">Wali Kelas</button>
-                            <span class="text-slate-300">|</span>
-                            <button class="cat-btn" data-cat="Guru BK">Guru BK</button>
-                            <span class="text-slate-300">|</span>
-                            <button class="cat-btn" data-cat="Waka">Waka</button>
-                        </div>
-                        <div class="flex items-center space-x-3 shrink-0">
-                            <button id="btnOpenTitle" onclick="window.location.href='kelola title.html'" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                                <span>Title</span>
-                            </button>
-                            <button id="btnOpenAddUser" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                                <span>Tambah User</span>
-                            </button>
-                        </div>
+                    <div class="flex items-center overflow-x-auto category-scroll pb-1 whitespace-nowrap gap-5 text-xs md:text-sm font-semibold text-slate-600">
+                        <button class="cat-btn underline text-indigo-600 font-bold" data-cat="all">Semua Guru</button>
+                        <span class="text-slate-300">|</span>
+                        <button class="cat-btn" data-cat="Guru Normada">Guru Normada</button>
+                        <span class="text-slate-300">|</span>
+                        <button class="cat-btn" data-cat="Guru Produktif">Guru Produktif</button>
+                        <span class="text-slate-300">|</span>
+                        <button class="cat-btn" data-cat="Walikelas">Wali Kelas</button>
+                        <span class="text-slate-300">|</span>
+                        <button class="cat-btn" data-cat="Guru BK Pengajar">Guru BK Pengajar</button>
+                        <span class="text-slate-300">|</span>
+                        <button class="cat-btn" data-cat="Waka">Waka</button>
                     </div>
                 </div>
 
@@ -85,7 +83,7 @@
 
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse min-w-[900px]">
+                        <table class="w-full text-left border-collapse min-w-[950px]">
                             <thead>
                                 <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
                                     <th class="py-3.5 px-3 font-semibold text-center w-16">Aksi</th>
@@ -95,11 +93,12 @@
                                     <th class="py-3.5 px-3 font-semibold text-center">Email</th>
                                     <th class="py-3.5 px-2 font-semibold w-24">Password (Encrypted)</th>
                                     <th class="py-3.5 px-3 font-semibold text-center w-36">Title</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-48">Mengampu Kelas</th>
                                     <th class="py-3.5 px-3 font-semibold text-center w-28">Role</th>
                                 </tr>
                             </thead>
                             <tbody id="teacherTableBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
-                                <tr><td colspan="8" class="py-8 text-center text-slate-400">Memuat data guru...</td></tr>
+                                <tr><td colspan="9" class="py-8 text-center text-slate-400">Memuat data guru...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -123,7 +122,6 @@
                 </div>
             </div>
 
-            <!-- Header Modal: Hanya Tombol Template dan Import Excel di Samping Kiri Tombol Silang (X) -->
             <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
                 <h3 class="font-bold text-base md:text-lg">Tambah User Guru Baru</h3>
                 <div class="flex items-center space-x-2">
@@ -171,7 +169,7 @@
                     </div>
                 </div>
 
-                <!-- 3 Kolom Kelas Tambahan Khusus Wali Kelas -->
+                <!-- 3 Kolom Kelas Khusus Wali Kelas -->
                 <div id="addWalikelasContainer" class="grid grid-cols-3 gap-2 hidden p-3 bg-amber-50/60 border border-amber-200 rounded-xl">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Kelas</label>
@@ -196,6 +194,19 @@
                         </select>
                         <p id="error_addNomorKelas" class="text-xs text-red-500 italic mt-0.5 hidden">pilih nomor</p>
                     </div>
+                </div>
+
+                <!-- Kolom Mengampu Kelas Khusus Guru BK Pengajar -->
+                <div id="addBkClassesContainer" class="hidden p-3.5 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold text-indigo-900 uppercase">Mengampu Kelas</label>
+                        <button type="button" id="btnAddBkClassRow" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow-xs">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <span>+ Kelas</span>
+                        </button>
+                    </div>
+                    <div id="addBkClassesList" class="space-y-2"></div>
+                    <p id="error_addBkClasses" class="text-xs text-red-500 italic mt-1 hidden">Pilih minimal 1 kelas yang diampu</p>
                 </div>
 
                 <div>
@@ -277,7 +288,7 @@
                     </div>
                 </div>
 
-                <!-- 3 Kolom Kelas Tambahan Khusus Edit Wali Kelas -->
+                <!-- 3 Kolom Kelas Khusus Edit Wali Kelas -->
                 <div id="editWalikelasContainer" class="grid grid-cols-3 gap-2 hidden p-3 bg-amber-50/60 border border-amber-200 rounded-xl">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Kelas</label>
@@ -302,6 +313,19 @@
                         </select>
                         <p id="error_editNomorKelas" class="text-xs text-red-500 italic mt-0.5 hidden">pilih nomor</p>
                     </div>
+                </div>
+
+                <!-- Kolom Mengampu Kelas Khusus Edit Guru BK Pengajar -->
+                <div id="editBkClassesContainer" class="hidden p-3.5 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold text-indigo-900 uppercase">Mengampu Kelas</label>
+                        <button type="button" id="btnEditBkClassRow" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow-xs">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <span>Kelas</span>
+                        </button>
+                    </div>
+                    <div id="editBkClassesList" class="space-y-2"></div>
+                    <p id="error_editBkClasses" class="text-xs text-red-500 italic mt-1 hidden">Pilih minimal 1 kelas yang diampu</p>
                 </div>
 
                 <div>
@@ -454,21 +478,27 @@
         const editNamaKelasDropdown = document.getElementById('editNamaKelasDropdown');
         const editNomorKelas = document.getElementById('editNomorKelas');
 
+        const addBkClassesContainer = document.getElementById('addBkClassesContainer');
+        const addBkClassesList = document.getElementById('addBkClassesList');
+        const btnAddBkClassRow = document.getElementById('btnAddBkClassRow');
+
+        const editBkClassesContainer = document.getElementById('editBkClassesContainer');
+        const editBkClassesList = document.getElementById('editBkClassesList');
+        const btnEditBkClassRow = document.getElementById('btnEditBkClassRow');
+
         const btnDownloadTemplate = document.getElementById('btnDownloadTemplate');
         const btnTriggerExcelImport = document.getElementById('btnTriggerExcelImport');
         const excelFileInput = document.getElementById('excelFileInput');
 
         const roleMap = { 1: 'Waka', 2: 'Guru', 3: 'Kesiswaan' };
 
+        // Hanya 4 Title Resmi: Wali Kelas, Guru BK Pengajar, Guru Normada, Guru Produktif
         function getAvailableTitles() {
-            const stored = localStorage.getItem('scp_teacher_titles');
-            if (stored) {
-                try { return JSON.parse(stored); } catch(e) {}
-            }
             return [
                 { name: "Wali Kelas", role: "Kesiswaan" },
-                { name: "Guru BK", role: "Kesiswaan" },
-                { name: "Guru Biasa", role: "Guru" }
+                { name: "Guru BK Pengajar", role: "Kesiswaan" },
+                { name: "Guru Normada", role: "Guru" },
+                { name: "Guru Produktif", role: "Guru" }
             ];
         }
 
@@ -485,12 +515,8 @@
                 filteredTitles = [{ name: "Waka", role: "Waka" }];
             } else if (roleVal === 2) {
                 filteredTitles = allTitles.filter(t => t.role === 'Guru');
-                if (filteredTitles.length === 0) filteredTitles.push({ name: "Guru Biasa", role: "Guru" });
             } else if (roleVal === 3) {
                 filteredTitles = allTitles.filter(t => t.role === 'Kesiswaan');
-                if (filteredTitles.length === 0) {
-                    filteredTitles.push({ name: "Wali Kelas", role: "Kesiswaan" }, { name: "Guru BK", role: "Kesiswaan" });
-                }
             }
 
             filteredTitles.forEach(t => {
@@ -515,6 +541,95 @@
                 schoolClassesList = res.data || res || [];
             } catch(e) {}
         }
+
+        function getOccupiedBkClassIds(excludeTeacherId = null) {
+            const occupiedMap = new Map();
+            allTeachersData.forEach(t => {
+                if (excludeTeacherId && Number(t.id_user) === Number(excludeTeacherId)) return;
+                const roleNum = parseInt(t.id_role);
+                const titleClean = (t.title || '').toLowerCase().replace(/\s+/g, '');
+                const isBkPengajar = (roleNum === 3) && (titleClean === 'gurubkpengajar');
+                if (isBkPengajar && t.id_class) {
+                    const rawIds = String(t.id_class).split(',').map(s => s.trim()).filter(Boolean);
+                    rawIds.forEach(cid => {
+                        occupiedMap.set(String(cid), t.fullname || t.username);
+                    });
+                }
+            });
+            return occupiedMap;
+        }
+
+        function createBkClassRow(containerList, selectedClassId = '', excludeTeacherId = null) {
+            const occupiedClasses = getOccupiedBkClassIds(excludeTeacherId);
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'flex items-center space-x-2 bk-class-row';
+
+            const select = document.createElement('select');
+            select.className = 'flex-1 px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-700 bg-white focus:ring-2 focus:ring-indigo-500 outline-none bk-class-select';
+            select.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+
+            schoolClassesList.forEach(c => {
+                const cidStr = String(c.id_class);
+                const cFull = `${c.kelas_nomor} ${c.nama_kelas} ${c.nomor_kelas || ''}`.trim();
+                const opt = document.createElement('option');
+                opt.value = cidStr;
+
+                const isTakenByOther = occupiedClasses.has(cidStr) && (cidStr !== String(selectedClassId));
+                if (isTakenByOther) {
+                    opt.textContent = `${cFull} (Sudah Digunakan - ${occupiedClasses.get(cidStr)})`;
+                    opt.disabled = true;
+                    opt.className = 'text-slate-400 bg-slate-100 italic';
+                } else {
+                    opt.textContent = cFull;
+                }
+
+                if (selectedClassId && cidStr === String(selectedClassId)) {
+                    opt.selected = true;
+                }
+                select.appendChild(opt);
+            });
+
+            const btnDelete = document.createElement('button');
+            btnDelete.type = 'button';
+            btnDelete.className = 'p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition shadow-xs';
+            btnDelete.title = 'Hapus Kelas Ini';
+            btnDelete.innerHTML = '<svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>';
+            btnDelete.addEventListener('click', () => {
+                rowDiv.remove();
+            });
+
+            rowDiv.appendChild(select);
+            rowDiv.appendChild(btnDelete);
+            containerList.appendChild(rowDiv);
+        }
+
+        btnAddBkClassRow.addEventListener('click', () => {
+            createBkClassRow(addBkClassesList, '', null);
+        });
+
+        btnEditBkClassRow.addEventListener('click', () => {
+            createBkClassRow(editBkClassesList, '', editingTeacherId);
+        });
+
+        function toggleTeacherRoleSpecificFields(titleVal, isEdit = false) {
+            const cleanTitle = (titleVal || '').replace(/\s+/g, '').toLowerCase();
+            const waliContainer = isEdit ? editWalikelasContainer : addWalikelasContainer;
+            const bkContainer = isEdit ? editBkClassesContainer : addBkClassesContainer;
+
+            if (cleanTitle === 'walikelas') {
+                waliContainer.classList.remove('hidden');
+                bkContainer.classList.add('hidden');
+            } else if (cleanTitle === 'gurubkpengajar') {
+                waliContainer.classList.add('hidden');
+                bkContainer.classList.remove('hidden');
+            } else {
+                waliContainer.classList.add('hidden');
+                bkContainer.classList.add('hidden');
+            }
+        }
+
+        addTitleSelect.addEventListener('change', () => toggleTeacherRoleSpecificFields(addTitleSelect.value, false));
+        editTitleSelect.addEventListener('change', () => toggleTeacherRoleSpecificFields(editTitleSelect.value, true));
 
         function renderKelasDropdown(query, dropdownEl, inputEl, tingkatEl, nomorSelectEl) {
             const tingkat = tingkatEl.value;
@@ -574,18 +689,6 @@
             });
         }
 
-        function toggleWaliKelasFields(titleVal, containerEl) {
-            const isWali = (titleVal || '').replace(/\s+/g, '').toLowerCase() === 'walikelas';
-            if (isWali) {
-                containerEl.classList.remove('hidden');
-            } else {
-                containerEl.classList.add('hidden');
-            }
-        }
-
-        addTitleSelect.addEventListener('change', () => toggleWaliKelasFields(addTitleSelect.value, addWalikelasContainer));
-        editTitleSelect.addEventListener('change', () => toggleWaliKelasFields(editTitleSelect.value, editWalikelasContainer));
-
         addTingkat.addEventListener('change', () => { addNamaKelas.value = ''; addNomorKelas.innerHTML = '<option value="">Pilih</option>'; });
         addNamaKelas.addEventListener('focus', () => renderKelasDropdown(addNamaKelas.value, addNamaKelasDropdown, addNamaKelas, addTingkat, addNomorKelas));
         addNamaKelas.addEventListener('input', (e) => { renderKelasDropdown(e.target.value, addNamaKelasDropdown, addNamaKelas, addTingkat, addNomorKelas); syncNomorOptions(addTingkat, addNamaKelas, addNomorKelas); });
@@ -615,7 +718,7 @@
         addRoleSelect.addEventListener('change', () => {
             document.getElementById('error_addRole').classList.add('hidden');
             populateTitleDropdown(addRoleSelect, addTitleSelect);
-            toggleWaliKelasFields(addTitleSelect.value, addWalikelasContainer);
+            toggleTeacherRoleSpecificFields(addTitleSelect.value, false);
         });
         addTitleSelect.addEventListener('change', () => {
             document.getElementById('error_addTitle').classList.add('hidden');
@@ -624,7 +727,7 @@
         editRoleSelect.addEventListener('change', () => {
             document.getElementById('error_editRole').classList.add('hidden');
             populateTitleDropdown(editRoleSelect, editTitleSelect);
-            toggleWaliKelasFields(editTitleSelect.value, editWalikelasContainer);
+            toggleTeacherRoleSpecificFields(editTitleSelect.value, true);
         });
         editTitleSelect.addEventListener('change', () => {
             document.getElementById('error_editTitle').classList.add('hidden');
@@ -678,7 +781,7 @@
 
         async function fetchTeachers() {
             try {
-                teacherTableBody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Memuat data guru...</td></tr>`;
+                teacherTableBody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Memuat data guru...</td></tr>`;
                 const response = await fetch(`${API_BASE_URL}/waka/teachers?category=all&_t=${Date.now()}`, {
                     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
                 });
@@ -700,7 +803,7 @@
                 allTeachersData = teachers;
                 renderTable();
             } catch (err) {
-                teacherTableBody.innerHTML = `<tr><td colspan="8" class="py-6 text-center text-red-500">Gagal memuat data guru.</td></tr>`;
+                teacherTableBody.innerHTML = `<tr><td colspan="9" class="py-6 text-center text-red-500">Gagal memuat data guru.</td></tr>`;
             }
         }
 
@@ -729,23 +832,39 @@
                 const username = (t.username || '').toLowerCase();
                 const email = (t.email || '').toLowerCase();
                 const roleNum = parseInt(t.id_role);
-                const titleClean = (t.title || '').toLowerCase().replace(/\s+/g, '');
-                const className = t.school_class ? `${t.school_class.kelas_nomor} ${t.school_class.nama_kelas} ${t.school_class.nomor_kelas || ''}`.toLowerCase() : '';
+                const titleRaw = (t.title || '').trim();
+                const titleClean = titleRaw.toLowerCase().replace(/\s+/g, '');
+                
+                let assignedClassNames = '';
+                if (t.id_class) {
+                    const rawIds = String(t.id_class).split(',').map(s => s.trim());
+                    assignedClassNames = schoolClassesList.filter(c => rawIds.includes(String(c.id_class)))
+                        .map(c => `${c.kelas_nomor} ${c.nama_kelas} ${c.nomor_kelas || ''}`.trim())
+                        .join(' ')
+                        .toLowerCase();
+                }
 
                 const matchesSearch = nip.includes(searchVal) || fullname.includes(searchVal) ||
-                       username.includes(searchVal) || email.includes(searchVal) || (t.title || '').toLowerCase().includes(searchVal) || className.includes(searchVal);
+                       username.includes(searchVal) || email.includes(searchVal) || (t.title || '').toLowerCase().includes(searchVal) || assignedClassNames.includes(searchVal);
 
                 let matchesCat = true;
-                if (currentCategory === 'Guru') matchesCat = roleNum === 2;
-                else if (currentCategory === 'Walikelas') matchesCat = roleNum === 3 && titleClean === 'walikelas';
-                else if (currentCategory === 'Guru BK') matchesCat = roleNum === 3 && titleClean === 'gurubk';
-                else if (currentCategory === 'Waka') matchesCat = roleNum === 1;
+                if (currentCategory === 'Guru Normada') {
+                    matchesCat = (roleNum === 2) && (titleClean === 'gurunormada' || titleClean === 'gurubiasa');
+                } else if (currentCategory === 'Guru Produktif') {
+                    matchesCat = (roleNum === 2) && (titleClean === 'guruproduktif');
+                } else if (currentCategory === 'Walikelas') {
+                    matchesCat = (roleNum === 3) && (titleClean === 'walikelas');
+                } else if (currentCategory === 'Guru BK Pengajar') {
+                    matchesCat = (roleNum === 3) && (titleClean === 'gurubkpengajar');
+                } else if (currentCategory === 'Waka') {
+                    matchesCat = (roleNum === 1);
+                }
 
                 return matchesSearch && matchesCat;
             });
 
             if (filtered.length === 0) {
-                teacherTableBody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Tidak ada data guru ditemukan.</td></tr>`;
+                teacherTableBody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Tidak ada data guru ditemukan.</td></tr>`;
                 renderRecentBox([]);
                 return;
             }
@@ -766,12 +885,24 @@
                 let maskedPwd = rawPwd.length > 8 ? rawPwd.substring(0, 8) + '...' : rawPwd;
                 let roleName = roleMap[parseInt(t.id_role)] || 'Guru';
 
-                const isWali = (t.title || '').replace(/\s+/g, '').toLowerCase() === 'walikelas';
-                let classSubtext = '';
-                if (isWali && t.school_class) {
-                    const c = t.school_class;
-                    const cFull = `${c.kelas_nomor} ${c.nama_kelas} ${c.nomor_kelas || ''}`.trim();
-                    classSubtext = `<br><span class="text-xs text-slate-500">(${cFull})</span>`;
+                const titleClean = (t.title || '').replace(/\s+/g, '').toLowerCase();
+                let classColumnContent = '-';
+
+                if (titleClean === 'walikelas') {
+                    if (t.school_class) {
+                        const c = t.school_class;
+                        classColumnContent = `<span class="bg-amber-100 text-amber-800 font-semibold px-2.5 py-0.5 rounded-full text-xs">${c.kelas_nomor} ${c.nama_kelas} ${c.nomor_kelas || ''}</span>`;
+                    }
+                } else if (titleClean === 'gurubkpengajar') {
+                    if (t.id_class) {
+                        const rawIds = String(t.id_class).split(',').map(s => s.trim()).filter(Boolean);
+                        const matchedClasses = schoolClassesList.filter(c => rawIds.includes(String(c.id_class)));
+                        if (matchedClasses.length > 0) {
+                            classColumnContent = `<div class="flex flex-wrap gap-1 justify-center max-w-[220px] mx-auto">` + matchedClasses.map(c => `
+                                <span class="bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full text-[11px] whitespace-nowrap">${c.kelas_nomor} ${c.nama_kelas} ${c.nomor_kelas || ''}</span>
+                            `).join('') + `</div>`;
+                        }
+                    }
                 }
 
                 return `
@@ -788,7 +919,9 @@
                         <td class="py-3 px-2 font-mono text-xs text-slate-500 w-24 truncate text-center">${highlightMatch(maskedPwd, searchVal)}</td>
                         <td class="py-3 px-3 font-semibold text-slate-800 text-center">
                             ${highlightMatch(t.title || '-', searchVal)}
-                            ${classSubtext}
+                        </td>
+                        <td class="py-3 px-3 text-center font-medium">
+                            ${classColumnContent}
                         </td>
                         <td class="py-3 px-3 font-semibold text-indigo-600 text-center">${roleName}</td>
                     </tr>
@@ -825,10 +958,7 @@
             recentBoxArrow.classList.toggle('rotate-180');
         });
 
-        // =========================================================================
-        // FITUR EXCEL: TEMPLATE DAN IMPORT EXCEL GURU
-        // =========================================================================
-
+        // TEMPLATE & IMPORT EXCEL GURU
         btnDownloadTemplate.addEventListener('click', () => {
             const templateData = [
                 {
@@ -847,19 +977,29 @@
                     'Username': 'sitiaminah',
                     'Email': 'siti@gmail.com',
                     'Password': 'Peh_1234',
-                    'Title': 'Guru Biasa',
+                    'Title': 'Guru Normada',
                     'Role': 'Guru',
                     'Kelas Diampu': '-'
                 },
                 {
-                    'NIP': '199003032012031003',
-                    'Fullname': 'Ahmad Fauzi, S.Kom',
-                    'Username': 'ahmadfauzi',
-                    'Email': 'ahmad@gmail.com',
+                    'NIP': '198803032012031003',
+                    'Fullname': 'Dedi Prasetyo, S.T',
+                    'Username': 'dediprasetyo',
+                    'Email': 'dedi@gmail.com',
                     'Password': 'Peh_1234',
-                    'Title': 'Guru BK',
-                    'Role': 'Kesiswaan',
+                    'Title': 'Guru Produktif',
+                    'Role': 'Guru',
                     'Kelas Diampu': '-'
+                },
+                {
+                    'NIP': '199204042014041005',
+                    'Fullname': 'Rahmat Hidayat, S.Pd',
+                    'Username': 'rahmathidayat',
+                    'Email': 'rahmat@gmail.com',
+                    'Password': 'Peh_1234',
+                    'Title': 'Guru BK Pengajar',
+                    'Role': 'Kesiswaan',
+                    'Kelas Diampu': 'XI RPL 1'
                 }
             ];
 
@@ -908,11 +1048,13 @@
                         const username = findVal(['Username']);
                         const email = findVal(['Email']);
                         let password = findVal(['Password', 'Kata Sandi']);
-                        const title = findVal(['Title', 'Jabatan']);
+                        let title = findVal(['Title', 'Jabatan']);
                         const role = findVal(['Role', 'Peran']);
                         const kelas = findVal(['Kelas Diampu', 'Kelas', 'Class']);
 
                         if (!password) password = 'Peh_1234';
+
+                        if (title.toLowerCase() === 'guru biasa') title = 'Guru Normada';
 
                         if (fullname && username && email && title && role) {
                             payloadItems.push({
@@ -1048,6 +1190,8 @@
             addPasswordInput.value = 'Peh_1234';
             addTitleSelect.innerHTML = '<option value="">Pilih</option>';
             addWalikelasContainer.classList.add('hidden');
+            addBkClassesContainer.classList.add('hidden');
+            addBkClassesList.innerHTML = '';
             document.querySelectorAll('#addUserModal p.text-red-500.italic').forEach(el => el.classList.add('hidden'));
             if (window.resetPwField) {
                 window.resetPwField('addPassword', 'toggleAddPasswordBtn', 'addPasswordValidationError');
@@ -1087,11 +1231,21 @@
                 }
             });
 
-            const isWali = (addTitleSelect.value || '').replace(/\s+/g, '').toLowerCase() === 'walikelas';
-            if (isWali) {
+            const cleanTitle = (addTitleSelect.value || '').replace(/\s+/g, '').toLowerCase();
+
+            if (cleanTitle === 'walikelas') {
                 if (!addTingkat.value) { document.getElementById('error_addTingkat').classList.remove('hidden'); hasEmpty = true; }
                 if (!addNamaKelas.value.trim()) { document.getElementById('error_addNamaKelas').classList.remove('hidden'); hasEmpty = true; }
                 if (!addNomorKelas.value) { document.getElementById('error_addNomorKelas').classList.remove('hidden'); hasEmpty = true; }
+            } else if (cleanTitle === 'gurubkpengajar') {
+                const bkSelects = addBkClassesList.querySelectorAll('.bk-class-select');
+                const selectedIds = Array.from(bkSelects).map(s => s.value).filter(Boolean);
+                if (selectedIds.length === 0) {
+                    document.getElementById('error_addBkClasses').classList.remove('hidden');
+                    hasEmpty = true;
+                } else {
+                    document.getElementById('error_addBkClasses').classList.add('hidden');
+                }
             }
 
             if (hasEmpty) return;
@@ -1122,8 +1276,9 @@
             confirmAddTeacherModal.classList.add('hidden');
 
             let classId = null;
-            const isWali = (addTitleSelect.value || '').replace(/\s+/g, '').toLowerCase() === 'walikelas';
-            if (isWali) {
+            const cleanTitle = (addTitleSelect.value || '').replace(/\s+/g, '').toLowerCase();
+
+            if (cleanTitle === 'walikelas') {
                 const matched = schoolClassesList.find(c => {
                     const matchTingkat = (c.kelas_nomor || '').toUpperCase() === addTingkat.value.toUpperCase();
                     const dbNama = (c.nama_kelas || '').replace(/\s*\d+$/, '').trim().toLowerCase();
@@ -1132,6 +1287,10 @@
                     return matchTingkat && matchNama && dbNomor === addNomorKelas.value;
                 });
                 if (matched) classId = matched.id_class;
+            } else if (cleanTitle === 'gurubkpengajar') {
+                const bkSelects = addBkClassesList.querySelectorAll('.bk-class-select');
+                const selectedIds = Array.from(bkSelects).map(s => s.value).filter(Boolean);
+                classId = selectedIds.join(',');
             }
 
             const payload = {
@@ -1191,11 +1350,21 @@
                 }
             });
 
-            const isWali = (editTitleSelect.value || '').replace(/\s+/g, '').toLowerCase() === 'walikelas';
-            if (isWali) {
+            const cleanTitle = (editTitleSelect.value || '').replace(/\s+/g, '').toLowerCase();
+
+            if (cleanTitle === 'walikelas') {
                 if (!editTingkat.value) { document.getElementById('error_editTingkat').classList.remove('hidden'); hasEmpty = true; }
                 if (!editNamaKelas.value.trim()) { document.getElementById('error_editNamaKelas').classList.remove('hidden'); hasEmpty = true; }
                 if (!editNomorKelas.value) { document.getElementById('error_editNomorKelas').classList.remove('hidden'); hasEmpty = true; }
+            } else if (cleanTitle === 'gurubkpengajar') {
+                const bkSelects = editBkClassesList.querySelectorAll('.bk-class-select');
+                const selectedIds = Array.from(bkSelects).map(s => s.value).filter(Boolean);
+                if (selectedIds.length === 0) {
+                    document.getElementById('error_editBkClasses').classList.remove('hidden');
+                    hasEmpty = true;
+                } else {
+                    document.getElementById('error_editBkClasses').classList.add('hidden');
+                }
             }
 
             if (hasEmpty) return;
@@ -1226,8 +1395,9 @@
             confirmEditTeacherModal.classList.add('hidden');
 
             let classId = null;
-            const isWali = (editTitleSelect.value || '').replace(/\s+/g, '').toLowerCase() === 'walikelas';
-            if (isWali) {
+            const cleanTitle = (editTitleSelect.value || '').replace(/\s+/g, '').toLowerCase();
+
+            if (cleanTitle === 'walikelas') {
                 const matched = schoolClassesList.find(c => {
                     const matchTingkat = (c.kelas_nomor || '').toUpperCase() === editTingkat.value.toUpperCase();
                     const dbNama = (c.nama_kelas || '').replace(/\s*\d+$/, '').trim().toLowerCase();
@@ -1236,6 +1406,10 @@
                     return matchTingkat && matchNama && dbNomor === editNomorKelas.value;
                 });
                 if (matched) classId = matched.id_class;
+            } else if (cleanTitle === 'gurubkpengajar') {
+                const bkSelects = editBkClassesList.querySelectorAll('.bk-class-select');
+                const selectedIds = Array.from(bkSelects).map(s => s.value).filter(Boolean);
+                classId = selectedIds.join(',');
             }
 
             const pwdValue = editPasswordInput.value.trim();
@@ -1393,19 +1567,29 @@
             editRoleSelect.value = String(currentRoleVal);
             populateTitleDropdown(editRoleSelect, editTitleSelect, t.title || '');
 
-            const isWali = (t.title || '').replace(/\s+/g, '').toLowerCase() === 'walikelas';
-            toggleWaliKelasFields(t.title, editWalikelasContainer);
+            const titleClean = (t.title || '').replace(/\s+/g, '').toLowerCase();
+            toggleTeacherRoleSpecificFields(t.title, true);
             
-            if (isWali && t.school_class) {
-                editTingkat.value = t.school_class.kelas_nomor || '';
-                const cleanNama = (t.school_class.nama_kelas || '').replace(/\s*\d+$/, '').trim();
-                editNamaKelas.value = cleanNama;
-                const nomorVal = t.school_class.nomor_kelas || (t.school_class.nama_kelas || '').match(/\d+$/)?.[0] || '';
-                syncNomorOptions(editTingkat, editNamaKelas, editNomorKelas, nomorVal);
-            } else {
-                editTingkat.value = '';
-                editNamaKelas.value = '';
-                editNomorKelas.innerHTML = '<option value="">Pilih</option>';
+            if (titleClean === 'walikelas') {
+                if (t.school_class) {
+                    editTingkat.value = t.school_class.kelas_nomor || '';
+                    const cleanNama = (t.school_class.nama_kelas || '').replace(/\s*\d+$/, '').trim();
+                    editNamaKelas.value = cleanNama;
+                    const nomorVal = t.school_class.nomor_kelas || (t.school_class.nama_kelas || '').match(/\d+$/)?.[0] || '';
+                    syncNomorOptions(editTingkat, editNamaKelas, editNomorKelas, nomorVal);
+                } else {
+                    editTingkat.value = '';
+                    editNamaKelas.value = '';
+                    editNomorKelas.innerHTML = '<option value="">Pilih</option>';
+                }
+            } else if (titleClean === 'gurubkpengajar') {
+                editBkClassesList.innerHTML = '';
+                if (t.id_class) {
+                    const classIds = String(t.id_class).split(',').map(s => s.trim()).filter(Boolean);
+                    classIds.forEach(cid => {
+                        createBkClassRow(editBkClassesList, cid, editingTeacherId);
+                    });
+                }
             }
 
             document.querySelectorAll('#editUserModal p.text-red-500.italic').forEach(el => el.classList.add('hidden'));

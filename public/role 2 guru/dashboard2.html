@@ -123,7 +123,7 @@
                     </div>
                 </div>
 
-                <!-- 1. JADWAL MENGAJAR HARI INI (HANYA MILIK GURU SENDIRI LINTAS KELAS) -->
+                <!-- 1. JADWAL MENGAJAR HARI INI (TANPA KOLOM JAM KE) -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
                         <div class="flex items-center space-x-2">
@@ -137,7 +137,6 @@
                         <table class="w-full text-left border-collapse min-w-[700px]">
                             <thead>
                                 <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
-                                    <th class="py-3 px-4 font-semibold text-center w-20">Jam Ke</th>
                                     <th class="py-3 px-4 font-semibold text-center w-36">Waktu</th>
                                     <th class="py-3 px-4 font-semibold text-center w-36">Kelas</th>
                                     <th class="py-3 px-4 font-semibold">Mata Pelajaran</th>
@@ -147,7 +146,7 @@
                             </thead>
                             <tbody id="myTodayScheduleBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
                                 <tr>
-                                    <td colspan="6" class="py-8 text-center text-slate-400">Memuat jadwal mengajar...</td>
+                                    <td colspan="5" class="py-8 text-center text-slate-400">Memuat jadwal mengajar...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -190,7 +189,7 @@
         </main>
     </div>
 
-    <!-- MODAL POP UP KONFIRMASI SIMPAN IZIN KHUSUS (YAKIN & TIDAK) -->
+    <!-- MODAL POP UP KONFIRMASI SIMPAN IZIN KHUSUS -->
     <div id="confirmSpecialLeaveModal" class="fixed inset-0 bg-slate-900/70 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col p-6 text-center transform transition-all animate-in fade-in zoom-in duration-150">
             <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 mx-auto flex items-center justify-center mb-4">
@@ -205,7 +204,7 @@
         </div>
     </div>
 
-    <!-- MODAL POP UP KONFIRMASI UBAH KE HADIR (YAKIN & TIDAK) -->
+    <!-- MODAL POP UP KONFIRMASI UBAH KE HADIR -->
     <div id="confirmHadirModal" class="fixed inset-0 bg-slate-900/70 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col p-6 text-center transform transition-all animate-in fade-in zoom-in duration-150">
             <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center mb-4">
@@ -232,17 +231,14 @@
         const cycleBadge = document.getElementById('cycleBadge');
         const lateCountBadge = document.getElementById('lateCountBadge');
 
-        // Komponen Notifikasi Jurnal Terlambat
         const lateJournalAlertBox = document.getElementById('lateJournalAlertBox');
         const lateJournalAlertText = document.getElementById('lateJournalAlertText');
 
-        // Modal Elements Hadir
         const confirmHadirModal = document.getElementById('confirmHadirModal');
         const confirmHadirDesc = document.getElementById('confirmHadirDesc');
         const btnConfirmHadirYes = document.getElementById('btnConfirmHadirYes');
         const btnConfirmHadirNo = document.getElementById('btnConfirmHadirNo');
 
-        // Komponen Izin Khusus
         const specialLeaveTargetClassText = document.getElementById('specialLeaveTargetClassText');
         const specialLeaveDateBadge = document.getElementById('specialLeaveDateBadge');
         const selectSpecialLeaveStudent = document.getElementById('selectSpecialLeaveStudent');
@@ -252,7 +248,6 @@
         const specialLeaveErrorText = document.getElementById('specialLeaveErrorText');
         const specialLeaveTableBody = document.getElementById('specialLeaveTableBody');
 
-        // Modal Izin Khusus
         const confirmSpecialLeaveModal = document.getElementById('confirmSpecialLeaveModal');
         const confirmSpecialLeaveTitle = document.getElementById('confirmSpecialLeaveTitle');
         const confirmSpecialLeaveDesc = document.getElementById('confirmSpecialLeaveDesc');
@@ -341,7 +336,7 @@
                 activeTeachingClassId = Number(activeSched.id_class);
                 const sc = activeSched.school_class;
                 const className = `${sc.kelas_nomor} ${sc.nama_kelas} ${sc.nomor_kelas || ''}`.trim();
-                specialLeaveTargetClassText.textContent = `Kelas Diajar: ${className} (Jam ${activeSched.jam_ke || '-'}, Mapel: ${activeSched.mapel})`;
+                specialLeaveTargetClassText.textContent = `Kelas Diajar: ${className} (Mapel: ${activeSched.mapel})`;
                 await loadClassStudentsForSpecialLeave(activeTeachingClassId);
                 await loadSpecialLeavesForClass(activeTeachingClassId, todayStr);
             } else {
@@ -354,7 +349,7 @@
             let lateJournalAlerts = [];
 
             if (mySchedulesToday.length === 0) {
-                myTodayScheduleBody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Tidak ada jadwal KBM mengajar untuk Anda hari ini (${todayName}).</td></tr>`;
+                myTodayScheduleBody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">Tidak ada jadwal KBM mengajar untuk Anda hari ini (${todayName}).</td></tr>`;
                 lateJournalAlertBox.classList.add('hidden');
             } else {
                 myTodayScheduleBody.innerHTML = mySchedulesToday.map(s => {
@@ -372,14 +367,13 @@
                         statusBadge = `<span class="bg-emerald-100 text-emerald-700 font-bold px-2.5 py-1 rounded-full text-xs">Sudah Diisi</span>`;
                     } else if (isLateMoreThan15Min) {
                         statusBadge = `<span class="bg-red-100 text-red-700 border border-red-300 font-black px-2.5 py-1 rounded-full text-xs animate-pulse">Terlambat Mengisi</span>`;
-                        lateJournalAlerts.push(`Jam ${s.jam_ke || '-'} (${s.mapel} di ${className})`);
+                        lateJournalAlerts.push(`${s.mapel} di ${className}`);
                     } else {
                         statusBadge = `<span class="bg-slate-100 text-slate-600 font-bold px-2.5 py-1 rounded-full text-xs">Belum Diisi</span>`;
                     }
 
                     return `
                         <tr class="hover:bg-slate-50 transition border-b border-slate-100 ${isLateMoreThan15Min ? 'bg-red-50/40' : ''}">
-                            <td class="py-3 px-4 text-center font-bold text-slate-700">Jam ${s.jam_ke || '-'}</td>
                             <td class="py-3 px-4 text-center font-mono text-xs text-slate-600">${start} - ${end}</td>
                             <td class="py-3 px-4 text-center font-bold text-indigo-700">${className}</td>
                             <td class="py-3 px-4 font-semibold text-slate-800">${s.mapel}</td>
@@ -480,7 +474,6 @@
             selectSpecialLeaveStudent.value = studentId;
             inputSpecialLeaveReason.value = reason;
             
-            // Tombol berubah jadi warna kuning saat klik aksi edit
             btnSubmitSpecialLeave.textContent = 'Update';
             btnSubmitSpecialLeave.className = 'w-full py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow';
 
@@ -493,7 +486,6 @@
             selectSpecialLeaveStudent.value = '';
             inputSpecialLeaveReason.value = '';
             
-            // Kembalikan tombol ke default
             btnSubmitSpecialLeave.textContent = 'Simpan';
             btnSubmitSpecialLeave.className = 'w-full py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow';
 

@@ -19,7 +19,7 @@
         <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
             <div class="max-w-7xl mx-auto space-y-6">
                 
-                <!-- Header & Search Sesuai Layout Panel Waka -->
+                <!-- Header & Search -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <h2 class="text-xl md:text-2xl font-bold text-slate-800">Persetujuan Surat Izin</h2>
@@ -35,21 +35,9 @@
 
                 <!-- Card Tabel Riwayat Persetujuan Izin -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    
-                    <!-- Header Tabel: Judul & Dropdown Filter Kelas BK di Kanan -->
                     <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div class="font-bold text-slate-800 text-sm md:text-base whitespace-nowrap">
                             Daftar Permohonan Izin Siswa
-                        </div>
-                        
-                        <!-- Dropdown Filter Khusus Guru BK di Paling Kanan -->
-                        <div id="bkDropdownFilterWrapper" class="hidden">
-                            <select id="selectBkTingkat" class="w-full sm:w-auto bg-white border border-slate-300 text-slate-700 text-xs md:text-sm font-semibold px-3 py-2 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition cursor-pointer">
-                                <option value="all">Semua Tingkat</option>
-                                <option value="X">Kelas X</option>
-                                <option value="XI">Kelas XI</option>
-                                <option value="XII">Kelas XII</option>
-                            </select>
                         </div>
                     </div>
 
@@ -78,11 +66,10 @@
         </main>
     </div>
 
-    <!-- Modal Verifikasi Surat Izin (Read-Only) -->
+    <!-- Modal Verifikasi Surat Izin -->
     <div id="modalVerifikasiIzin" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] relative">
             
-            <!-- Modal Konfirmasi Bertingkat Yakin/Tidak di Atas Modal Verifikasi -->
             <div id="confirmApprovalModal" class="absolute inset-0 bg-slate-900/70 z-[60] hidden flex items-center justify-center p-4">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
                     <h3 id="confirmApprovalTitle" class="text-lg font-bold text-slate-800 mb-2">Konfirmasi</h3>
@@ -94,10 +81,8 @@
                 </div>
             </div>
 
-            <!-- Modal Tambahkan Alasan Di Tolak -->
             <div id="modalInputReasonDitolak" class="absolute inset-0 bg-slate-900/70 z-[60] hidden flex items-center justify-center p-4">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col relative">
-                    <!-- Pop-up Konfirmasi Bertingkat di Atas Modal Alasan Di Tolak -->
                     <div id="confirmRejectReasonModal" class="absolute inset-0 bg-slate-900/80 z-[70] hidden flex items-center justify-center p-4 rounded-2xl">
                         <div class="bg-white rounded-xl shadow-xl w-full max-w-xs p-5 text-center">
                             <h4 class="text-base font-bold text-slate-800 mb-2">Konfirmasi Penolakan</h4>
@@ -201,14 +186,12 @@
         const userData = JSON.parse(sessionStorage.getItem('user_data') || localStorage.getItem('user_data') || '{}');
 
         if (!token || Number(userData.id_role) !== 3) {
-            alert('Akses ditolak! Silakan login sebagai Wali Kelas / Guru BK.');
+            alert('Akses ditolak! Silakan login sebagai Wali Kelas atau Guru BK Pengajar.');
             window.location.href = '../login/login.html';
         }
 
         const persetujuanTableBody = document.getElementById('persetujuanTableBody');
         const searchInputPersetujuan = document.getElementById('searchInputPersetujuan');
-        const bkDropdownFilterWrapper = document.getElementById('bkDropdownFilterWrapper');
-        const selectBkTingkat = document.getElementById('selectBkTingkat');
 
         const modalVerifikasiIzin = document.getElementById('modalVerifikasiIzin');
         const btnCloseModalVerifikasi = document.getElementById('btnCloseModalVerifikasi');
@@ -250,17 +233,8 @@
         let verifyingRequestId = null;
         let pendingDecision = null;
         let pendingReasonDitolak = null;
-        let currentBkTingkat = 'all';
 
         const isWaliKelas = (userData.title || '').replace(/\s+/g, '').toLowerCase() === 'walikelas';
-
-        if (!isWaliKelas && bkDropdownFilterWrapper) {
-            bkDropdownFilterWrapper.classList.remove('hidden');
-            selectBkTingkat.addEventListener('change', () => {
-                currentBkTingkat = selectBkTingkat.value;
-                fetchIzinList();
-            });
-        }
 
         if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
             Notification.requestPermission();
@@ -297,17 +271,9 @@
             if (match) {
                 const tag = match[1];
                 const text = match[2].trim();
-                if (text.length > 6) {
-                    display = `${tag} ${text.substring(0, 6)}...`;
-                } else {
-                    display = `${tag} ${text}`;
-                }
+                display = text.length > 6 ? `${tag} ${text.substring(0, 6)}...` : `${tag} ${text}`;
             } else {
-                if (clean.length > 6) {
-                    display = `${clean.substring(0, 6)}...`;
-                } else {
-                    display = clean;
-                }
+                display = clean.length > 6 ? `${clean.substring(0, 6)}...` : clean;
             }
             return highlightMatch(display, query);
         }
@@ -336,8 +302,9 @@
                 if (isWaliKelas) {
                     const classId = userData.id_class || (userData.school_class ? userData.school_class.id_class : null);
                     if (classId) url += `?id_class=${classId}`;
-                } else if (currentBkTingkat !== 'all') {
-                    url += `?kelas_nomor=${currentBkTingkat}`;
+                } else if (userData.id_class) {
+                    // Untuk Guru BK Pengajar, ambil permohonan dari kelas-kelas yang diampunya
+                    url += `?id_class=${userData.id_class}`;
                 }
 
                 const res = await fetch(url, {

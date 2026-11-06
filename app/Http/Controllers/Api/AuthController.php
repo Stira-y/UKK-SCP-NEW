@@ -14,7 +14,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'username' => 'required|string', // Dapat diisi email atau username dari frontend
+            'username' => 'required|string', // Dapat diisi Username, Email, atau NIS
             'password' => 'required|string',
         ]);
 
@@ -26,22 +26,32 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // Bersihkan input dari spasi di awal/akhir dan ubah ke huruf kecil[cite: 31]
+        // Bersihkan input dari spasi di awal/akhir dan ubah ke huruf kecil
         $loginInput = trim($request->username);
         $cleanInput = strtolower($loginInput);
 
-        // Cari user berdasarkan username ATAU email dengan penanganan spasi, baris baru, dan huruf besar-kecil[cite: 31]
+        // Cari user berdasarkan username, email, ATAU nis
         $user = User::with(['role', 'schoolClass'])
             ->whereRaw('LOWER(TRIM(username)) = ?', [$cleanInput])
-            ->orWhereRaw("LOWER(TRIM(REPLACE(REPLACE(email, CHAR(13), ''), CHAR(10), ''))) = ?", [$cleanInput])
+            ->orWhereRaw("LOWER(TRIM(REPLACE(REPLACE(email, CHAR(13), ''), CHAR(10), '')))= ?", [$cleanInput])
+            ->orWhere('nis', $loginInput)
             ->first();
 
-        // Cek jika user tidak ditemukan ATAU password salah[cite: 31]
+        // Cek jika user tidak ditemukan ATAU password salah
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Username/email atau password salah'
+                'message' => 'Username/Email/NIS atau password salah'
             ], 401);
+        }
+
+        // Tolak login jika pengguna merupakan Role 3 dengan Title "Guru BK" murni
+        $cleanTitle = strtolower(str_replace(' ', '', $user->title ?? ''));
+        if ((int) $user->id_role === 3 && $cleanTitle === 'gurubk') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Akses ditolak. Title Guru BK tidak memiliki izin login ke sistem.'
+            ], 403);
         }
 
         // Buat token autentikasi
@@ -72,23 +82,18 @@ class AuthController extends Controller
     {
         $user = $request->user();
         
-        // Generate kode OTP acak 6 digit
         $otp = rand(100000, 999999);
         
-        // Simpan OTP ke database (pastikan tabel users memiliki kolom otp dan otp_expired_at)
         $user->otp = $otp;
-        $user->otp_expired_at = now()->addMinutes(5); // Berlaku 5 menit
+        $user->otp_expired_at = now()->addMinutes(5);
         $user->save();
 
-        // Kirim email (jika MAIL_MAILER=log di .env, cek di storage/logs/laravel.log)
         try {
             Mail::raw("Kode verifikasi OTP Anda adalah: $otp", function ($message) use ($user) {
                 $message->to($user->email)
                         ->subject('Kode Verifikasi OTP SCP Sekolah');
             });
-        } catch (\Exception $e) {
-            // Tangkap error pengiriman email jika ada
-        }
+        } catch (\Exception $e) {}
 
         return response()->json([
             'status' => 'success',
@@ -109,7 +114,6 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // OTP Valid
         return response()->json([
             'status' => 'success',
             'message' => 'OTP terverifikasi.'
@@ -125,7 +129,7 @@ class AuthController extends Controller
         $otp = rand(100000, 999999);
         $user->otp = $otp;
         $user->otp_expired_at = now()->addMinutes(5);
-        $user->pending_email = $request->email; // Simpan sementara email baru
+        $user->pending_email = $request->email;
         $user->save();
 
         try {
@@ -154,7 +158,6 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // Perbarui email user
         $user->email = $user->pending_email;
         $user->pending_email = null;
         $user->otp = null;
