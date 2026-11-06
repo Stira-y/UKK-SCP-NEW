@@ -15,13 +15,13 @@ jobs:
       - name: 🐘 Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.3'
           extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, bcmath, fileinfo, gd, zip, curl
           coverage: none
 
       - name: 📦 Install Composer Dependencies
         run: |
-          composer install --no-dev --prefer-dist --optimize-autoloader --no-progress --no-interaction --ignore-platform-reqs
+          composer install --no-dev --prefer-dist --optimize-autoloader --no-progress --no-interaction --ignore-platform-reqs --no-scripts
 
       - name: 🚀 Sync Files via FTP to DomaiNesia
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
