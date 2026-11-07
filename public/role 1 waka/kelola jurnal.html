@@ -284,8 +284,8 @@
 
             if (item.photos && item.photos.length > 0) {
                 photosContainer.innerHTML = item.photos.map(p => `
-                    <a href="http://localhost/ukk-scp-new/public/storage/${p}" target="_blank" class="block border border-slate-200 rounded-lg overflow-hidden shadow-sm hover:opacity-90">
-                        <img src="http://localhost/ukk-scp-new/public/storage/${p}" class="w-full h-24 object-cover" alt="Foto Jurnal">
+                    <a href="${API_BASE_URL.replace('/api', '')}/storage/${p}" target="_blank" class="block border border-slate-200 rounded-lg overflow-hidden shadow-sm hover:opacity-90">
+                        <img src="${API_BASE_URL.replace('/api', '')}/storage/${p}" class="w-full h-24 object-cover" alt="Foto Jurnal">
                     </a>
                 `).join('');
             } else {

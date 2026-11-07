@@ -8,7 +8,7 @@
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 var API_BASE_URL = isLocalhost 
     ? 'http://localhost/ukk-scp-new/public/api' 
-    : `${window.location.origin}/public/api`;
+    : `${window.location.origin}/api`;
 
 window.API_BASE_URL = API_BASE_URL;
 
