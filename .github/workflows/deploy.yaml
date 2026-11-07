@@ -23,12 +23,12 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, xml, ctype, iconv, mysql, pdo_mysql, zip, bcmath, json, curl
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, bcmath, fileinfo, gd, zip, curl
           coverage: none
 
       - name: 📦 Install Composer Dependencies (Production)
         run: |
-          composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
+          composer install --no-dev --prefer-dist --optimize-autoloader --no-progress --no-interaction --ignore-platform-reqs --no-scripts
 
       - name: 🚀 Deploy to DomaiNesia via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
