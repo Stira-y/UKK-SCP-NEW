@@ -1,0 +1,39 @@
+AcceptPathInfo On
+
+# START MultiPHP Version
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php83 .php .php8 .phtml
+</IfModule>
+# END MultiPHP Version
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # 1. Lindungi berkas sensitif dari akses publik
+    RewriteRule ^(\.env|\.git|composer\.(json|lock)|package(-lock)?\.json|phpunit\.xml) - [F,L]
+    RewriteRule \.sql$ - [F,L]
+    RewriteRule ^(app|bootstrap|config|database|resources|routes|storage/logs|tests|vendor) - [F,L]
+
+    # 2. Arahkan endpoint Laravel langsung ke front controller
+    RewriteRule ^(api/.*|up)$ public/index.php [L,QSA]
+
+    # 3. Jika berkas fisik memang ada, buka langsung
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # 4. Sisanya arahkan ke folder public/
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# BEGIN cPanel-generated php ini directives, do not edit
+<IfModule php8_module>
+    php_value error_log "/home/ukkscpyu/logs/php.error.log"
+    php_flag log_errors On
+</IfModule>
+<IfModule lsapi_module>
+    php_value error_log "/home/ukkscpyu/logs/php.error.log"
+    php_flag log_errors On
+</IfModule>
+# END cPanel-generated php ini directives
