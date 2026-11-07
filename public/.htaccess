@@ -1,9 +1,16 @@
 <IfModule mod_headers.c>
     <FilesMatch "\.(html|htm|js|css)$">
-        Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
-        Header set Pragma "no-cache"
-        Header set Expires "0"
+        Header always set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+        Header always set Pragma "no-cache"
+        Header always set Expires "0"
     </FilesMatch>
+</IfModule>
+
+<IfModule pagespeed_module>
+    ModPagespeed off
+</IfModule>
+<IfModule mod_pagespeed.c>
+    ModPagespeed off
 </IfModule>
 
 <IfModule mod_rewrite.c>
