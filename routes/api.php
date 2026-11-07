@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/waka/students/verify-otp', [UserController::class, 'verifyWakaOtp']);
     Route::put('/waka/students/{id}', [UserController::class, 'updateStudentByWaka']);
     Route::post('/waka/students/promote', [UserController::class, 'promoteClasses']);
+    Route::post('/waka/students/{id}/expel', [UserController::class, 'expelStudent']);
     Route::get('/waka/graduations', [UserController::class, 'getGraduations']);
 
     // Route Khusus Kelola User Guru oleh Waka

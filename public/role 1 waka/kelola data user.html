@@ -310,9 +310,15 @@
 
                 <p id="editFormError" class="text-xs text-red-500 italic mt-1 hidden"></p>
             </form>
-            <div class="bg-slate-50 px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 shrink-0">
-                <button type="button" id="btnCancelEditUser" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition">Batal</button>
-                <button type="button" id="btnTriggerEditStudentSave" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow">Simpan</button>
+            <div class="bg-slate-50 px-6 py-3.5 flex items-center justify-between border-t border-slate-200 shrink-0">
+                <button type="button" id="btnExpelStudent" class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg text-xs md:text-sm font-bold transition flex items-center space-x-1.5 shadow-xs">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    <span>Keluarkan Siswa</span>
+                </button>
+                <div class="flex items-center space-x-2">
+                    <button type="button" id="btnCancelEditUser" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition">Batal</button>
+                    <button type="button" id="btnTriggerEditStudentSave" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow">Simpan</button>
+                </div>
             </div>
         </div>
     </div>
@@ -735,7 +741,8 @@
             const matched = schoolClassesList.filter(cls => {
                 const matchTingkat = (cls.kelas_nomor || '').toUpperCase() === tingkat.toUpperCase();
                 const dbNama = (cls.nama_kelas || '').replace(/\s*\d+$/, '').trim().toLowerCase();
-                return matchTingkat && dbNama === namaKelas;
+                const exactDbNama = (cls.nama_kelas || '').trim().toLowerCase();
+                return matchTingkat && (dbNama === namaKelas || exactDbNama === namaKelas);
             });
 
             let numbers = [];
@@ -748,19 +755,31 @@
 
             numbers.sort((a, b) => parseInt(a) - parseInt(b));
 
-            numbers.forEach(num => {
-                const opt = document.createElement('option');
-                opt.value = num;
-                opt.textContent = num;
-                if (selectedVal && String(num) === String(selectedVal)) {
-                    opt.selected = true;
-                }
-                nomorSelectEl.appendChild(opt);
-            });
+            if (numbers.length === 0) {
+                nomorSelectEl.innerHTML = '<option value="">- Tanpa Nomor -</option>';
+                nomorSelectEl.dataset.hasNumbers = 'false';
+                const errId = nomorSelectEl.id === 'addNomorKelas' ? 'error_addNomorKelas' : 'error_editNomorKelas';
+                const errEl = document.getElementById(errId);
+                if (errEl) errEl.classList.add('hidden');
+            } else {
+                nomorSelectEl.dataset.hasNumbers = 'true';
+                numbers.forEach(num => {
+                    const opt = document.createElement('option');
+                    opt.value = num;
+                    opt.textContent = num;
+                    if (selectedVal && String(num) === String(selectedVal)) {
+                        opt.selected = true;
+                    }
+                    nomorSelectEl.appendChild(opt);
+                });
+            }
         }
 
         function guardNomorKelasFocus(tingkatEl, namaKelasEl, selectEl) {
             selectEl.addEventListener('mousedown', (e) => {
+                if (selectEl.dataset.hasNumbers === 'false') {
+                    return;
+                }
                 if (!tingkatEl.value) {
                     e.preventDefault();
                     alert('Silakan pilih kolom Kelas terlebih dahulu!');
@@ -1180,6 +1199,10 @@
             ];
 
             fieldsToCheck.forEach(item => {
+                if ((item.input === addNomorKelas || item.input === editNomorKelas) && item.input.dataset.hasNumbers === 'false') {
+                    item.error.classList.add('hidden');
+                    return;
+                }
                 if (!item.input.value.trim()) {
                     item.error.classList.remove('hidden');
                     hasEmpty = true;
@@ -1225,6 +1248,10 @@
             ];
 
             fieldsToCheck.forEach(item => {
+                if ((item.input === addNomorKelas || item.input === editNomorKelas) && item.input.dataset.hasNumbers === 'false') {
+                    item.error.classList.add('hidden');
+                    return;
+                }
                 if (!item.input.value.trim()) {
                     item.error.classList.remove('hidden');
                     hasEmpty = true;
@@ -1296,24 +1323,69 @@
             pendingStudentSaveAction = null;
         });
 
+        const btnExpelStudent = document.getElementById('btnExpelStudent');
+        if (btnExpelStudent) {
+            btnExpelStudent.addEventListener('click', () => {
+                if (!editingStudentId) return;
+                const studentName = editUsernameInput.value || 'siswa ini';
+                pendingStudentSaveAction = 'expel';
+                confirmActionTitle.textContent = 'Konfirmasi Keluarkan Siswa';
+                confirmActionSubtext.textContent = `Apakah Anda yakin ingin mengeluarkan siswa "${studentName}" dari sekolah? Siswa akan dinonaktifkan dan dipindahkan ke Data Arsip Siswa (Siswa Dikeluarkan).`;
+                confirmActionModal.classList.remove('hidden');
+            });
+        }
+
         async function executeStudentSave() {
+            if (pendingStudentSaveAction === 'expel') {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/waka/students/${editingStudentId}/expel`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    const res = await response.json();
+                    if (response.ok) {
+                        alert(res.message || 'Siswa berhasil dikeluarkan dan diarsipkan!');
+                        window.location.href = 'kelulusan.html?type=dikeluarkan';
+                    } else {
+                        alert(res.message || 'Gagal mengeluarkan siswa.');
+                    }
+                } catch (err) {
+                    alert('Terjadi kesalahan koneksi ke server saat mengeluarkan siswa.');
+                }
+                return;
+            }
+
             if (pendingStudentSaveAction === 'add') {
                 const tingkatVal = addTingkat.value;
                 const namaVal = addNamaKelas.value.trim().toLowerCase();
                 const nomorVal = addNomorKelas.value.trim();
 
-                const matchedClass = schoolClassesList.find(cls => {
-                    const matchesTingkat = cls.kelas_nomor === tingkatVal;
+                let matchedClass = schoolClassesList.find(cls => {
+                    const matchesTingkat = (cls.kelas_nomor || '').toUpperCase() === tingkatVal.toUpperCase();
                     const dbNama = (cls.nama_kelas || '').replace(/\s*\d+$/, '').trim().toLowerCase();
-                    const matchesNama = dbNama === namaVal;
+                    const exactDbNama = (cls.nama_kelas || '').trim().toLowerCase();
+                    const matchesNama = dbNama === namaVal || exactDbNama === namaVal;
                     const dbNomor = cls.nomor_kelas ? cls.nomor_kelas.toString() : ((cls.nama_kelas || '').match(/\d+$/)?.[0] || '');
-                    const matchesNomor = dbNomor === nomorVal;
+                    const matchesNomor = !nomorVal ? (!dbNomor || dbNomor === '') : (dbNomor === nomorVal);
                     return matchesTingkat && matchesNama && matchesNomor;
                 });
 
+                if (!matchedClass && (!nomorVal || addNomorKelas.dataset.hasNumbers === 'false')) {
+                    matchedClass = schoolClassesList.find(cls => {
+                        const matchesTingkat = (cls.kelas_nomor || '').toUpperCase() === tingkatVal.toUpperCase();
+                        const dbNama = (cls.nama_kelas || '').replace(/\s*\d+$/, '').trim().toLowerCase();
+                        const exactDbNama = (cls.nama_kelas || '').trim().toLowerCase();
+                        return matchesTingkat && (dbNama === namaVal || exactDbNama === namaVal);
+                    });
+                }
+
                 if (!matchedClass) {
                     const errElem = document.getElementById('addFormError');
-                    errElem.textContent = 'Kombinasi Kelas, Nama Kelas, dan Nomor Kelas tidak ditemukan di database!';
+                    errElem.textContent = 'Kombinasi Kelas dan Nama Kelas tidak ditemukan di database!';
                     errElem.classList.remove('hidden');
                     return;
                 }
@@ -1361,18 +1433,28 @@
                 const namaVal = editNamaKelas.value.trim().toLowerCase();
                 const nomorVal = editNomorKelas.value.trim();
 
-                const matchedClass = schoolClassesList.find(cls => {
-                    const matchesTingkat = cls.kelas_nomor === tingkatVal;
+                let matchedClass = schoolClassesList.find(cls => {
+                    const matchesTingkat = (cls.kelas_nomor || '').toUpperCase() === tingkatVal.toUpperCase();
                     const dbNama = (cls.nama_kelas || '').replace(/\s*\d+$/, '').trim().toLowerCase();
-                    const matchesNama = dbNama === namaVal;
+                    const exactDbNama = (cls.nama_kelas || '').trim().toLowerCase();
+                    const matchesNama = dbNama === namaVal || exactDbNama === namaVal;
                     const dbNomor = cls.nomor_kelas ? cls.nomor_kelas.toString() : ((cls.nama_kelas || '').match(/\d+$/)?.[0] || '');
-                    const matchesNomor = dbNomor === nomorVal;
+                    const matchesNomor = !nomorVal ? (!dbNomor || dbNomor === '') : (dbNomor === nomorVal);
                     return matchesTingkat && matchesNama && matchesNomor;
                 });
 
+                if (!matchedClass && (!nomorVal || editNomorKelas.dataset.hasNumbers === 'false')) {
+                    matchedClass = schoolClassesList.find(cls => {
+                        const matchesTingkat = (cls.kelas_nomor || '').toUpperCase() === tingkatVal.toUpperCase();
+                        const dbNama = (cls.nama_kelas || '').replace(/\s*\d+$/, '').trim().toLowerCase();
+                        const exactDbNama = (cls.nama_kelas || '').trim().toLowerCase();
+                        return matchesTingkat && (dbNama === namaVal || exactDbNama === namaVal);
+                    });
+                }
+
                 if (!matchedClass) {
                     const errElem = document.getElementById('editFormError');
-                    errElem.textContent = 'Kombinasi Kelas, Nama Kelas, dan Nomor Kelas tidak ditemukan di database!';
+                    errElem.textContent = 'Kombinasi Kelas dan Nama Kelas tidak ditemukan di database!';
                     errElem.classList.remove('hidden');
                     return;
                 }

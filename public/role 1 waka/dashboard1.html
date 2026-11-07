@@ -23,6 +23,15 @@
         <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
             <div class="max-w-7xl mx-auto space-y-6">
 
+                <!-- Banner Putaran Aktif Universal -->
+                <div id="cycleBanner" class="w-full py-3 px-6 rounded-2xl shadow-sm flex items-center justify-between transition-all duration-300 font-extrabold text-base md:text-lg tracking-wide uppercase bg-emerald-500 text-white">
+                    <div class="flex items-center space-x-2.5">
+                        <svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <span id="cycleBannerText">Putaran 1</span>
+                    </div>
+                    <span class="text-xs bg-white/20 backdrop-blur-xs px-3 py-1 rounded-full font-bold normal-case tracking-normal">Sedang Aktif</span>
+                </div>
+
                 <!-- Header Ucapan & Kontrol Putaran / Kunci Jadwal -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                     <div>
@@ -219,11 +228,26 @@
         const btnConfirmNo = document.getElementById('btnConfirmNo');
 
         let isScheduleLocked = false;
-        let lockedActiveCycle = '1';
+        let lockedActiveCycle = localStorage.getItem('active_cycle') || '1';
         let pendingAction = null; // 'toggle_lock' | 'lock_cycle'
         let pendingVal = null;
 
+        function renderCycleBanner(cycle) {
+            const banner = document.getElementById('cycleBanner');
+            const textEl = document.getElementById('cycleBannerText');
+            if (!banner || !textEl) return;
+            const c = String(cycle);
+            if (c === '2') {
+                banner.className = 'w-full py-3 px-6 rounded-2xl shadow-sm flex items-center justify-between transition-all duration-300 font-extrabold text-base md:text-lg tracking-wide uppercase bg-sky-400 text-white';
+                textEl.textContent = 'Putaran 2';
+            } else {
+                banner.className = 'w-full py-3 px-6 rounded-2xl shadow-sm flex items-center justify-between transition-all duration-300 font-extrabold text-base md:text-lg tracking-wide uppercase bg-emerald-500 text-white';
+                textEl.textContent = 'Putaran 1';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
+            renderCycleBanner(lockedActiveCycle);
             await fetchSystemConfiguration();
             await loadSchoolStats();
             await loadTodayKbmMonitoring();
@@ -239,8 +263,10 @@
                 if (json.data) {
                     if (json.data.active_cycle) {
                         lockedActiveCycle = String(json.data.active_cycle);
+                        localStorage.setItem('active_cycle', lockedActiveCycle);
                         selectLockCycle.value = lockedActiveCycle;
                         statKbmCycleText.textContent = `Putaran ${lockedActiveCycle} Aktif`;
+                        renderCycleBanner(lockedActiveCycle);
                     }
                     isScheduleLocked = Boolean(json.data.is_schedule_locked);
                     renderLockUI();
@@ -356,7 +382,9 @@
                 });
                 if (res.ok) {
                     lockedActiveCycle = String(val);
+                    localStorage.setItem('active_cycle', lockedActiveCycle);
                     statKbmCycleText.textContent = `Putaran ${lockedActiveCycle} Aktif`;
+                    renderCycleBanner(lockedActiveCycle);
                     alert(`Putaran ${val} berhasil dikunci sebagai putaran aktif!`);
                     await loadTodayKbmMonitoring();
                 } else {

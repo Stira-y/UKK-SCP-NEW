@@ -1086,6 +1086,7 @@
 
                 if (res.ok) {
                     lockedActiveCycle = String(cycleVal);
+                    localStorage.setItem('active_cycle', lockedActiveCycle);
                     selectLockCycle.value = lockedActiveCycle;
                     applyCycleVisualStatus();
                     await fetchSchedules();

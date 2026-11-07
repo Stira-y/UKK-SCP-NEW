@@ -54,6 +54,18 @@ class AuthController extends Controller
             ], 403);
         }
 
+        // Tolak login jika siswa sudah lulus / berstatus alumni atau dikeluarkan (nonaktif)
+        if ((int) $user->id_role === 4) {
+            $statusTitle = strtolower(trim($user->title ?? ''));
+            if ($user->id_class === null || in_array($statusTitle, ['alumni', 'lulus', 'dikeluarkan'])) {
+                $statusKet = ($statusTitle === 'dikeluarkan') ? 'dikeluarkan' : 'sudah lulus / alumni';
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Akun Anda telah dinonaktifkan karena berstatus {$statusKet}. Silakan hubungi pihak sekolah jika terjadi kesalahan."
+                ], 403);
+            }
+        }
+
         // Buat token autentikasi
         $token = $user->createToken('auth_token')->plainTextToken;
 

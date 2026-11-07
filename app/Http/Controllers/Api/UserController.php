@@ -69,11 +69,36 @@ class UserController extends Controller
         ], 200);
     }
 
+    public function expelStudent($id)
+    {
+        $student = User::where('id_role', 4)->findOrFail($id);
+        $student->id_class = null;
+        $student->title = 'dikeluarkan';
+        $student->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Siswa {$student->fullname} berhasil dikeluarkan dan dipindahkan ke Data Arsip Siswa."
+        ], 200);
+    }
+
     public function getGraduations(Request $request)
     {
-        $graduates = User::where('id_role', 4)
-            ->whereNull('id_class')
-            ->orderByRaw('CAST(nisn AS UNSIGNED) ASC')
+        $type = $request->query('type');
+
+        $query = User::where('id_role', 4)
+            ->whereNull('id_class');
+
+        if ($type === 'dikeluarkan') {
+            $query->where('title', 'dikeluarkan');
+        } elseif ($type === 'alumni' || $type === 'lulus') {
+            $query->where(function ($q) {
+                $q->whereNull('title')
+                  ->orWhere('title', '!=', 'dikeluarkan');
+            });
+        }
+
+        $graduates = $query->orderByRaw('CAST(nisn AS UNSIGNED) ASC')
             ->orderBy('nisn', 'asc')
             ->get();
 
@@ -94,14 +119,18 @@ class UserController extends Controller
         $result = $graduates->map(function ($st) use ($attendancesCounts, $leaveCounts) {
             $totalIzin = $leaveCounts[$st->id_user] ?? 0;
             $totalPresensi = $attendancesCounts[$st->id_user] ?? 0;
+            $isExpelled = (strtolower(trim($st->title ?? '')) === 'dikeluarkan');
 
             return [
                 'id_user'        => $st->id_user,
                 'nisn'           => $st->nisn ?? '-',
                 'nis'            => $st->nis ?? '-',
                 'fullname'       => $st->fullname ?? $st->username,
+                'status_arsip'   => $isExpelled ? 'dikeluarkan' : 'alumni',
+                'status_label'   => $isExpelled ? 'Dikeluarkan' : 'Lulus / Alumni',
                 'total_izin'     => $totalIzin,
                 'total_presensi' => $totalPresensi,
+                'tanggal_arsip'  => $st->updated_at ? date('d/m/Y', strtotime($st->updated_at)) : '-',
                 'tahun_lulus'    => $st->updated_at ? date('Y', strtotime($st->updated_at)) : date('Y'),
             ];
         });
@@ -952,6 +981,7 @@ class UserController extends Controller
 
             if ($currentTingkat === 'XII') {
                 $student->id_class = null;
+                $student->title = 'alumni';
                 $student->save();
                 $graduatedCount++;
             } elseif ($currentTingkat === 'X') {

@@ -83,8 +83,18 @@
                 <button id="btnCloseCamera" type="button" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
             </div>
             <div class="p-4 bg-black flex items-center justify-center relative">
-                <video id="cameraVideo" autoplay playsinline class="w-full h-[320px] object-cover rounded-lg"></video>
+                <video id="cameraVideo" autoplay playsinline class="w-full h-[320px] object-cover rounded-lg transition-transform duration-200"></video>
                 <canvas id="cameraCanvas" class="hidden"></canvas>
+
+                <!-- Tombol Putar Kamera & Mirror Kamera -->
+                <div class="absolute top-6 right-6 flex items-center space-x-2 z-10">
+                    <button type="button" id="btnSwitchCamera" title="Putar Kamera Depan / Belakang" class="bg-black/60 hover:bg-indigo-600 text-white p-2.5 rounded-full backdrop-blur-md transition shadow-md flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    </button>
+                    <button type="button" id="btnMirrorCamera" title="Mirror Kamera (Balik Horizontal)" class="bg-black/60 hover:bg-indigo-600 text-white p-2.5 rounded-full backdrop-blur-md transition shadow-md flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                    </button>
+                </div>
             </div>
             <div class="bg-white px-6 py-4 flex justify-center space-x-3 border-t border-slate-200">
                 <button type="button" id="btnCapturePhoto" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs md:text-sm shadow">Jepret Foto</button>
@@ -154,7 +164,11 @@
         const btnCloseCamera = document.getElementById('btnCloseCamera');
         const btnCancelCamera = document.getElementById('btnCancelCamera');
         const btnCapturePhoto = document.getElementById('btnCapturePhoto');
+        const btnSwitchCamera = document.getElementById('btnSwitchCamera');
+        const btnMirrorCamera = document.getElementById('btnMirrorCamera');
         let mediaStream = null;
+        let currentFacingMode = 'environment';
+        let isCameraMirrored = false;
 
         const imagePreviewModal = document.getElementById('imagePreviewModal');
         const previewImageTitle = document.getElementById('previewImageTitle');
@@ -317,16 +331,41 @@
 
         topicDescription.addEventListener('input', validateFormState);
 
+        function applyCameraMirrorStyle() {
+            cameraVideo.style.transform = isCameraMirrored ? 'scaleX(-1)' : 'scaleX(1)';
+            if (btnMirrorCamera) {
+                if (isCameraMirrored) {
+                    btnMirrorCamera.classList.add('bg-indigo-600', 'text-white');
+                    btnMirrorCamera.classList.remove('bg-black/60');
+                } else {
+                    btnMirrorCamera.classList.remove('bg-indigo-600');
+                    btnMirrorCamera.classList.add('bg-black/60');
+                }
+            }
+        }
+
         async function openCameraStream() {
             try {
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(track => track.stop());
+                    mediaStream = null;
+                }
                 mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' }, 
+                    video: { facingMode: currentFacingMode }, 
                     audio: false 
                 });
                 cameraVideo.srcObject = mediaStream;
+                applyCameraMirrorStyle();
                 cameraModal.classList.remove('hidden');
             } catch (err) {
-                alert('Tidak dapat mengakses kamera perangkat. Pastikan izin kamera telah diberikan di browser.');
+                try {
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    cameraVideo.srcObject = mediaStream;
+                    applyCameraMirrorStyle();
+                    cameraModal.classList.remove('hidden');
+                } catch (errFallback) {
+                    alert('Tidak dapat mengakses kamera perangkat. Pastikan izin kamera telah diberikan di browser.');
+                }
             }
         }
 
@@ -342,6 +381,21 @@
         btnCloseCamera.addEventListener('click', closeCameraStream);
         btnCancelCamera.addEventListener('click', closeCameraStream);
 
+        if (btnSwitchCamera) {
+            btnSwitchCamera.addEventListener('click', async () => {
+                currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+                isCameraMirrored = (currentFacingMode === 'user');
+                await openCameraStream();
+            });
+        }
+
+        if (btnMirrorCamera) {
+            btnMirrorCamera.addEventListener('click', () => {
+                isCameraMirrored = !isCameraMirrored;
+                applyCameraMirrorStyle();
+            });
+        }
+
         btnCapturePhoto.addEventListener('click', () => {
             if (!mediaStream) return;
             const width = cameraVideo.videoWidth || 640;
@@ -349,7 +403,16 @@
             cameraCanvas.width = width;
             cameraCanvas.height = height;
             const ctx = cameraCanvas.getContext('2d');
-            ctx.drawImage(cameraVideo, 0, 0, width, height);
+            
+            if (isCameraMirrored) {
+                ctx.save();
+                ctx.translate(width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(cameraVideo, 0, 0, width, height);
+                ctx.restore();
+            } else {
+                ctx.drawImage(cameraVideo, 0, 0, width, height);
+            }
 
             cameraCanvas.toBlob((blob) => {
                 if (!blob) {
