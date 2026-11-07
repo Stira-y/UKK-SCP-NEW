@@ -61,7 +61,7 @@ jobs:
               pwd = ftp.pwd()
               files = ftp.nlst()
               diag = f'PWD: {pwd}\nFILES: {files}\n'
-              for check_f in ['error_log', 'php.ini', '.user.ini', 'public/index.php']:
+              for check_f in ['.htaccess', '../logs/php.error.log', 'logs/php.error.log']:
                   try:
                       content = io.BytesIO()
                       ftp.retrbinary(f'RETR {check_f}', content.write)
