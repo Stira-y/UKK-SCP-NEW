@@ -145,12 +145,13 @@
 
             const loginValue = loginInput.value.trim();
             const passwordValue = passwordInput.value;
+            const loginEndpoint = `${API_BASE_URL}/login`;
 
             setLoading(true);
             alertBox.classList.add('hidden');
 
             try {
-                const response = await fetch(`${API_BASE_URL}/login`, {
+                const response = await fetch(loginEndpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -162,9 +163,28 @@
                     })
                 });
 
-                const result = await response.json();
+                const responseText = await response.text();
+                let result = null;
+                try {
+                    result = responseText ? JSON.parse(responseText) : null;
+                } catch {
+                    result = null;
+                }
 
-                if (response.ok && result.status === 'success') {
+                if (!response.ok) {
+                    const message = result?.message || `Server menolak permintaan (HTTP ${response.status} ${response.statusText}).`;
+                    showAlert(`${message} Endpoint: ${loginEndpoint}`, false);
+                    setLoading(false);
+                    return;
+                }
+
+                if (!result) {
+                    showAlert(`Server mengirim respons bukan JSON (HTTP ${response.status}). Endpoint: ${loginEndpoint}`, false);
+                    setLoading(false);
+                    return;
+                }
+
+                if (result.status === 'success') {
                     localStorage.setItem('auth_token', result.data.token);
                     localStorage.setItem('user_data', JSON.stringify(result.data.user));
 
@@ -198,7 +218,8 @@
                     setLoading(false);
                 }
             } catch (error) {
-                showAlert('Tidak dapat terhubung ke server backend API. Pastikan Apache & MySQL berjalan.', false);
+                const reason = error instanceof Error ? error.message : String(error);
+                showAlert(`Koneksi ke ${loginEndpoint} gagal (${reason}). Periksa alamat API, SSL, dan konfigurasi hosting.`, false);
                 console.error('Login error:', error);
                 setLoading(false);
             }
