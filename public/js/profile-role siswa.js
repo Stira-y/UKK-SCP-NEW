@@ -932,13 +932,10 @@ function initProfileEvents() {
             }
 
             if (tempCroppedImageBase64) {
-                const responseBlob = await fetch(
-                    tempCroppedImageBase64
-                );
-
-                const blob = await responseBlob.blob();
-
-                formData.append('avatar', blob, 'avatar.jpg');
+                const blob = dataURLtoBlob(tempCroppedImageBase64);
+                if (blob) {
+                    formData.append('avatar', blob, 'avatar.jpg');
+                }
             }
 
             try {
@@ -957,9 +954,20 @@ function initProfileEvents() {
                     }
                 );
 
-                const result = await response.json();
+                let result = null;
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    result = await response.json();
+                } else {
+                    const text = await response.text();
+                    try {
+                        result = JSON.parse(text);
+                    } catch {
+                        result = { message: `Server mengembalikan status HTTP ${response.status} (${response.statusText})` };
+                    }
+                }
 
-                if (response.ok) {
+                if (response.ok && result && (result.status === 'success' || result.data)) {
                     const updatedUser =
                         result.data || result.user || result;
 
@@ -968,32 +976,35 @@ function initProfileEvents() {
                         JSON.stringify(updatedUser)
                     );
 
+                    tempCroppedImageBase64 = null;
                     renderProfileData();
                     closeProfileModal();
 
                     alert('Berhasil memperbaharui profil!');
                 } else {
-                    if (result.errors && result.errors.username) {
+                    const msg = result?.message || result?.error || `Gagal memperbarui profil (HTTP ${response.status}).`;
+                    if (result?.errors?.username) {
                         showUsernameError(
                             result.errors.username[0] ||
                             'Username sudah digunakan.'
                         );
+                    } else if (result?.errors?.avatar) {
+                        alert(`Foto profil gagal diunggah: ${result.errors.avatar[0]}`);
                     } else if (
-                        result.errors &&
-                        result.errors.password
+                        result?.errors?.password
                     ) {
                         showPasswordError(
                             result.errors.password[0]
                         );
+                    } else if (msg.toLowerCase().includes('username')) {
+                        showUsernameError(msg);
                     } else {
-                        alert(
-                            result.message ||
-                            'Gagal memperbarui profil.'
-                        );
+                        alert(msg);
                     }
                 }
             } catch (error) {
-                alert('Terjadi kesalahan koneksi ke server.');
+                console.error('Error updating profile:', error);
+                alert(`Gagal memperbarui profil: ${error.message || 'Terjadi kesalahan jaringan atau koneksi ke server.'}`);
             } finally {
                 btnSaveProfile.disabled = false;
                 btnSaveProfile.textContent = 'Simpan';
@@ -1239,6 +1250,25 @@ function showPasswordError(msg) {
     if (modalPassword) {
         modalPassword.classList.add('border-red-500');
         modalPassword.classList.remove('border-slate-300');
+    }
+}
+
+function dataURLtoBlob(dataurl) {
+    if (!dataurl) return null;
+    try {
+        const arr = dataurl.split(',');
+        const mimeMatch = arr[0].match(/:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+    } catch (e) {
+        console.error('Konversi dataURL ke Blob gagal:', e);
+        return null;
     }
 }
 

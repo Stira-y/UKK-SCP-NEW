@@ -1173,7 +1173,7 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'username' => 'nullable|string|max:100|unique:users,username,' . $user->id_user . ',id_user',
             'password' => 'nullable|string|min:8',
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         if ($validator->fails()) {
