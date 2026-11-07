@@ -372,7 +372,7 @@
 
     <!-- Script Khusus Dashboard Siswa: Rekap Siswa, Jadwal Hari Ini, Status Presensi & Izin Khusus Realtime -->
     <script>
-        const API_BASE = 'https://ukk-scp-yudhis.my.id/api';
+        // Menggunakan variabel global API_BASE_URL dari profile-role siswa.js
         const authToken = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
         const studentData = JSON.parse(localStorage.getItem('user_data') || sessionStorage.getItem('user_data') || '{}');
 
@@ -425,7 +425,7 @@
             let activeCycle = '1';
 
             try {
-                const resConfig = await fetch(`${API_BASE}/system-config/active-cycle`, {
+                const resConfig = await fetch(`${API_BASE_URL}/system-config/active-cycle`, {
                     headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
                 });
                 const jsonConfig = await resConfig.json();
@@ -440,7 +440,7 @@
 
             // Periksa Izin Khusus yang diberikan guru hari ini untuk siswa ini
             try {
-                const resLeaves = await fetch(`${API_BASE}/leave-requests?id_siswa=${studentData.id_user}`, {
+                const resLeaves = await fetch(`${API_BASE_URL}/leave-requests?id_siswa=${studentData.id_user}`, {
                     headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
                 });
                 const jsonLeaves = await resLeaves.json();
@@ -469,7 +469,7 @@
 
             // Rekap Kehadiran Siswa
             try {
-                const resAttRecap = await fetch(`${API_BASE}/attendances`, {
+                const resAttRecap = await fetch(`${API_BASE_URL}/attendances`, {
                     headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
                 });
                 const jsonAttRecap = await resAttRecap.json();
@@ -506,7 +506,7 @@
                 });
 
                 try {
-                    const resLeaves = await fetch(`${API_BASE}/leave-requests?id_siswa=${studentData.id_user}`, {
+                    const resLeaves = await fetch(`${API_BASE_URL}/leave-requests?id_siswa=${studentData.id_user}`, {
                         headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
                     });
                     if (resLeaves.ok) {
@@ -555,7 +555,7 @@
             let todaySchedules = [];
             try {
                 const classId = studentData.id_class;
-                const resSched = await fetch(`${API_BASE}/schedules?id_class=${classId}&cycle_type=${activeCycle}`, {
+                const resSched = await fetch(`${API_BASE_URL}/schedules?id_class=${classId}&cycle_type=${activeCycle}`, {
                     headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
                 });
                 const jsonSched = await resSched.json();
@@ -568,7 +568,7 @@
             // Presensi Siswa Hari Ini
             let myAttendancesToday = [];
             try {
-                const resAtt = await fetch(`${API_BASE}/attendances?id_siswa=${studentData.id_user}&date=${todayStr}`, {
+                const resAtt = await fetch(`${API_BASE_URL}/attendances?id_siswa=${studentData.id_user}&date=${todayStr}`, {
                     headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
                 });
                 const jsonAtt = await resAtt.json();

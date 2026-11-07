@@ -1,10 +1,18 @@
 /**
  * global-layout.js
  * Modul Universal Layout (Navbar, Sidebar, Profil, Ganti Email, OTP Cooldown & Crop Foto)
+ * Kompatibel otomatis untuk Lingkungan Lokal (Laragon) & Hosting Produksi
  */
 
+// 1. DEFINISI GLOBAL SEBELUM DOMContentLoaded (Agar langsung dikenali di seluruh file HTML)
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+var API_BASE_URL = isLocalhost 
+    ? 'http://localhost/ukk-scp-new/public/api' 
+    : `${window.location.origin}/public/api`;
+
+window.API_BASE_URL = API_BASE_URL;
+
 document.addEventListener("DOMContentLoaded", function() {
-    const API_BASE_URL = window.location.origin + '/api';
     const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
     const userData = JSON.parse(localStorage.getItem('user_data') || sessionStorage.getItem('user_data') || '{}');
     const role = Number(userData.id_role); // 1: Waka, 2: Guru, 3: Walikelas/BK/Kesiswaan, 4: Siswa

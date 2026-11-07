@@ -1,9 +1,17 @@
 /**
  * profile-role-siswa.js
  * Modul Manajemen Profil, Navbar, Sidebar, dan Footer untuk Siswa
+ * Kompatibel otomatis untuk Lingkungan Lokal (Laragon) & Hosting Produksi
  */
 
-const API_BASE_URL = window.location.origin + '/api';
+// DEFINISI GLOBAL DI PALING ATAS
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+var API_BASE_URL = isLocalhost 
+    ? 'http://localhost/ukk-scp-new/public/api' 
+    : `${window.location.origin}/public/api`;
+
+window.API_BASE_URL = API_BASE_URL;
+
 const token = localStorage.getItem('auth_token');
 const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
 const userId = userData.id_user || userData.id || 'default';

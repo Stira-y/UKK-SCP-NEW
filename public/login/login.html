@@ -3,47 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - School Management System</title>
-    <!-- Tailwind CSS via CDN -->
+    <title>Masuk - Sistem SCP Sekolah</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
-
-    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-200 relative">
-        <!-- Header -->
-        <div class="text-center mb-6">
-            <h1 class="text-2xl font-bold text-slate-800">Sistem SCP Sekolah</h1>
-            <p class="text-sm text-slate-500 mt-1">Silakan masuk menggunakan akun Anda</p>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 space-y-6">
+        <div class="text-center">
+            <h1 class="text-2xl font-bold text-gray-900">Sistem SCP Sekolah</h1>
+            <p class="text-sm text-gray-500 mt-1">Silakan masuk menggunakan akun Anda</p>
         </div>
 
-        <!-- Alert Notifikasi Error / Sukses -->
-        <div id="alertBox" class="hidden mb-4 p-3 rounded-lg text-sm font-medium"></div>
+        <!-- Alert Notifikasi -->
+        <div id="alertBox" class="hidden p-4 rounded-xl text-sm font-medium transition-all"></div>
 
-        <!-- Form Login -->
         <form id="loginForm" class="space-y-4">
-            <!-- Input Email / Username / NIS -->
             <div>
-                <label for="login_input" class="block text-sm font-medium text-slate-700 mb-1">Email, Username, atau NIS</label>
+                <label for="login_input" class="block text-sm font-medium text-gray-700 mb-1">Email, Username, atau NIS</label>
                 <input 
                     type="text" 
                     id="login_input" 
                     name="login_input" 
                     required 
-                    autocomplete="off"
-                    placeholder="Masukkan email, username, atau NIS"
-                    class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition duration-150"
+                    placeholder="Masukkan Email, Username, atau NIS"
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
                 >
             </div>
 
-            <!-- Input Password -->
             <div>
-                <div class="flex justify-between items-center mb-1">
-                    <label for="password" class="block text-sm font-medium text-slate-700">Kata Sandi</label>
-                    <a href="lupapw.html" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition duration-150">
-                        Lupa Password?
-                    </a>
+                <div class="flex items-center justify-between mb-1">
+                    <label for="password" class="block text-sm font-medium text-gray-700">Kata Sandi</label>
+                    <a href="lupapw.html" class="text-xs text-indigo-600 hover:text-indigo-500 font-medium">Lupa Password?</a>
                 </div>
-                
                 <div class="relative">
                     <input 
                         type="password" 
@@ -51,22 +41,21 @@
                         name="password" 
                         required 
                         placeholder="••••••••"
-                        class="w-full px-4 py-2.5 pr-11 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition duration-150"
-                    />
-                    <!-- Tombol Toggle Mata (Show/Hide Password) -->
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition pr-10"
+                    >
                     <button 
                         type="button" 
                         id="togglePassword" 
-                        class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
                     >
-                        <!-- Ikon Mata Terbuka (Show) -->
-                        <svg id="eyeOpen" class="hidden w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Ikon Mata Terbuka -->
+                        <svg id="eyeOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                         </svg>
-                        <!-- Ikon Mata Tertutup / Ada Coretan Slash (Hide) -->
+                        <!-- Ikon Mata Tertutup -->
                         <svg id="eyeClosed" class="hidden w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.03 10.03 0 013.122-.382c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21m-2-2L3 3"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"></path>
                         </svg>
                     </button>
                 </div>
@@ -76,7 +65,7 @@
             <button 
                 type="submit" 
                 id="btnSubmit" 
-                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition duration-200 shadow-md flex items-center justify-center space-x-2 mt-6"
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition duration-200 shadow-md flex items-center justify-center space-x-2 mt-6"
             >
                 <span id="btnText">Masuk</span>
                 <span id="btnSpinner" class="hidden animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></span>
@@ -86,7 +75,11 @@
 
     <!-- Script JavaScript -->
     <script>
-        const API_BASE_URL = window.location.origin + '/api';
+        // Deteksi URL API secara dinamis (Laragon vs Hosting)
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const API_BASE_URL = isLocalhost 
+            ? 'http://localhost/ukk-scp-new/public/api' 
+            : 'https://ukk-scp-yudhis.my.id/public/api';
 
         const loginForm = document.getElementById('loginForm');
         const alertBox = document.getElementById('alertBox');
@@ -115,24 +108,23 @@
 
         // Toggle Fitur Lihat/Sembunyikan Password
         togglePasswordBtn.addEventListener('click', () => {
-            const isPassword = passwordInput.type === 'password';
-            passwordInput.type = isPassword ? 'text' : 'password';
-            
-            if (isPassword) {
-                eyeOpen.classList.remove('hidden');
-                eyeClosed.classList.add('hidden');
-            } else {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
                 eyeOpen.classList.add('hidden');
                 eyeClosed.classList.remove('hidden');
+            } else {
+                passwordInput.type = 'password';
+                eyeOpen.classList.remove('hidden');
+                eyeClosed.classList.add('hidden');
             }
         });
 
         function showAlert(message, isSuccess = false) {
-            alertBox.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+            alertBox.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'border-red-200', 'bg-green-50', 'text-green-700', 'border-green-200', 'border');
             if (isSuccess) {
-                alertBox.classList.add('bg-green-100', 'text-green-700');
+                alertBox.classList.add('bg-green-50', 'text-green-700', 'border', 'border-green-200');
             } else {
-                alertBox.classList.add('bg-red-100', 'text-red-700');
+                alertBox.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-200');
             }
             alertBox.textContent = message;
         }
@@ -190,6 +182,7 @@
                             // Blokir jika title Guru BK non-pengajar
                             if (userTitle === 'gurubk') {
                                 showAlert('Akses ditolak! Akun dengan title Guru BK tidak memiliki izin login ke sistem.', false);
+                                setLoading(false);
                                 return;
                             }
                             window.location.href = '../role 3 walikelas&bk/dashboard3.html';
@@ -197,15 +190,16 @@
                             window.location.href = '../role 4 siswa/dashboard4.html';
                         } else {
                             showAlert('Role pengguna tidak dikenal.', false);
+                            setLoading(false);
                         }
                     }, 1000);
                 } else {
                     showAlert(result.message || 'Username/email atau password salah', false);
+                    setLoading(false);
                 }
             } catch (error) {
                 showAlert('Tidak dapat terhubung ke server backend API. Pastikan Apache & MySQL berjalan.', false);
                 console.error('Login error:', error);
-            } finally {
                 setLoading(false);
             }
         });

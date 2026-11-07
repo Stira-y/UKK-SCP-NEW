@@ -411,7 +411,7 @@
 
     <!-- Script Logika Halaman Surat Izin -->
     <script>
-        const API_BASE_URL_IZIN = window.location.origin + '/api';
+        // Menggunakan variabel global API_BASE_URL dari profile-role siswa.js tanpa deklarasi ulang
         const tokenIzin = localStorage.getItem('auth_token');
         const userDataIzin = JSON.parse(localStorage.getItem('user_data') || '{}');
 
@@ -547,7 +547,7 @@
 
         async function fetchLeaveRequests() {
             try {
-                const response = await fetch(`${API_BASE_URL_IZIN}/leave-requests?id_siswa=${userDataIzin.id_user || userDataIzin.id}`, {
+                const response = await fetch(`${API_BASE_URL}/leave-requests?id_siswa=${userDataIzin.id_user || userDataIzin.id}`, {
                     headers: { 'Authorization': `Bearer ${tokenIzin}`, 'Accept': 'application/json' }
                 });
                 if (!response.ok) {
@@ -652,7 +652,7 @@
                 if (Array.isArray(parsedDocs) && parsedDocs.length > 0) {
                     const fileButtons = parsedDocs.map((docPath, idx) => {
                         const cleanPath = typeof docPath === 'string' ? docPath : (docPath.file_path || docPath.path || '');
-                        const fileUrl = `${API_BASE_URL_IZIN.replace('/api', '')}/storage/${cleanPath}?v=${Date.now()}`;
+                        const fileUrl = `${API_BASE_URL.replace('/api', '')}/storage/${cleanPath}?v=${Date.now()}`;
                         const fileName = getDisplayFileName(cleanPath, idx);
                         const hideClass = idx >= 2 ? 'hidden hidden-doc' : '';
                         return `<button type="button" onclick="openFileViewer('${fileUrl}', '${fileName}')" class="text-blue-600 hover:underline text-xs font-semibold block truncate max-w-[140px] text-left ${hideClass}">${fileName}</button>`;
@@ -741,7 +741,7 @@
 
                 activeExisting.forEach((doc, idx) => {
                     const filePath = doc.file_path || doc.path;
-                    const fileUrl = `${API_BASE_URL_IZIN.replace('/api', '')}/storage/${filePath}?v=${Date.now()}`;
+                    const fileUrl = `${API_BASE_URL.replace('/api', '')}/storage/${filePath}?v=${Date.now()}`;
                     const fileName = getDisplayFileName(filePath, idx);
 
                     const itemDiv = document.createElement('div');
@@ -859,7 +859,7 @@
             pendingDeleteId = null;
 
             try {
-                const response = await fetch(`${API_BASE_URL_IZIN}/leave-requests/${targetId}`, {
+                const response = await fetch(`${API_BASE_URL}/leave-requests/${targetId}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${tokenIzin}`, 'Accept': 'application/json' }
                 });
@@ -1066,9 +1066,9 @@
                 deletedFilePaths.forEach(path => formData.append('deleted_documents[]', path));
             }
 
-            let endpoint = `${API_BASE_URL_IZIN}/leave-requests`;
+            let endpoint = `${API_BASE_URL}/leave-requests`;
             if (editingRequestId) {
-                endpoint = `${API_BASE_URL_IZIN}/leave-requests/${editingRequestId}`;
+                endpoint = `${API_BASE_URL}/leave-requests/${editingRequestId}`;
                 formData.append('_method', 'PUT');
             }
 
