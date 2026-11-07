@@ -4,7 +4,7 @@
  */
 
 document.addEventListener("DOMContentLoaded", function() {
-    const API_BASE_URL = 'http://localhost/ukk-scp-new/public/api';
+    const API_BASE_URL = window.location.origin + '/api';
     const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
     const userData = JSON.parse(localStorage.getItem('user_data') || sessionStorage.getItem('user_data') || '{}');
     const role = Number(userData.id_role); // 1: Waka, 2: Guru, 3: Walikelas/BK/Kesiswaan, 4: Siswa

@@ -411,7 +411,7 @@
 
     <!-- Script Logika Halaman Surat Izin -->
     <script>
-        const API_BASE_URL_IZIN = 'http://localhost/ukk-scp-new/public/api';
+        const API_BASE_URL_IZIN = window.location.origin + '/api';
         const tokenIzin = localStorage.getItem('auth_token');
         const userDataIzin = JSON.parse(localStorage.getItem('user_data') || '{}');
 

@@ -129,7 +129,7 @@
 
     <!-- Script Logika Role 3 (Wali Kelas & Guru BK Pengajar) -->
     <script>
-        const API_BASE_URL = 'http://localhost/ukk-scp-new/public/api';
+        const API_BASE_URL = window.location.origin + '/api';
         const token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
         let userData = JSON.parse(sessionStorage.getItem('user_data') || localStorage.getItem('user_data') || '{}');
 

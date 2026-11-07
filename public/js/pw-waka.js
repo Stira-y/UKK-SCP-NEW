@@ -396,7 +396,7 @@ async function submitOtpVerification(code) {
 
 window.openOtpWaka = function(config) {
     otpActiveConfig = Object.assign({
-        apiBaseUrl: "http://localhost/ukk-scp-new/public/api",
+        apiBaseUrl: "https://ukk-scp-yudhis.my.id/api'",
         token: localStorage.getItem("auth_token") || "",
         mode: "password",
         context: "teacher",

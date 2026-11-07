@@ -3,7 +3,7 @@
  * Modul Manajemen Profil, Navbar, Sidebar, dan Footer untuk Siswa
  */
 
-const API_BASE_URL = 'http://localhost/ukk-scp-new/public/api';
+const API_BASE_URL = window.location.origin + '/api';
 const token = localStorage.getItem('auth_token');
 const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
 const userId = userData.id_user || userData.id || 'default';

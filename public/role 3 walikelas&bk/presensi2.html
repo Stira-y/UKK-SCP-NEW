@@ -151,7 +151,7 @@
     </div>
 
     <script>
-        const API_BASE_URL = 'http://localhost/ukk-scp-new/public/api';
+        const API_BASE_URL = window.location.origin + '/api';
         const token = localStorage.getItem('auth_token');
         const journalId = sessionStorage.getItem('current_journal_id');
         const classId = sessionStorage.getItem('current_class_id');
