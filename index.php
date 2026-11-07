@@ -28,7 +28,8 @@ if (isset($_GET['check_php'])) {
     header('Content-Type: application/json');
     echo json_encode([
         'php_version' => PHP_VERSION,
-        'extensions' => get_loaded_extensions()
+        'alt_php' => glob('/opt/alt/php*'),
+        'ea_php' => glob('/opt/cpanel/ea-php*')
     ], JSON_PRETTY_PRINT);
     exit;
 }
