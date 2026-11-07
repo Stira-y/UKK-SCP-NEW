@@ -19,6 +19,37 @@ class RoomController extends Controller
 
     public function store(Request $request)
     {
+        // Jika pembuatan ruangan custom ("Buat nama" tanpa nomor ruang)
+        if (!$request->filled('nomor_room_awal')) {
+            $request->validate([
+                'nama_room' => 'required|string|max:100',
+            ]);
+
+            $cleanName = trim($request->nama_room);
+            $exists = Room::where('nama_room', $cleanName)
+                ->where(function ($q) {
+                    $q->whereNull('nomor_room')->orWhere('nomor_room', '');
+                })->exists();
+
+            if ($exists) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Data sudah di tambahkan! Ruangan "' . $cleanName . '" sudah terdaftar.'
+                ], 422);
+            }
+
+            $room = Room::create([
+                'nama_room'  => $cleanName,
+                'nomor_room' => null,
+            ]);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Ruangan ' . $cleanName . ' berhasil ditambahkan.',
+                'data'    => [$room]
+            ], 201);
+        }
+
         $request->validate([
             'nama_room'        => 'required|string|max:100',
             'nomor_room_awal'  => 'required|integer|min:1|max:50',
@@ -136,6 +167,21 @@ class RoomController extends Controller
         return response()->json([
             'status'  => 'success', 
             'message' => 'Ruangan berhasil dihapus'
+        ], 200);
+    }
+
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer'
+        ]);
+
+        $count = Room::whereIn('id_room', $request->ids)->delete();
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => "{$count} ruangan berhasil dihapus."
         ], 200);
     }
 }

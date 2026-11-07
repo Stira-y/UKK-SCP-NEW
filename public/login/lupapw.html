@@ -139,7 +139,11 @@
     </div>
 
     <script>
-        
+        // Deteksi URL API secara dinamis (Laragon vs Hosting)
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const API_BASE_URL = isLocalhost 
+            ? 'http://localhost/ukk-scp-new/public/api' 
+            : `${window.location.origin}/api`;
 
         const lupaPwForm = document.getElementById('lupaPwForm');
         const usernameInput = document.getElementById('username');

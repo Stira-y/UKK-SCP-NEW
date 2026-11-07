@@ -26,34 +26,24 @@
         <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
             <div class="max-w-7xl mx-auto space-y-6">
 
-                <!-- Header & Search & Dropdown Kategori Arsip -->
+                <!-- Header & Search -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <h2 class="text-xl md:text-2xl font-bold text-slate-800">Data Arsip Siswa</h2>
                         <p class="text-slate-500 text-xs md:text-sm mt-0.5">Riwayat arsip data kelulusan (alumni) dan siswa yang telah dikeluarkan dari sekolah.</p>
                     </div>
 
-                    <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-                        <!-- Dropdown Pilihan Kategori Arsip -->
-                        <div class="w-full sm:w-auto shrink-0">
-                            <select id="selectArsipType" class="w-full sm:w-auto bg-slate-50 border border-slate-300 text-slate-800 text-xs md:text-sm font-bold px-3 py-2 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-xs">
-                                <option value="alumni">Kelulusan / Alumni</option>
-                                <option value="dikeluarkan">Siswa Dikeluarkan</option>
-                            </select>
-                        </div>
-
-                        <div class="w-full sm:w-72">
-                            <div class="relative">
-                                <input type="text" id="searchInput" autocomplete="off" placeholder="Cari NISN, NIS, atau Nama Lengkap..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition">
-                                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                            </div>
+                    <div class="w-full md:w-80">
+                        <div class="relative">
+                            <input type="text" id="searchInput" autocomplete="off" placeholder="Cari NISN, NIS, atau Nama Lengkap..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                         </div>
                     </div>
                 </div>
 
                 <!-- Card Tabel Data Arsip Siswa -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+                    <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
                         <div class="flex items-center space-x-2">
                             <span id="tableTitleText" class="font-bold text-slate-800 text-sm md:text-base">Daftar Siswa Lulus (Alumni)</span>
                             <span id="totalGraduatesBadge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">
@@ -61,11 +51,19 @@
                             </span>
                         </div>
 
-                        <!-- Tombol Download PDF -->
-                        <button type="button" id="btnDownloadPdf" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow transition flex items-center space-x-1.5 shrink-0">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            <span>Download Data</span>
-                        </button>
+                        <!-- Dropdown Pilihan Kategori Arsip & Tombol Download Data -->
+                        <div class="flex items-center space-x-3 shrink-0">
+                            <select id="selectArsipType" class="bg-white border border-slate-300 text-slate-800 text-xs md:text-sm font-bold px-3 py-2 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-xs">
+                                <option value="alumni">Kelulusan / Alumni</option>
+                                <option value="dikeluarkan">Siswa Dikeluarkan</option>
+                            </select>
+
+                            <!-- Tombol Download Data -->
+                            <button type="button" id="btnDownloadPdf" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow transition flex items-center space-x-1.5 shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                <span>Download Data</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -263,6 +261,6 @@
             doc.save(fileName);
         });
     </script>
-    <script src="../js/global-layout.js"></script>
+    <script src="../js/global-layout.js?v=20261108_3.0"></script>
 </body>
 </html>

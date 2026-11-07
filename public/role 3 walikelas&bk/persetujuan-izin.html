@@ -611,6 +611,15 @@
         window.openVerifikasiModal = function(id) {
             const item = activeLeaveRequests.find(r => (r.id_izin_keluar || r.id_leave_request || r.id) == id);
             if (!item) return;
+
+            const sNorm = (item.status_approval || '').trim().toLowerCase();
+            const currentUserId = Number(userData.id_user || userData.id);
+            if (item.verified_by && currentUserId && Number(item.verified_by) !== currentUserId && !['pending', 'aju banding'].includes(sNorm)) {
+                const verifierName = item.verifier?.fullname || item.verifier?.username || 'user lain';
+                alert(`Pemberitahuan: Surat izin ini telah diverifikasi oleh ${verifierName}.`);
+                return;
+            }
+
             verifyingRequestId = id;
 
             document.getElementById('viewFullname').value = item.student ? item.student.fullname : '-';
@@ -745,6 +754,10 @@
                     await fetchIzinList();
                 } else {
                     alert(result.message || 'Gagal memproses permohonan.');
+                    if (res.status === 409) {
+                        modalVerifikasiIzin.classList.add('hidden');
+                        await fetchIzinList();
+                    }
                 }
             } catch(e) {
                 alert('Terjadi kesalahan koneksi server.');
@@ -779,6 +792,6 @@
         btnZoomIn.addEventListener('click', () => { if (currentZoom < 3) { currentZoom += 0.25; viewerContentWrapper.style.transform = `scale(${currentZoom})`; } });
         btnZoomOut.addEventListener('click', () => { if (currentZoom > 0.5) { currentZoom -= 0.25; viewerContentWrapper.style.transform = `scale(${currentZoom})`; } });
     </script>
-    <script src="../js/global-layout.js"></script>
+    <script src="../js/global-layout.js?v=20261108_3.0"></script>
 </body>
 </html>

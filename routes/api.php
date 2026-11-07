@@ -58,6 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::apiResource('classes', SchoolClassController::class);
+    Route::post('rooms/bulk-delete', [RoomController::class, 'bulkDestroy']);
     Route::apiResource('rooms', RoomController::class);
     Route::apiResource('users', UserController::class);
 

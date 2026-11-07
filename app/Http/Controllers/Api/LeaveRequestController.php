@@ -127,6 +127,21 @@ class LeaveRequestController extends Controller
 
         $currentUser = $request->user();
 
+        // Validasi jika surat izin telah disetujui / diproses oleh pengguna lain
+        $targetStatus = $request->input('status_approval');
+        if ($targetStatus && !in_array(strtolower($targetStatus), ['pending', 'aju banding'])) {
+            $currentStatus = strtolower(trim($leaveRequest->status_approval ?? ''));
+            if (!in_array($currentStatus, ['pending', 'aju banding']) && $leaveRequest->verified_by) {
+                if ($currentUser && (int) $leaveRequest->verified_by !== (int) $currentUser->id_user) {
+                    $verifierName = $leaveRequest->verifier?->fullname ?? $leaveRequest->verifier?->username ?? 'user lain';
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Surat izin ini telah diverifikasi oleh {$verifierName}."
+                    ], 409);
+                }
+            }
+        }
+
         if ($currentUser) {
             if ((int) $currentUser->id_role === 3) {
                 $validated['verified_by'] = $currentUser->id_user;

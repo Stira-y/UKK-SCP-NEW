@@ -53,8 +53,8 @@
 
                 <!-- Kategori Tabs & Action Buttons -->
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                    <div class="flex items-center justify-between overflow-x-auto category-scroll pb-2 whitespace-nowrap gap-4 text-xs md:text-sm font-semibold text-slate-600">
-                        <div class="flex items-center space-x-6">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs md:text-sm font-semibold text-slate-600">
+                        <div class="flex items-center space-x-6 overflow-x-auto pb-1 whitespace-nowrap">
                             <button class="cat-btn underline text-indigo-600 font-bold" data-cat="all">Semua Siswa</button>
                             <span class="text-slate-300">|</span>
                             <button class="cat-btn" data-cat="X">Siswa X</button>
@@ -63,7 +63,7 @@
                             <span class="text-slate-300">|</span>
                             <button class="cat-btn" data-cat="XII">Siswa XII</button>
                         </div>
-                        <div class="flex items-center space-x-3 shrink-0">
+                        <div class="flex flex-wrap items-center gap-3">
                             <button id="btnOpenAddClass" onclick="window.location.href='kelola kelas.html'" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                                 <span>Kelas</span>
@@ -1616,6 +1616,6 @@
             searchInput.value = lastActiveSearchValue;
         });
     </script>
-    <script src="../js/global-layout.js"></script>
+    <script src="../js/global-layout.js?v=20261108_3.0"></script>
 </body>
 </html>
