@@ -12,14 +12,18 @@ DirectoryIndex index.php public/index.php index.html
     # 2. Redirect root langsung ke halaman login
     RewriteRule ^$ login/login.html [R=302,L]
 
-    # 3. Jika berkas fisik memang ada di dalam folder public/, sajikan langsung
+    # 3. Jika berkas fisik memang ada di root, sajikan langsung
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # 4. Jika berkas fisik ada di dalam folder public/, sajikan langsung
     RewriteCond %{DOCUMENT_ROOT}/public/$1 -f
     RewriteRule ^(.*)$ public/$1 [L]
 
-    # 4. Jika direktori fisik memang ada di dalam folder public/, sajikan langsung
+    # 5. Jika direktori fisik ada di dalam folder public/, sajikan langsung
     RewriteCond %{DOCUMENT_ROOT}/public/$1 -d
     RewriteRule ^(.*)$ public/$1 [L]
 
-    # 5. Sisanya (endpoint API & rute Laravel) arahkan ke front controller
+    # 6. Sisanya (endpoint API & rute Laravel) arahkan ke front controller
     RewriteRule ^(.*)$ public/index.php [L,QSA]
 </IfModule>

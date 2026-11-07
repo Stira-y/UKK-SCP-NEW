@@ -63,6 +63,10 @@ jobs:
               diag = f'PWD: {pwd}\nFILES: {files}\n'
               print(diag)
               ftp.storbinary('STOR test_ftp_dir.txt', io.BytesIO(diag.encode('utf-8')))
+              try:
+                  ftp.storbinary('STOR public/test_ftp_dir.txt', io.BytesIO(diag.encode('utf-8')))
+              except Exception as e_pub:
+                  diag += f'\nPUBLIC ERROR: {e_pub}\n'
               ftp.quit()
           except Exception as e:
               print('FTP DIAG ERROR:', e)
