@@ -23,6 +23,16 @@ if ($uri === '/' || $uri === '' || $uri === '/index.php') {
     exit;
 }
 
+// 1.5 Cek versi PHP server hosting
+if (isset($_GET['check_php'])) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'php_version' => PHP_VERSION,
+        'extensions' => get_loaded_extensions()
+    ], JSON_PRETTY_PRINT);
+    exit;
+}
+
 // 2. Teruskan semua request lainnya ke Laravel Front Controller di public/index.php
 try {
     require_once __DIR__ . '/public/index.php';
