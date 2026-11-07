@@ -61,12 +61,16 @@ jobs:
               pwd = ftp.pwd()
               files = ftp.nlst()
               diag = f'PWD: {pwd}\nFILES: {files}\n'
+              for check_f in ['error_log', 'php.ini', '.user.ini', 'public/index.php']:
+                  try:
+                      content = io.BytesIO()
+                      ftp.retrbinary(f'RETR {check_f}', content.write)
+                      text_val = content.getvalue().decode('utf-8', errors='ignore')
+                      diag += f'\n=== {check_f} ===\n{text_val[:1000]}\n'
+                  except Exception as e_f:
+                      diag += f'\n=== {check_f} === ERROR: {e_f}\n'
               print(diag)
               ftp.storbinary('STOR test_ftp_dir.txt', io.BytesIO(diag.encode('utf-8')))
-              try:
-                  ftp.storbinary('STOR public/test_ftp_dir.txt', io.BytesIO(diag.encode('utf-8')))
-              except Exception as e_pub:
-                  diag += f'\nPUBLIC ERROR: {e_pub}\n'
               ftp.quit()
           except Exception as e:
               print('FTP DIAG ERROR:', e)
