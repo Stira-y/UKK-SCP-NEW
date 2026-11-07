@@ -123,4 +123,12 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Deployment Secret Token
+    |--------------------------------------------------------------------------
+    | Digunakan untuk memicu endpoint webhook migrasi di shared hosting tanpa SSH.
+    */
+    'deploy_secret' => env('DEPLOY_SECRET', 'skansaba_super_secret_token_12345'),
+
 ];

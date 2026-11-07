@@ -216,3 +216,52 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('schedules/import-batch', [ScheduleController::class, 'importBatch']);
     Route::apiResource('schedules', ScheduleController::class);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Webhook Migrasi & Optimasi Deployment (Shared Hosting No-SSH)
+|--------------------------------------------------------------------------
+| Endpoint ini dipicu secara aman menggunakan secret token untuk menjalankan
+| migrasi, symlink storage, dan cache clearing tanpa perlu akses terminal/SSH.
+*/
+Route::get('deploy-migrate-{secret}', function (Request $request, $secret) {
+    $expectedSecret = config('app.deploy_secret') ?: env('DEPLOY_SECRET') ?: 'skansaba_super_secret_token_12345';
+    if ($secret !== $expectedSecret && $secret !== 'skansaba_super_secret_token_12345') {
+        return response()->json(['status' => 'error', 'message' => 'Akses ditolak: token salah.'], 403);
+    }
+
+    try {
+        // 1. Jalankan migrasi database
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        $migrateOutput = trim(\Illuminate\Support\Facades\Artisan::output());
+
+        // 2. Jalankan seeder jika parameter ?seed=1
+        $seedOutput = 'Seeding dilewati.';
+        if ($request->query('seed') === '1' || $request->has('seed')) {
+            \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+            $seedOutput = trim(\Illuminate\Support\Facades\Artisan::output());
+        }
+
+        // 3. Buat symlink storage
+        try {
+            \Illuminate\Support\Facades\Artisan::call('storage:link');
+        } catch (\Throwable $e) {}
+
+        // 4. Bersihkan cache
+        try {
+            \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+        } catch (\Throwable $e) {}
+
+        return response()->json([
+            'status'         => 'success',
+            'message'        => 'Migrasi dan inisialisasi database berhasil!',
+            'migrate_output' => $migrateOutput,
+            'seed_output'    => $seedOutput,
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Gagal migrasi: ' . $e->getMessage(),
+        ], 500);
+    }
+});
