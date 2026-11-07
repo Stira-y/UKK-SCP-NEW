@@ -377,11 +377,11 @@
     </div>
 
     <!-- Script Utama (Modular Profil & Logout) -->
-    <script src="../js/profile-role siswa.js"></script>
+    <script src="../js/profile-role siswa.js?v=20261108_4.0"></script>
 
     <!-- Script Khusus Dashboard Siswa: Rekap Siswa, Jadwal Hari Ini, Status Presensi & Izin Khusus Realtime -->
     <script>
-        // Menggunakan variabel global API_BASE_URL dari profile-role siswa.js
+        // Menggunakan variabel global API_BASE_URL dari profile-role siswa.js?v=20261108_4.0
         const authToken = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
         const studentData = JSON.parse(localStorage.getItem('user_data') || sessionStorage.getItem('user_data') || '{}');
 
