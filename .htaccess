@@ -1,5 +1,10 @@
 DirectoryIndex index.php public/index.php index.html
 
+# Gunakan PHP 8.4 di LiteSpeed / CloudLinux
+<FilesMatch "\.(php4|php5|php3|php2|php|phtml)$">
+    SetHandler application/x-httpd-alt-php84___lsphp
+</FilesMatch>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
