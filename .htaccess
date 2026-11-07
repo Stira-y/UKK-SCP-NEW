@@ -16,14 +16,20 @@ DirectoryIndex index.php public/index.php index.html
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 
-    # 4. Jika berkas fisik ada di dalam folder public/, sajikan langsung
+    # 4. Jika direktori fisik memang ada di root (selain root itu sendiri), sajikan langsung
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # 5. Jika berkas fisik ada di dalam folder public/, sajikan langsung
     RewriteCond %{DOCUMENT_ROOT}/public/$1 -f
     RewriteRule ^(.*)$ public/$1 [L]
 
-    # 5. Jika direktori fisik ada di dalam folder public/, sajikan langsung
+    # 6. Jika direktori fisik ada di dalam folder public/, sajikan langsung
     RewriteCond %{DOCUMENT_ROOT}/public/$1 -d
     RewriteRule ^(.*)$ public/$1 [L]
 
-    # 6. Sisanya (endpoint API & rute Laravel) arahkan ke front controller
-    RewriteRule ^(.*)$ public/index.php [L,QSA]
+    # 7. Sisanya (endpoint API & rute Laravel) arahkan ke front controller
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L,QSA]
 </IfModule>

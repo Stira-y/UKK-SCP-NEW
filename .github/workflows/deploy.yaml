@@ -1,42 +1,46 @@
-name: Deploy Laravel to DomaiNesia
+name: 🚀 Deploy Laravel to DomaiNesia Shared Hosting (No SSH)
+
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
+concurrency:
+  group: production-deploy
+  cancel-in-progress: true
+
 jobs:
-  build-and-deploy:
+  deploy:
+    name: 📦 Build and FTP Upload
     runs-on: ubuntu-latest
-    name: Build & FTP Deploy
+
     steps:
-      - name: ⬇️ Checkout Repository
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🐘 Setup PHP
+      - name: 🐘 Setup PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, bcmath, fileinfo, gd, zip, curl
+          extensions: mbstring, xml, ctype, iconv, mysql, pdo_mysql, zip, bcmath, json, curl
           coverage: none
 
-      - name: 📦 Install Composer Dependencies
+      - name: 📦 Install Composer Dependencies (Production)
         run: |
-          composer install --no-dev --prefer-dist --optimize-autoloader --no-progress --no-interaction --ignore-platform-reqs --no-scripts
+          composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
 
-      - name: 🚀 Sync Files via FTP to DomaiNesia
+      - name: 🚀 Deploy to DomaiNesia via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          port: 21
-          protocol: ftp
-          dangerous-clean-slate: false
-          server-dir: '/'
+          server-dir: /
           exclude: |
             **/.git*
             **/.git*/**
-            **/node_modules/**
+            node_modules/**
             tests/**
             .env
             .env.example
@@ -46,7 +50,7 @@ jobs:
             phpunit.xml
             .github/**
 
-      - name: 🔍 Diagnose FTP Structure
+      - name: 🧹 Cleanup Diagnostic File
         env:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
@@ -54,26 +58,17 @@ jobs:
         run: |
           python3 -c "
           from ftplib import FTP
-          import os, io
+          import os
           try:
               ftp = FTP(os.environ['FTP_SERVER'], timeout=30)
               ftp.login(os.environ['FTP_USERNAME'], os.environ['FTP_PASSWORD'])
-              pwd = ftp.pwd()
-              files = ftp.nlst()
-              diag = f'PWD: {pwd}\nFILES: {files}\n'
-              for check_f in ['.htaccess', '../logs/php.error.log', 'logs/php.error.log']:
-                  try:
-                      content = io.BytesIO()
-                      ftp.retrbinary(f'RETR {check_f}', content.write)
-                      text_val = content.getvalue().decode('utf-8', errors='ignore')
-                      diag += f'\n=== {check_f} ===\n{text_val[:1000]}\n'
-                  except Exception as e_f:
-                      diag += f'\n=== {check_f} === ERROR: {e_f}\n'
-              print(diag)
-              ftp.storbinary('STOR test_ftp_dir.txt', io.BytesIO(diag.encode('utf-8')))
+              try:
+                  ftp.delete('test_ftp_dir.txt')
+              except Exception:
+                  pass
               ftp.quit()
-          except Exception as e:
-              print('FTP DIAG ERROR:', e)
+          except Exception:
+              pass
           "
 
       - name: ⚡ Trigger Database Migration & Cache Clear
@@ -82,4 +77,3 @@ jobs:
         run: |
           TOKEN="${DEPLOY_SECRET:-skansaba_super_secret_token_12345}"
           curl -sS -k "https://ukk-scp-yudhis.my.id/api/deploy-migrate-${TOKEN}?seed=0" || echo "Webhook executed."
-
