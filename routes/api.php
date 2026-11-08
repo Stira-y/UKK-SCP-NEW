@@ -81,25 +81,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('rooms', RoomController::class);
     Route::apiResource('users', UserController::class);
 
-    // Endpoint Konfigurasi Putaran & Kunci Jadwal
-    Route::get('/system-config/active-cycle', function () {
-        $config = SystemConfiguration::first();
-        if (!$config) {
-            $config = SystemConfiguration::create([
-                'active_cycle' => '1',
-                'is_schedule_locked' => false,
-                'updated_by' => null,
-            ]);
-        }
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'active_cycle' => (string) $config->active_cycle,
-                'is_schedule_locked' => (bool) $config->is_schedule_locked
-            ]
-        ], 200);
-    });
-
+    // Endpoint Update Konfigurasi Putaran & Kunci Jadwal
     Route::post('/system-config/set-active-cycle', function (Request $request) {
         $validated = $request->validate([
             'active_cycle' => 'required|in:1,2'
