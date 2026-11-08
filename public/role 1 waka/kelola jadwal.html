@@ -1771,270 +1771,360 @@
                 const abRuang = await fileRuang.arrayBuffer();
                 const pdfRuang = await pdfjsLib.getDocument({ data: new Uint8Array(abRuang) }).promise;
 
-                importPdfProgressBar.style.width = '30%';
-                importPdfProgressPct.textContent = '30%';
-                importPdfProgressLabel.textContent = 'Mengekstrak peta ruangan per kelas...';
+                importPdfProgressBar.style.width = '25%';
+                importPdfProgressPct.textContent = '25%';
+                importPdfProgressLabel.textContent = 'Mengekstrak alokasi ruangan & waktu per kelas...';
+
+                // Tentukan putaran target: deteksi dari nama berkas atau gunakan putaran yang aktif dipilih
+                let targetCycle = String(currentCycle || '1');
+                if (/PUT[_\s\-]*2/i.test(fileJadwal.name) || /PUT[_\s\-]*2/i.test(fileRuang.name)) {
+                    targetCycle = '2';
+                } else if (/PUT[_\s\-]*1/i.test(fileJadwal.name) || /PUT[_\s\-]*1/i.test(fileRuang.name)) {
+                    targetCycle = '1';
+                }
 
                 const RUANG_CLASSES = [
                     '10 RPL 1', '10 RPL 2', '10 TKJ 1', '10 TKJ 2', '10 DKV 1', '10 DKV 2', '10 AK 1', '10 AK 2', '10 AK 3', '10 LPS 1', '10 LPS 2', '10 MP 1', '10 MP 2', '10 BR 1', '10 BR 2', '10 BD',
                     '11 RPL 1', '11 RPL 2', '11 TKJ 1', '11 TKJ 2', '11 DKV 1', '11 DKV 2', '11 AK 1', '11 AK 2', '11 AK 3', '11 LPS 1', '11 LPS 2', '11 MP 1', '11 MP 2', '11 BR 1', '11 BR 2', '11 BD',
                     '12 RPL 1', '12 RPL 2', '12 TKJ 1', '12 TKJ 2', '12 DKV 1', '12 DKV 2', '12 AK 1', '12 AK 2', '12 AK 3', '12 AK 4', '12 LPS', '12 MP 1', '12 MP 2', '12 BR 1', '12 BR 2', '12 BD'
                 ];
-                function cleanClassKey(str) {
-                    return (str || '').toUpperCase().replace(/\s+/g, '').replace(/^10/, 'X').replace(/^11/, 'XI').replace(/^12/, 'XII');
-                }
-                const RUANG_KEYS = RUANG_CLASSES.map(cleanClassKey);
 
                 function normalizeRoomStr(raw) {
-                    if (!raw || raw === '-') return '-';
-                    const tr = raw.trim();
-                    if (/^L\.(\d+)$/i.test(tr)) return `Lab ${tr.match(/^L\.(\d+)$/i)[1]}`;
-                    if (/^L\.(.+)$/i.test(tr)) return `Lab ${tr.match(/^L\.(.+)$/i)[1].toUpperCase()}`;
-                    if (/^\d+$/.test(tr)) return `Ruang ${tr}`;
-                    return tr;
+                    raw = (raw || '').trim();
+                    if (!raw || raw === '-') return 'Ruang Kelas';
+                    const mLabNum = raw.match(/^L\.(\d+)$/i);
+                    if (mLabNum) return `Lab ${mLabNum[1]}`;
+                    const mLabTxt = raw.match(/^L\.(.+)$/i);
+                    if (mLabTxt) return `Lab ${mLabTxt[1].toUpperCase()}`;
+                    if (/^\d+$/.test(raw)) return `Ruang ${raw}`;
+                    if (raw.toUpperCase() === 'OR') return 'Ruang OR';
+                    if (raw.toUpperCase() === 'HALL') return 'Hall';
+                    return raw;
                 }
 
-                // 1. Ekstrak Grid Ruangan dari pdfRuang
+                // 1. Ekstrak Ruangan dan Waktu dari pdfRuang
                 const roomGrid = { Senin: {}, Selasa: {}, Rabu: {}, Kamis: {}, Jumat: {} };
-                const dayPages = [
-                    [['Senin', 0, 131], ['Selasa', 132, 274]],
-                    [['Rabu', 0, 131], ['Kamis', 132, 268]],
-                    [['Jumat', 0, 145]]
-                ];
+                const breakTimes = { Senin: [], Selasa: [], Rabu: [], Kamis: [], Jumat: [] };
+                const pageDays = [['Senin', 'Selasa'], ['Rabu', 'Kamis'], ['Jumat']];
 
                 for (let pIdx = 0; pIdx < Math.min(3, pdfRuang.numPages); pIdx++) {
                     const page = await pdfRuang.getPage(pIdx + 1);
                     const tc = await page.getTextContent();
-                    const lines = tc.items.map(it => it.str.trim()).filter(Boolean);
 
-                    const sections = dayPages[pIdx] || [];
-                    for (const [dayName] of sections) {
-                        for (const line of lines) {
-                            const m = line.match(/^(\d+|IST)\s+(\d{2}[\.:]\d{2})\s*[-–]\s*(\d{2}[\.:]\d{2})\s+(.+)/);
-                            if (m) {
-                                const jamId = m[1];
-                                const tStart = m[2].replace('.', ':');
-                                const tEnd = m[3].replace('.', ':');
-                                const tokens = m[4].split(/\s+/).filter(Boolean);
-                                if (tokens.length >= RUANG_KEYS.length) {
-                                    for (let cIdx = 0; cIdx < RUANG_KEYS.length; cIdx++) {
-                                        const cKey = RUANG_KEYS[cIdx];
-                                        if (!roomGrid[dayName][cKey]) roomGrid[dayName][cKey] = {};
-                                        roomGrid[dayName][cKey][jamId] = {
-                                            room: normalizeRoomStr(tokens[cIdx]),
-                                            start: tStart,
-                                            end: tEnd
-                                        };
-                                    }
+                    // Cluster teks berdasarkan koordinat y (toleransi 2.5px)
+                    const byY = {};
+                    for (const it of tc.items) {
+                        const str = it.str.trim();
+                        if (!str) continue;
+                        const x = it.transform[4];
+                        const y = Math.round(it.transform[5] * 10) / 10;
+                        let matchedKey = null;
+                        for (const k of Object.keys(byY)) {
+                            if (Math.abs(parseFloat(k) - y) <= 2.5) {
+                                matchedKey = k;
+                                break;
+                            }
+                        }
+                        if (!matchedKey) {
+                            matchedKey = String(y);
+                            byY[matchedKey] = [];
+                        }
+                        byY[matchedKey].push({ x, str });
+                    }
+
+                    const daysOnPage = pageDays[pIdx];
+                    let currentDayIdx = 0;
+                    let currentDay = daysOnPage[0];
+                    let sawJam10 = false;
+
+                    const sortedY = Object.keys(byY).map(Number).sort((a, b) => b - a);
+                    for (const yVal of sortedY) {
+                        const lineItems = byY[String(yVal)].sort((a, b) => a.x - b.x);
+                        const lineStr = lineItems.map(it => it.str).join(' ');
+
+                        // Pindah ke hari berikutnya jika sudah melewati Jam 10 pada halaman yang sama
+                        if (daysOnPage.length > 1 && currentDayIdx === 0 && sawJam10) {
+                            if (/\b1\s+\d{2}[\.:]\d{2}/.test(lineStr) || lineStr.includes('LITERASI') || lineStr.includes(daysOnPage[1])) {
+                                currentDayIdx = 1;
+                                currentDay = daysOnPage[1];
+                                sawJam10 = false;
+                            }
+                        }
+
+                        if (/^IST\b/i.test(lineStr) || lineStr.includes('ISTIRAHAT')) {
+                            const mIst = lineStr.match(/(\d{2}[\.:]\d{2})\s*[-–]\s*(\d{2}[\.:]\d{2})/);
+                            if (mIst) {
+                                const tStr = `${mIst[1].replace('.', ':')} - ${mIst[2].replace('.', ':')}`;
+                                breakTimes[currentDay].push(tStr);
+                            }
+                            continue;
+                        }
+
+                        const mJam = lineStr.match(/\b([1-9]|10)\s+(\d{2}[\.:]\d{2})/);
+                        if (mJam) {
+                            const jam = parseInt(mJam[1]);
+                            if (jam === 10) sawJam10 = true;
+
+                            const mTime = lineStr.match(/(\d{2}[\.:]\d{2})\s*[-–]?\s*(\d{2}[\.:]?\d{2})?/);
+                            if (!mTime) continue;
+
+                            const tStart = mTime[1].replace('.', ':');
+                            let tEnd = mTime[2] || '';
+                            if (tEnd.length === 4 && !tEnd.includes(':') && !tEnd.includes('.')) {
+                                tEnd = `${tEnd.slice(0, 2)}:${tEnd.slice(2)}`;
+                            } else {
+                                tEnd = tEnd.replace('.', ':');
+                            }
+
+                            const parts = lineStr.split(/\s+/).filter(Boolean);
+                            let idxAfterTime = 0;
+                            for (let i = 0; i < parts.length; i++) {
+                                const tok = parts[i];
+                                if (/^\d{2}[\.:]\d{2}/.test(tok) || /^[-–]\d{2}/.test(tok) || /^\d{4}$/.test(tok)) {
+                                    idxAfterTime = i + 1;
+                                }
+                            }
+                            const roomTokens = parts.slice(idxAfterTime);
+
+                            if (roomTokens.length >= 48) {
+                                for (let cIdx = 0; cIdx < 48; cIdx++) {
+                                    if (!roomGrid[currentDay][cIdx]) roomGrid[currentDay][cIdx] = {};
+                                    roomGrid[currentDay][cIdx][jam] = {
+                                        room: normalizeRoomStr(roomTokens[cIdx]),
+                                        start: tStart,
+                                        end: tEnd
+                                    };
                                 }
                             }
                         }
                     }
                 }
 
-                importPdfProgressBar.style.width = '50%';
-                importPdfProgressPct.textContent = '50%';
-                importPdfProgressLabel.textContent = 'Menganalisis tabel jadwal pelajaran FET per kelas...';
+                importPdfProgressBar.style.width = '45%';
+                importPdfProgressPct.textContent = '45%';
+                importPdfProgressLabel.textContent = 'Mengekstrak mata pelajaran & guru per kelas...';
 
-                const TIME_SLOTS_ORDERED = ['07:15', '08:00', '08:45', '09:45', '10:30', '11:15', '12:30', '13:15', '14:00', '14:45'];
-                const PERIOD_INDEX_MAP = {
-                    '07:15': 1, '08:00': 2, '08:45': 3,
-                    '09:45': 4, '10:30': 5, '11:15': 6,
-                    '12:30': 7, '13:15': 8, '14:00': 9, '14:45': 10
+                // Titik tengah kolom hari (Senin..Jumat)
+                const DAY_CENTERS = {
+                    Senin: (70.0 + 158.2) / 2,     // 114.1
+                    Selasa: (160.0 + 256.1) / 2,   // 208.0
+                    Rabu: (257.8 + 354.0) / 2,     // 305.9
+                    Kamis: (355.8 + 451.9) / 2,    // 403.8
+                    Jumat: (453.6 + 554.5) / 2     // 504.0
                 };
-                const DEFAULT_BREAK_TIMES = {
-                    Senin: { ist1: '09:45 - 10:00', ist2: '11:45 - 12:45' },
-                    Selasa: { ist1: '09:30 - 09:45', ist2: '11:45 - 12:45' },
-                    Rabu: { ist1: '09:15 - 09:30', ist2: '11:30 - 12:30' },
-                    Kamis: { ist1: '09:15 - 09:30', ist2: '11:30 - 12:30' },
-                    Jumat: { ist1: '09:15 - 09:30', ist2: '11:25 - 12:40' }
-                };
+
+                function getClosestDay(x) {
+                    let bestD = 'Senin';
+                    let bestDist = 99999;
+                    for (const [d, cx] of Object.entries(DAY_CENTERS)) {
+                        const dist = Math.abs(x - cx);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            bestD = d;
+                        }
+                    }
+                    return bestD;
+                }
 
                 const payloadItems = [];
 
-                for (let pageNum = 1; pageNum <= pdfJadwal.numPages; pageNum++) {
+                // 2. Ekstrak Mata Pelajaran dan Guru dari pdfJadwal (48 kelas pada halaman 2 s.d. 49)
+                const totalClassPages = Math.min(48, pdfJadwal.numPages - 1);
+
+                for (let cIdx = 0; cIdx < totalClassPages; cIdx++) {
+                    const pageNum = cIdx + 2;
                     const page = await pdfJadwal.getPage(pageNum);
                     const textContent = await page.getTextContent();
+
                     const items = textContent.items.map(it => ({
                         x: Math.round(it.transform[4] * 10) / 10,
                         y: Math.round(it.transform[5] * 10) / 10,
                         text: it.str.trim()
                     })).filter(it => it.text.length > 0);
 
-                    // Deteksi nama kelas di halaman ini (contoh: X RPL1, XI TKJ 2, XII AK 1)
-                    let detectedClassName = null;
+                    const classLabel = RUANG_CLASSES[cIdx] || `Kelas ${cIdx + 1}`;
+
+                    // Kelompokkan item per kolom hari (abaikan label jam di kiri: x < 68)
+                    const dayItems = { Senin: [], Selasa: [], Rabu: [], Kamis: [], Jumat: [] };
                     for (const it of items) {
-                        const mClass = it.text.match(/^(X|XI|XII)\s+[A-Za-z0-9\-]+(\s*\d+)?$/i);
-                        if (mClass) {
-                            detectedClassName = mClass[0].trim();
-                            break;
+                        if (it.x < 68.0 || it.y < 78.0 || it.y > 490.0 || it.text === 'Senin Selasa Rabu Kamis Jumat') {
+                            continue;
                         }
-                    }
-                    if (!detectedClassName) continue;
-
-                    const classKey = cleanClassKey(detectedClassName);
-
-                    // Cari label hari (Senin - Jumat)
-                    let dayCols = items.filter(it => ['senin', 'selasa', 'rabu', 'kamis', 'jumat'].includes(it.text.toLowerCase())).map(d => ({
-                        day: d.text.charAt(0).toUpperCase() + d.text.slice(1).toLowerCase(),
-                        x: d.x
-                    }));
-                    dayCols.sort((a, b) => a.x - b.x);
-                    if (dayCols.length < 5) {
-                        dayCols = [
-                            { day: 'Senin', x: 100 },
-                            { day: 'Selasa', x: 190 },
-                            { day: 'Rabu', x: 280 },
-                            { day: 'Kamis', x: 370 },
-                            { day: 'Jumat', x: 460 }
-                        ];
+                        const d = getClosestDay(it.x);
+                        dayItems[d].push(it);
                     }
 
-                    // Cari label waktu (07:15, dsb.)
-                    const timeLabels = items.filter(it => /^\d{2}:\d{2}$/.test(it.text));
-                    timeLabels.sort((a, b) => b.y - a.y);
+                    // Untuk setiap hari, kelompokkan teks yang berdekatan vertikal (cluster diff <= 18px)
+                    for (const day of ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat']) {
+                        const dList = dayItems[day];
+                        dList.sort((a, b) => a.y - b.y);
 
-                    const minDayX = Math.min(...dayCols.map(d => d.x)) - 30;
-
-                    // Filter item sel (abaikan header dan footer)
-                    const cellItems = items.filter(it => {
-                        if (it.x < minDayX) return false;
-                        const t = it.text;
-                        if (t.includes('SMK NEGERI') || t === detectedClassName || ['senin', 'selasa', 'rabu', 'kamis', 'jumat', '---', '-x-'].includes(t.toLowerCase()) || t.includes('Jadwal dihasilkan') || t.includes('Kembali ke atas')) {
-                            return false;
+                        const clusters = [];
+                        let currCluster = [];
+                        for (const it of dList) {
+                            if (currCluster.length === 0) {
+                                currCluster.push(it);
+                            } else {
+                                if (it.y - currCluster[currCluster.length - 1].y <= 18.0) {
+                                    currCluster.push(it);
+                                } else {
+                                    clusters.push(currCluster);
+                                    currCluster = [it];
+                                }
+                            }
                         }
-                        return true;
-                    });
+                        if (currCluster.length > 0) clusters.push(currCluster);
 
-                    // Petakan item teks ke sel terdekat (hari & waktu)
-                    const cells = {};
-                    for (const it of cellItems) {
-                        const closestDay = dayCols.reduce((prev, curr) => Math.abs(curr.x - it.x) < Math.abs(prev.x - it.x) ? curr : prev, dayCols[0]);
-                        let tStart = '07:15';
-                        if (timeLabels.length > 0) {
-                            const closestTime = timeLabels.reduce((prev, curr) => Math.abs(curr.y - it.y) < Math.abs(prev.y - it.y) ? curr : prev, timeLabels[0]);
-                            tStart = closestTime.text;
+                        // Ekstrak informasi guru dan mapel untuk setiap cluster
+                        const clusterInfo = [];
+                        for (const c of clusters) {
+                            const cCenter = c.reduce((acc, it) => acc + it.y, 0) / c.length;
+                            const cTexts = c.map(it => it.text);
+
+                            if (cTexts.includes('-x-')) {
+                                clusterInfo.push({ center: cCenter, mapel: '-x-', guru: '-' });
+                            } else {
+                                const teacherTokens = [];
+                                const mapelTokens = [];
+                                let inTeacher = false;
+
+                                for (const t of cTexts) {
+                                    if (t === '-x-' || t === '---') continue;
+                                    if (t.includes('"')) {
+                                        if ((t.match(/"/g) || []).length >= 2) {
+                                            teacherTokens.push(t.replace(/"/g, '').trim());
+                                        } else if (t.startsWith('"')) {
+                                            inTeacher = true;
+                                            teacherTokens.push(t.replace(/"/g, '').trim());
+                                        } else if (t.endsWith('"')) {
+                                            inTeacher = false;
+                                            teacherTokens.push(t.replace(/"/g, '').trim());
+                                        } else {
+                                            teacherTokens.push(t.replace(/"/g, '').trim());
+                                        }
+                                    } else if (inTeacher) {
+                                        teacherTokens.push(t.trim());
+                                    } else {
+                                        mapelTokens.push(t.trim());
+                                    }
+                                }
+
+                                let teacherName = teacherTokens.join(' ').trim();
+                                teacherName = teacherName.replace(/^\d+[\.,]\s*/, '').trim();
+                                let mapelName = mapelTokens.join(' ').trim();
+                                if (!mapelName && teacherName && teacherName !== '-') {
+                                    mapelName = 'Pelajaran';
+                                }
+
+                                clusterInfo.push({
+                                    center: cCenter,
+                                    mapel: mapelName || 'Pelajaran',
+                                    guru: teacherName || '-'
+                                });
+                            }
                         }
 
-                        const dayName = closestDay.day;
-                        const key = `${dayName}_${tStart}`;
-                        if (!cells[key]) cells[key] = [];
-                        cells[key].push(it);
-                    }
-
-                    // Untuk setiap hari, ekstrak jadwal dan sisipkan jam istirahat sesuai aturan
-                    for (const dayCol of dayCols) {
-                        const dayName = dayCol.day;
+                        // Petakan ke Jam 1..10 (atau 1..8 pada hari Jumat)
+                        const maxJam = (day === 'Jumat') ? 8 : 10;
                         const daySchedules = {};
 
-                        for (const tStart of TIME_SLOTS_ORDERED) {
-                            const key = `${dayName}_${tStart}`;
-                            const cItems = cells[key] || [];
-                            cItems.sort((a, b) => b.y - a.y);
-                            const texts = cItems.map(it => it.text).filter(t => !['---', '-x-'].includes(t));
-                            if (texts.length === 0) continue;
-
-                            let teacherName = '-';
-                            let mapelParts = [];
-
-                            for (const txt of texts) {
-                                if (txt.includes('"')) {
-                                    // Guru pengampu berada di dalam tanda petik
-                                    teacherName = txt.replace(/^[",\s]+|[",\s]+$/g, '').replace(/^\d+[\.,]\s*/, '');
-                                } else {
-                                    mapelParts.push(txt);
+                        for (let j = 1; j <= maxJam; j++) {
+                            const sMid = 80.2 + (j - 1) * 40.46 + 20.23;
+                            let bestC = null;
+                            let bestDist = 99999;
+                            for (const ci of clusterInfo) {
+                                const dist = Math.abs(sMid - ci.center);
+                                if (dist < bestDist) {
+                                    bestDist = dist;
+                                    bestC = ci;
                                 }
                             }
 
-                            const mapelName = mapelParts.join(' ').trim() || 'Pelajaran';
-                            const periodIdx = PERIOD_INDEX_MAP[tStart] || 1;
+                            const slotMapel = bestC ? bestC.mapel : 'Pelajaran';
+                            const slotGuru = bestC ? bestC.guru : '-';
+                            if (slotMapel === '-x-') continue;
 
-                            // Cari alokasi ruangan dari roomGrid
-                            let roomFound = '-';
-                            const dayRooms = roomGrid[dayName]?.[classKey];
-                            if (dayRooms && dayRooms[String(periodIdx)]) {
-                                roomFound = dayRooms[String(periodIdx)].room;
-                            } else if (dayRooms && dayRooms[periodIdx]) {
-                                roomFound = dayRooms[periodIdx].room;
-                            }
+                            const rInfo = roomGrid[day]?.[cIdx]?.[j] || { room: 'Ruang Kelas', start: '07:15', end: '08:00' };
 
-                            daySchedules[periodIdx] = {
-                                kelas: detectedClassName,
-                                hari: dayName,
-                                waktu: `${tStart} - ${(getSchedulePeriods(0, dayName === 'Senin' ? 'upacara' : (dayName === 'Selasa' ? 'literasi' : 'none')).find(p => p.jam === periodIdx)?.endTime || tStart)}`,
-                                mapel: mapelName,
-                                guru: teacherName,
-                                ruangan: roomFound,
-                                cycle_type: String(currentCycle)
+                            daySchedules[j] = {
+                                kelas: classLabel,
+                                hari: day,
+                                waktu: `${rInfo.start} - ${rInfo.end}`,
+                                mapel: slotMapel,
+                                guru: slotGuru,
+                                ruangan: rInfo.room,
+                                cycle_type: String(targetCycle)
                             };
                         }
 
-                        // Sisipkan Istirahat I & II sesuai aturan:
-                        // Jika ruangan/guru sebelum dan sesudah sama -> gunakan itu, jika beda -> gunakan yang sesudah istirahat
-                        const breakTimes = DEFAULT_BREAK_TIMES[dayName] || DEFAULT_BREAK_TIMES.Rabu;
-
-                        // Istirahat I (antara Jam 3 dan Jam 4)
+                        // Sisipkan Istirahat I & II sesuai aturan sekolah:
+                        // Ruang/guru jam istirahat mengikuti sebelum jika sama; jika berbeda gunakan yang sesudah istirahat
                         const p3 = daySchedules[3];
                         const p4 = daySchedules[4];
                         const ist1Room = (p3 && p4 && p3.ruangan === p4.ruangan) ? p3.ruangan : (p4 ? p4.ruangan : (p3 ? p3.ruangan : 'Ruang Kelas'));
                         const ist1Guru = (p3 && p4 && p3.guru === p4.guru) ? p3.guru : (p4 ? p4.guru : (p3 ? p3.guru : '-'));
-                        const ist1Schedule = {
-                            kelas: detectedClassName,
-                            hari: dayName,
-                            waktu: breakTimes.ist1,
+                        const ist1Time = breakTimes[day]?.[0] || '09:30 - 09:45';
+                        const ist1Item = {
+                            kelas: classLabel,
+                            hari: day,
+                            waktu: ist1Time,
                             mapel: 'Istirahat',
                             guru: ist1Guru,
                             ruangan: ist1Room,
-                            cycle_type: String(currentCycle)
+                            cycle_type: String(targetCycle)
                         };
 
-                        // Istirahat II (antara Jam 6 dan Jam 7)
                         const p6 = daySchedules[6];
                         const p7 = daySchedules[7];
                         const ist2Room = (p6 && p7 && p6.ruangan === p7.ruangan) ? p6.ruangan : (p7 ? p7.ruangan : (p6 ? p6.ruangan : 'Ruang Kelas'));
                         const ist2Guru = (p6 && p7 && p6.guru === p7.guru) ? p6.guru : (p7 ? p7.guru : (p6 ? p6.guru : '-'));
-                        const ist2Schedule = {
-                            kelas: detectedClassName,
-                            hari: dayName,
-                            waktu: breakTimes.ist2,
+                        const ist2Time = breakTimes[day]?.[1] || '11:45 - 12:45';
+                        const ist2Item = {
+                            kelas: classLabel,
+                            hari: day,
+                            waktu: ist2Time,
                             mapel: 'Istirahat',
                             guru: ist2Guru,
                             ruangan: ist2Room,
-                            cycle_type: String(currentCycle)
+                            cycle_type: String(targetCycle)
                         };
 
-                        // Urutkan dan masukkan ke payload: 1..3, IST 1, 4..6, IST 2, 7..10
+                        // Urutkan jadwal: 1..3, IST 1, 4..6, IST 2, 7..10
                         for (let j = 1; j <= 3; j++) {
                             if (daySchedules[j]) payloadItems.push(daySchedules[j]);
                         }
-                        payloadItems.push(ist1Schedule);
+                        payloadItems.push(ist1Item);
                         for (let j = 4; j <= 6; j++) {
                             if (daySchedules[j]) payloadItems.push(daySchedules[j]);
                         }
-                        payloadItems.push(ist2Schedule);
+                        payloadItems.push(ist2Item);
                         for (let j = 7; j <= 10; j++) {
                             if (daySchedules[j]) payloadItems.push(daySchedules[j]);
                         }
                     }
+
+                    const pct = Math.round(45 + ((cIdx / totalClassPages) * 30));
+                    importPdfProgressBar.style.width = `${pct}%`;
+                    importPdfProgressPct.textContent = `${pct}%`;
                 }
 
                 if (payloadItems.length === 0) {
-                    alert('Tidak ditemukan data jadwal yang dapat diekstrak dari PDF! Pastikan berkas sesuai format jadwal FET.');
+                    alert('Tidak ditemukan data jadwal yang dapat diekstrak dari PDF! Pastikan berkas PDF sesuai format FET.');
                     return;
                 }
 
                 importPdfProgressBar.style.width = '75%';
                 importPdfProgressPct.textContent = '75%';
-                importPdfProgressLabel.textContent = `Menyimpan ${payloadItems.length} jadwal ke database server...`;
+                importPdfProgressLabel.textContent = `Menyimpan ${payloadItems.length} jadwal (Putaran ${targetCycle}) ke database...`;
 
-                // Kirim per batch 200 agar stabil
-                const BATCH_SIZE = 200;
+                // Kirim per batch 150 agar cepat dan stabil tanpa timeout
+                const BATCH_SIZE = 150;
                 let totalSuccess = 0;
                 let totalErrors = [];
 
                 for (let b = 0; b < payloadItems.length; b += BATCH_SIZE) {
                     const chunk = payloadItems.slice(b, b + BATCH_SIZE);
-                    const pct = Math.round(75 + ((b / payloadItems.length) * 20));
+                    const pct = Math.round(75 + ((b / payloadItems.length) * 23));
                     importPdfProgressBar.style.width = `${pct}%`;
                     importPdfProgressPct.textContent = `${pct}%`;
 
@@ -2049,11 +2139,13 @@
                     });
                     const resJson = await res.json();
                     if (res.ok) {
-                        totalSuccess += (resJson.data?.imported_count || chunk.length);
-                        if (resJson.errors) totalErrors.push(...resJson.errors);
+                        totalSuccess += (resJson.data?.imported_count || resJson.imported_count || chunk.length);
+                        if (resJson.errors && Array.isArray(resJson.errors)) totalErrors.push(...resJson.errors);
                     } else {
                         if (resJson.errors && Array.isArray(resJson.errors)) {
                             totalErrors.push(...resJson.errors);
+                        } else if (resJson.message) {
+                            totalErrors.push(resJson.message);
                         }
                     }
                 }
@@ -2062,7 +2154,7 @@
                 importPdfProgressPct.textContent = '100%';
                 importPdfProgressLabel.textContent = 'Selesai!';
 
-                let msg = `Import ${totalSuccess} data jadwal pelajaran berhasil disimpan!`;
+                let msg = `Berhasil mengimpor ${totalSuccess} data jadwal pelajaran (Putaran ${targetCycle})!`;
                 if (totalErrors.length > 0) {
                     msg += '\n\nCatatan:\n' + totalErrors.slice(0, 5).join('\n');
                     if (totalErrors.length > 5) {
@@ -2072,11 +2164,14 @@
                 alert(msg);
                 modalImportPdf.classList.add('hidden');
                 formScheduleModal.classList.add('hidden');
+                currentCycle = targetCycle;
+                selectCycle.value = currentCycle;
+                applyCycleVisualStatus();
                 await fetchSchedules();
                 renderClassTable();
             } catch (err) {
                 console.error(err);
-                alert('Gagal memproses file PDF: ' + (err.message || 'Format tidak dikenali'));
+                alert('Gagal memproses berkas PDF: ' + (err.message || 'Format tidak dikenali'));
             } finally {
                 importPdfProgressBox.classList.add('hidden');
             }
@@ -2221,6 +2316,6 @@
             doc.save(`Jadwal_Kelas_${currentTingkat}_Putaran_${currentCycle}.pdf`);
         });
     </script>
-    <script src="../js/global-layout.js?v=20261108_5.0"></script>
+    <script src="../js/global-layout.js?v=20261108_6.0"></script>
 </body>
 </html>

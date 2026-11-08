@@ -327,27 +327,45 @@ class ScheduleController extends Controller
         // Helper untuk normalisasi ruangan
         $normalizeRoom = function ($raw) {
             $raw = trim($raw);
-            if (empty($raw) || $raw === '-') return [null, null];
+            if (empty($raw) || $raw === '-') return ['Ruang Kelas', null];
             if (preg_match('/^L\.(\d+)$/i', $raw, $m)) return ['Lab', $m[1]];
             if (preg_match('/^L\.(.+)$/i', $raw, $m)) return ['Lab ' . strtoupper($m[1]), null];
-            if (is_numeric($raw)) return ['Ruang', (string)$raw];
             if (preg_match('/^Lab\s+(\d+)$/i', $raw, $m)) return ['Lab', $m[1]];
             if (preg_match('/^Ruang\s+(\d+)$/i', $raw, $m)) return ['Ruang', $m[1]];
+            if (is_numeric($raw)) return ['Ruang', (string)$raw];
+            if (strcasecmp($raw, 'OR') === 0 || strcasecmp($raw, 'Ruang OR') === 0) return ['Ruang OR', null];
+            if (strcasecmp($raw, 'HALL') === 0) return ['Hall', null];
             return [$raw, null];
         };
 
         foreach ($request->items as $idx => $item) {
             $rowNum = $idx + 2;
 
-            $cleanClassStr = preg_replace('/\s+/', ' ', trim($item['kelas']));
+            $cleanClassStr = strtoupper(preg_replace('/[^A-Z0-9]/i', '', $item['kelas']));
+            $cleanClassStr = preg_replace('/^10/', 'X', $cleanClassStr);
+            $cleanClassStr = preg_replace('/^11/', 'XI', $cleanClassStr);
+            $cleanClassStr = preg_replace('/^12/', 'XII', $cleanClassStr);
+
             $matchedClass = null;
 
             foreach ($classes as $c) {
-                $fullC1 = trim($c->kelas_nomor . ' ' . $c->nama_kelas . ' ' . ($c->nomor_kelas ?? ''));
-                $fullC2 = trim($c->kelas_nomor . ' ' . $c->nama_kelas . ($c->nomor_kelas ?? ''));
-                if (strcasecmp($cleanClassStr, $fullC1) === 0 || strcasecmp($cleanClassStr, $fullC2) === 0) {
+                $dbKey = strtoupper(preg_replace('/[^A-Z0-9]/i', '', $c->kelas_nomor . $c->nama_kelas . ($c->nomor_kelas ?? '')));
+                if ($cleanClassStr === $dbKey) {
                     $matchedClass = $c;
                     break;
+                }
+            }
+
+            if (!$matchedClass) {
+                // Fallback check dengan format teks biasa
+                $cleanClassRegular = preg_replace('/\s+/', ' ', trim($item['kelas']));
+                foreach ($classes as $c) {
+                    $fullC1 = trim($c->kelas_nomor . ' ' . $c->nama_kelas . ' ' . ($c->nomor_kelas ?? ''));
+                    $fullC2 = trim($c->kelas_nomor . ' ' . $c->nama_kelas . ($c->nomor_kelas ?? ''));
+                    if (strcasecmp($cleanClassRegular, $fullC1) === 0 || strcasecmp($cleanClassRegular, $fullC2) === 0) {
+                        $matchedClass = $c;
+                        break;
+                    }
                 }
             }
 
@@ -460,21 +478,16 @@ class ScheduleController extends Controller
             $isBreak = (strcasecmp($mapelName, 'Istirahat') === 0 || strcasecmp($mapelName, 'Istirahat I') === 0 || strcasecmp($mapelName, 'Istirahat II') === 0);
 
             if (!$isBreak) {
-                $conflictClass = Schedule::with('schoolClass')
-                    ->where('id_class', $matchedClass->id_class)
+                // Hapus jadwal usang yang tumpang-tindih dengan jam berbeda agar jadwal impor resmi PDF dapat masuk tanpa bentrok
+                Schedule::where('id_class', $matchedClass->id_class)
                     ->where('day_of_week', $day)
                     ->where('cycle_type', $cycle)
                     ->where(function ($timeQ) use ($startTime, $endTime) {
                         $timeQ->where('start_time', '<', $endTime)
                               ->where('end_time', '>', $startTime);
                     })
-                    ->first();
-
-                if ($conflictClass && $conflictClass->mapel !== 'Istirahat' && $conflictClass->mapel !== $mapelName) {
-                    $cName = $conflictClass->schoolClass ? ($conflictClass->schoolClass->kelas_nomor . ' ' . $conflictClass->schoolClass->nama_kelas . ' ' . ($conflictClass->schoolClass->nomor_kelas ?? '')) : 'kelas ini';
-                    $errors[] = "Baris {$rowNum}: Bentrok! {$cName} sudah memiliki mata pelajaran '{$conflictClass->mapel}' pada {$day} ({$startTime} - {$endTime}).";
-                    continue;
-                }
+                    ->where('start_time', '!=', $startTime)
+                    ->delete();
             }
 
             Schedule::updateOrCreate(
