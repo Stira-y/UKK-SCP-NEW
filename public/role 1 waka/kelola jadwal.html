@@ -1064,7 +1064,7 @@
                     { jam: 7, label: 'Jam Ke 7', dur: 40, isBreak: false, start: '12:45', end: '13:25' },
                     { jam: 8, label: 'Jam Ke 8', dur: 35, isBreak: false, start: '13:25', end: '14:00' },
                     { jam: 9, label: 'Jam Ke 9', dur: 35, isBreak: false, start: '14:00', end: '14:35' },
-                    { jam: 10, label: 'Jam Ke 10', dur: 35, isBreak: false, start: '14:35', end: '15:10' },
+                    { jam: 10, label: 'Jam Ke 10', dur: 35, isBreak: false, start: '14:35', end: '23:59' },
                 ];
             } else if (extraTime === 'literasi') {
                 baseSlots = [
@@ -1079,7 +1079,7 @@
                     { jam: 7, label: 'Jam Ke 7', dur: 40, isBreak: false, start: '12:45', end: '13:25' },
                     { jam: 8, label: 'Jam Ke 8', dur: 35, isBreak: false, start: '13:25', end: '14:00' },
                     { jam: 9, label: 'Jam Ke 9', dur: 35, isBreak: false, start: '14:00', end: '14:35' },
-                    { jam: 10, label: 'Jam Ke 10', dur: 35, isBreak: false, start: '14:35', end: '15:10' },
+                    { jam: 10, label: 'Jam Ke 10', dur: 35, isBreak: false, start: '14:35', end: '23:59' },
                 ];
             } else {
                 baseSlots = [
@@ -1094,7 +1094,7 @@
                     { jam: 7, label: 'Jam Ke 7', dur: 40, isBreak: false, start: '12:30', end: '13:10' },
                     { jam: 8, label: 'Jam Ke 8', dur: 40, isBreak: false, start: '13:10', end: '13:50' },
                     { jam: 9, label: 'Jam Ke 9', dur: 40, isBreak: false, start: '13:50', end: '14:30' },
-                    { jam: 10, label: 'Jam Ke 10', dur: 40, isBreak: false, start: '14:30', end: '15:10' },
+                    { jam: 10, label: 'Jam Ke 10', dur: 40, isBreak: false, start: '14:30', end: '23:59' },
                 ];
             }
 
@@ -1128,7 +1128,7 @@
                     label: s.label,
                     isBreak: s.isBreak,
                     startTime: formatTime(sMin),
-                    endTime: formatTime(eMin)
+                    endTime: (s.jam === 10) ? '23:59' : formatTime(eMin)
                 });
             }
             return adjusted;
@@ -2392,6 +2392,6 @@
             doc.save(`Jadwal_Kelas_${currentTingkat}_Putaran_${currentCycle}.pdf`);
         });
     </script>
-    <script src="../js/global-layout.js?v=20261108_9.0"></script>
+    <script src="../js/global-layout.js?v=20261108_9.1"></script>
 </body>
 </html>
