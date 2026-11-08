@@ -425,14 +425,15 @@ class ScheduleController extends Controller
                 if (empty($cleanUser)) $cleanUser = 'guru_' . time() . '_' . rand(10, 99);
                 $baseU = $cleanUser;
                 $counter = 1;
-                while (User::where('username', $cleanUser)->exists()) {
+                $existingUsernames = $teachers->pluck('username')->filter()->toArray();
+                while (in_array($cleanUser, $existingUsernames)) {
                     $cleanUser = $baseU . $counter++;
                 }
                 $matchedGuru = User::create([
                     'username' => $cleanUser,
                     'fullname' => $cleanGuruStr,
                     'email'    => $cleanUser . '@school.id',
-                    'password' => \Illuminate\Support\Facades\Hash::make('Peh_1234'),
+                    'password' => 'Peh_1234',
                     'id_role'  => 2,
                     'title'    => 'Guru',
                 ]);
@@ -481,7 +482,7 @@ class ScheduleController extends Controller
                 }
             }
 
-            $waktuParts = preg_split('/[\-\–]/', str_replace('.', ':', $item['waktu']));
+            $waktuParts = preg_split('/[\s]+[-–—~][\s]+|[-–—~]/u', str_replace('.', ':', $item['waktu']));
             if (count($waktuParts) !== 2) {
                 $errors[] = "Baris {$rowNum}: Format waktu '{$item['waktu']}' tidak valid (Gunakan format JJ:MM - JJ:MM).";
                 continue;
@@ -490,8 +491,17 @@ class ScheduleController extends Controller
             $startTime = trim($waktuParts[0]);
             $endTime = trim($waktuParts[1]);
 
-            if (strlen($startTime) === 5) $startTime .= ':00';
-            if (strlen($endTime) === 5) $endTime .= ':00';
+            if (preg_match('/^\d{1,2}:\d{2}$/', $startTime)) {
+                $startTime = str_pad($startTime, 5, '0', STR_PAD_LEFT) . ':00';
+            } elseif (preg_match('/^\d{1,2}:\d{2}:\d{2}$/', $startTime)) {
+                $startTime = str_pad($startTime, 8, '0', STR_PAD_LEFT);
+            }
+
+            if (preg_match('/^\d{1,2}:\d{2}$/', $endTime)) {
+                $endTime = str_pad($endTime, 5, '0', STR_PAD_LEFT) . ':00';
+            } elseif (preg_match('/^\d{1,2}:\d{2}:\d{2}$/', $endTime)) {
+                $endTime = str_pad($endTime, 8, '0', STR_PAD_LEFT);
+            }
 
             $day = $item['hari'];
             $cycle = $item['cycle_type'];
@@ -512,9 +522,21 @@ class ScheduleController extends Controller
         }
 
         if (count($insertRows) > 0) {
-            // Bulk insert secepat kilat (1 single SQL query)
-            Schedule::insert($insertRows);
-            $importedCount = count($insertRows);
+            try {
+                // Bulk insert secepat kilat (1 single SQL query)
+                Schedule::insert($insertRows);
+                $importedCount = count($insertRows);
+            } catch (\Throwable $e) {
+                \Log::warning('Schedule batch insert failed, fallback to individual rows: ' . $e->getMessage());
+                foreach ($insertRows as $row) {
+                    try {
+                        Schedule::create($row);
+                        $importedCount++;
+                    } catch (\Throwable $rowErr) {
+                        $errors[] = "Jadwal gagal disimpan ({$row['mapel']}): " . $rowErr->getMessage();
+                    }
+                }
+            }
         }
 
         if ($importedCount === 0 && count($errors) > 0) {

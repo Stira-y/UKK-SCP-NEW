@@ -2157,8 +2157,8 @@
                 importPdfProgressPct.textContent = '75%';
                 importPdfProgressLabel.textContent = `Menyimpan ${payloadItems.length} jadwal (Putaran ${targetCycle}) ke database...`;
 
-                // Kirim per batch 200 (sekarang secepat kilat tanpa timeout)
-                const BATCH_SIZE = 200;
+                // Kirim per batch 250 dengan retry aman & jeda stabilitas hosting
+                const BATCH_SIZE = 250;
                 let totalSuccess = 0;
                 let totalErrors = [];
 
@@ -2168,26 +2168,58 @@
                     importPdfProgressBar.style.width = `${pct}%`;
                     importPdfProgressPct.textContent = `${pct}%`;
 
-                    const res = await fetch(`${API_BASE_URL}/schedules/import-batch`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({ items: chunk })
-                    });
-                    const resJson = await res.json();
-                    if (res.ok) {
-                        totalSuccess += (resJson.data?.imported_count || resJson.imported_count || chunk.length);
-                        if (resJson.errors && Array.isArray(resJson.errors)) totalErrors.push(...resJson.errors);
-                    } else {
-                        if (resJson.errors && Array.isArray(resJson.errors)) {
-                            totalErrors.push(...resJson.errors);
-                        } else if (resJson.message) {
-                            totalErrors.push(resJson.message);
+                    let attempt = 0;
+                    let success = false;
+                    let lastErrorMsg = '';
+
+                    while (attempt < 3 && !success) {
+                        attempt++;
+                        try {
+                            const res = await fetch(`${API_BASE_URL}/schedules/import-batch`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify({ items: chunk })
+                            });
+
+                            const resText = await res.text();
+                            let resJson = null;
+                            try {
+                                resJson = JSON.parse(resText);
+                            } catch (parseErr) {
+                                console.warn(`Batch ke-${Math.floor(b / BATCH_SIZE) + 1} respons bukan JSON (Status ${res.status})`);
+                            }
+
+                            if (res.ok && resJson) {
+                                totalSuccess += (resJson.data?.imported_count || resJson.imported_count || chunk.length);
+                                if (resJson.errors && Array.isArray(resJson.errors)) totalErrors.push(...resJson.errors);
+                                success = true;
+                            } else if (resJson && resJson.errors && Array.isArray(resJson.errors)) {
+                                totalErrors.push(...resJson.errors);
+                                success = true;
+                            } else {
+                                lastErrorMsg = resJson?.message || `Server merespons status ${res.status}`;
+                                if (attempt < 3) {
+                                    await new Promise(r => setTimeout(r, 800));
+                                }
+                            }
+                        } catch (netErr) {
+                            lastErrorMsg = netErr.message;
+                            if (attempt < 3) {
+                                await new Promise(r => setTimeout(r, 800));
+                            }
                         }
                     }
+
+                    if (!success && lastErrorMsg) {
+                        totalErrors.push(`Batch ${Math.floor(b / BATCH_SIZE) + 1} (${chunk.length} jadwal): ${lastErrorMsg}`);
+                    }
+
+                    // Jeda 150ms antar-batch agar web server shared hosting tetap prima
+                    await new Promise(r => setTimeout(r, 150));
                 }
 
                 importPdfProgressBar.style.width = '100%';
@@ -2356,6 +2388,6 @@
             doc.save(`Jadwal_Kelas_${currentTingkat}_Putaran_${currentCycle}.pdf`);
         });
     </script>
-    <script src="../js/global-layout.js?v=20261108_7.0"></script>
+    <script src="../js/global-layout.js?v=20261108_8.0"></script>
 </body>
 </html>
