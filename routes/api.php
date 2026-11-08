@@ -22,6 +22,25 @@ Route::post('/forgot-password/send-otp', [ForgotPasswordController::class, 'send
 Route::post('/forgot-password/verify-otp', [ForgotPasswordController::class, 'verifyOtp']);
 Route::post('/forgot-password/reset', [ForgotPasswordController::class, 'resetPassword']);
 
+// Endpoint Publik Konfigurasi Putaran & Kunci Jadwal
+Route::get('/system-config/active-cycle', function () {
+    $config = SystemConfiguration::first();
+    if (!$config) {
+        $config = SystemConfiguration::create([
+            'active_cycle' => '1',
+            'is_schedule_locked' => false,
+            'updated_by' => null,
+        ]);
+    }
+    return response()->json([
+        'status' => 'success',
+        'data' => [
+            'active_cycle' => (string) $config->active_cycle,
+            'is_schedule_locked' => (bool) $config->is_schedule_locked
+        ]
+    ], 200);
+});
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/send-otp', [UserController::class, 'sendOtp']);
     Route::post('/profile/verify-otp', [UserController::class, 'verifyOtp']);
@@ -237,6 +256,13 @@ Route::get('deploy-migrate-{secret}', function (Request $request, $secret) {
         // 1. Jalankan migrasi database
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         $migrateOutput = trim(\Illuminate\Support\Facades\Artisan::output());
+
+        // Hapus kelas salah 'RPL 1' / 'RPL1' jika masih tersisa di database produksi
+        try {
+            \Illuminate\Support\Facades\DB::table('classes')
+                ->whereIn('nama_kelas', ['RPL 1', 'RPL1'])
+                ->delete();
+        } catch (\Throwable $e) {}
 
         // 2. Jalankan seeder jika parameter ?seed=1
         $seedOutput = 'Seeding dilewati.';

@@ -29,7 +29,7 @@ DirectoryIndex index.php public/index.php index.html
     RewriteRule ^(\.env|\.git|composer\.(json|lock)|package(-lock)?\.json|phpunit\.xml) - [F,L]
     RewriteRule \.sql$ - [F,L]
     RewriteRule ^(app|bootstrap|config|database|resources|routes|tests|vendor) - [F,L]
-    RewriteRule ^storage/(?!app/public/).* - [F,L]
+    RewriteRule ^storage/app/(?!public/).* - [F,L]
 
     # 2. Redirect root langsung ke halaman login
     RewriteRule ^$ login/login.html [R=302,L]
@@ -37,6 +37,8 @@ DirectoryIndex index.php public/index.php index.html
     # 2.5. Sajikan berkas penyimpanan publik (avatar, file uploads)
     RewriteCond %{DOCUMENT_ROOT}/storage/app/public/$2 -f
     RewriteRule ^(public/)?storage/(.*)$ storage/app/public/$2 [L]
+    RewriteCond %{DOCUMENT_ROOT}/storage/app/public/$1 -f
+    RewriteRule ^storage/(.*)$ storage/app/public/$1 [L]
 
     # 3. Jika berkas fisik memang ada di root, sajikan langsung
     RewriteCond %{REQUEST_FILENAME} -f

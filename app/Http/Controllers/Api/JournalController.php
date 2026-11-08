@@ -25,9 +25,10 @@ class JournalController extends Controller
             $query->whereDate('date', $request->date);
         }
 
-        if ($request->has('id_teacher')) {
-            $query->whereHas('schedule', function ($q) use ($request) {
-                $q->where('id_teacher', $request->id_teacher);
+        if ($request->has('id_teacher') || $request->has('id_guru')) {
+            $teacherId = $request->input('id_teacher') ?? $request->input('id_guru');
+            $query->whereHas('schedule', function ($q) use ($teacherId) {
+                $q->where('id_guru', $teacherId);
             });
         }
 

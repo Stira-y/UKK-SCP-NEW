@@ -136,6 +136,10 @@ function updateAvatarUI(avatarSrc) {
         if (navAvatarImg) {
             navAvatarImg.src = avatarSrc;
             navAvatarImg.classList.remove('hidden');
+            navAvatarImg.onerror = () => {
+                navAvatarImg.classList.add('hidden');
+                if (navAvatarSvg) navAvatarSvg.classList.remove('hidden');
+            };
         }
 
         if (navAvatarSvg) navAvatarSvg.classList.add('hidden');
@@ -143,6 +147,10 @@ function updateAvatarUI(avatarSrc) {
         if (modalAvatarImg) {
             modalAvatarImg.src = avatarSrc;
             modalAvatarImg.classList.remove('hidden');
+            modalAvatarImg.onerror = () => {
+                modalAvatarImg.classList.add('hidden');
+                if (modalAvatarSvg) modalAvatarSvg.classList.remove('hidden');
+            };
         }
 
         if (modalAvatarSvg) modalAvatarSvg.classList.add('hidden');
@@ -936,6 +944,8 @@ function initProfileEvents() {
                 if (blob) {
                     formData.append('avatar', blob, 'avatar.jpg');
                 }
+            } else if (inputAvatar && inputAvatar.files && inputAvatar.files[0]) {
+                formData.append('avatar', inputAvatar.files[0]);
             }
 
             try {

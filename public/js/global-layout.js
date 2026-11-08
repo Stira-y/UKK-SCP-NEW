@@ -148,8 +148,8 @@ document.addEventListener("DOMContentLoaded", function() {
         } else if (role === 2) {
             panelTitle = 'Panel Guru';
             const isDashboard = currentPath.includes('dashboard2.html');
-            const isJurnal = currentPath.includes('jurnal1.html') || currentPath.includes('presensi1.html');
             const isRekapJurnal = currentPath.includes('rekap jurnal1.html');
+            const isJurnal = !isRekapJurnal && (currentPath.includes('jurnal1.html') || currentPath.includes('presensi1.html'));
             const isRekap = currentPath.includes('rekap kehadiran siswa1.html');
 
             const dashActive = isDashboard ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
@@ -197,8 +197,8 @@ document.addEventListener("DOMContentLoaded", function() {
             }
 
             const isDashboard = currentPath.includes('dashboard3.html');
-            const isUploadJurnal = currentPath.includes('jurnal2.html') || currentPath.includes('presensi2.html');
             const isRekapJurnal = currentPath.includes('rekap jurnal2.html');
+            const isUploadJurnal = !isRekapJurnal && (currentPath.includes('jurnal2.html') || currentPath.includes('presensi2.html'));
             const isPersetujuan = currentPath.includes('persetujuan-izin.html');
             const isRekap = currentPath.includes('rekap kehadiran siswa2.html');
 
@@ -550,20 +550,81 @@ document.addEventListener("DOMContentLoaded", function() {
         if (document.getElementById('identityLabel')) document.getElementById('identityLabel').textContent = role === 4 ? 'NIS' : 'NIP';
 
         if (avatarSrc) {
-            if (document.getElementById('navAvatarImg')) {
-                document.getElementById('navAvatarImg').src = avatarSrc;
-                document.getElementById('navAvatarImg').classList.remove('hidden');
+            const navImg = document.getElementById('navAvatarImg');
+            const navSvg = document.getElementById('navAvatarSvg');
+            if (navImg) {
+                navImg.src = avatarSrc;
+                navImg.classList.remove('hidden');
+                navImg.onerror = () => {
+                    navImg.classList.add('hidden');
+                    if (navSvg) navSvg.classList.remove('hidden');
+                };
             }
-            if (document.getElementById('navAvatarSvg')) document.getElementById('navAvatarSvg').classList.add('hidden');
-            if (document.getElementById('modalAvatarImg')) {
-                document.getElementById('modalAvatarImg').src = avatarSrc;
-                document.getElementById('modalAvatarImg').classList.remove('hidden');
+            if (navSvg) navSvg.classList.add('hidden');
+
+            const modalImg = document.getElementById('modalAvatarImg');
+            const modalSvg = document.getElementById('modalAvatarSvg');
+            if (modalImg) {
+                modalImg.src = avatarSrc;
+                modalImg.classList.remove('hidden');
+                modalImg.onerror = () => {
+                    modalImg.classList.add('hidden');
+                    if (modalSvg) modalSvg.classList.remove('hidden');
+                };
             }
-            if (document.getElementById('modalAvatarSvg')) document.getElementById('modalAvatarSvg').classList.add('hidden');
+            if (modalSvg) modalSvg.classList.add('hidden');
         }
     }
 
     renderProfileData();
+
+    // Fungsi Render Banner Putaran Aktif (Putaran 1 = Hijau, Putaran 2 = Biru Muda)
+    async function renderActiveCycleBanner() {
+        const banner = document.getElementById('cycleBanner') || document.getElementById('bannerActiveCycle');
+        const textEl = document.getElementById('cycleBannerText');
+        if (!banner) return;
+
+        let activeCycle = localStorage.getItem('active_cycle') || '1';
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/system-config/active-cycle`, {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (res.ok) {
+                const json = await res.json();
+                if (json?.data?.active_cycle) {
+                    activeCycle = String(json.data.active_cycle);
+                    localStorage.setItem('active_cycle', activeCycle);
+                }
+            }
+        } catch (e) {
+            // fallback
+        }
+
+        banner.classList.remove('hidden');
+        if (activeCycle === '2') {
+            // Putaran 2 = Biru Muda
+            banner.className = 'w-full py-3 px-6 rounded-2xl shadow-sm flex items-center justify-between transition-all duration-300 font-extrabold text-base md:text-lg tracking-wide uppercase bg-sky-400 text-white';
+            if (textEl) {
+                textEl.textContent = 'Putaran 2';
+            } else {
+                banner.innerHTML = `<div class="flex items-center space-x-2.5"><svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg><span>Putaran 2</span></div><span class="text-xs bg-white/20 backdrop-blur-xs px-3 py-1 rounded-full font-bold normal-case tracking-normal">Sedang Aktif</span>`;
+            }
+        } else {
+            // Putaran 1 = Hijau
+            banner.className = 'w-full py-3 px-6 rounded-2xl shadow-sm flex items-center justify-between transition-all duration-300 font-extrabold text-base md:text-lg tracking-wide uppercase bg-emerald-600 text-white';
+            if (textEl) {
+                textEl.textContent = 'Putaran 1';
+            } else {
+                banner.innerHTML = `<div class="flex items-center space-x-2.5"><svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg><span>Putaran 1</span></div><span class="text-xs bg-white/20 backdrop-blur-xs px-3 py-1 rounded-full font-bold normal-case tracking-normal">Sedang Aktif</span>`;
+            }
+        }
+    }
+
+    renderActiveCycleBanner();
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'active_cycle') renderActiveCycleBanner();
+    });
 
     function closeProfileModal() {
         resetModalErrors();
@@ -1039,6 +1100,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (blob) {
                     formData.append('avatar', blob, 'avatar.jpg');
                 }
+            } else if (inputAvatar && inputAvatar.files && inputAvatar.files[0]) {
+                formData.append('avatar', inputAvatar.files[0]);
             }
 
             try {

@@ -236,16 +236,26 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Pilih Pengurangan Waktu</label>
-                    <select id="editFormTimeReduction" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-                        <option value="0">Tidak ada (default)</option>
-                        <option value="5">-5 menit (ramadhan)</option>
-                        <option value="10">-10 menit</option>
-                        <option value="15">-15 menit</option>
-                        <option value="20">-20 menit</option>
-                        <option value="25">-25 menit</option>
-                    </select>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Waktu Tambahan</label>
+                        <select id="editFormExtraTime" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                            <option value="none">Tidak ada (default)</option>
+                            <option value="upacara">Upacara (Senin)</option>
+                            <option value="literasi">Literasi (Selasa)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Pengurangan Waktu</label>
+                        <select id="editFormTimeReduction" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                            <option value="0">Tidak ada (default)</option>
+                            <option value="5">-5 menit (ramadhan)</option>
+                            <option value="10">-10 menit</option>
+                            <option value="15">-15 menit</option>
+                            <option value="20">-20 menit</option>
+                            <option value="25">-25 menit</option>
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Grid Waktu: Dropdown Jam Ke (Mulai & Selesai) -->
@@ -353,16 +363,26 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Pilih Pengurangan Waktu</label>
-                    <select id="formTimeReduction" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-                        <option value="0">Tidak ada (default)</option>
-                        <option value="5">-5 menit (ramadhan)</option>
-                        <option value="10">-10 menit</option>
-                        <option value="15">-15 menit</option>
-                        <option value="20">-20 menit</option>
-                        <option value="25">-25 menit</option>
-                    </select>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Waktu Tambahan</label>
+                        <select id="formExtraTime" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                            <option value="none">Tidak ada (default)</option>
+                            <option value="upacara">Upacara (Senin)</option>
+                            <option value="literasi">Literasi (Selasa)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Pengurangan Waktu</label>
+                        <select id="formTimeReduction" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                            <option value="0">Tidak ada (default)</option>
+                            <option value="5">-5 menit (ramadhan)</option>
+                            <option value="10">-10 menit</option>
+                            <option value="15">-15 menit</option>
+                            <option value="20">-20 menit</option>
+                            <option value="25">-25 menit</option>
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Grid Waktu: Dropdown Jam Ke (Mulai & Selesai) -->
@@ -561,6 +581,7 @@
         const editScheduleId = document.getElementById('editScheduleId');
         const editFormClass = document.getElementById('editFormClass');
         const editFormDay = document.getElementById('editFormDay');
+        const editFormExtraTime = document.getElementById('editFormExtraTime');
         const editFormTimeReduction = document.getElementById('editFormTimeReduction');
         const editFormStartTimeSelect = document.getElementById('editFormStartTimeSelect');
         const editFormEndTimeSelect = document.getElementById('editFormEndTimeSelect');
@@ -581,6 +602,7 @@
         const scheduleIdInput = document.getElementById('scheduleId');
         const formClass = document.getElementById('formClass');
         const formDay = document.getElementById('formDay');
+        const formExtraTime = document.getElementById('formExtraTime');
         const formTimeReduction = document.getElementById('formTimeReduction');
         const formStartTimeSelect = document.getElementById('formStartTimeSelect');
         const formEndTimeSelect = document.getElementById('formEndTimeSelect');
@@ -718,9 +740,11 @@
             scheduleForm.reset();
             scheduleIdInput.value = '';
             formCycle.value = currentCycle;
-            formModalTitle.textContent = 'Tambah Jadwal Baru';
+            formDay.value = 'Senin';
+            formExtraTime.value = 'upacara';
             formTimeReduction.value = '0';
-            populatePeriodDropdowns(formStartTimeSelect, formEndTimeSelect, formStartTime, formEndTime, 0);
+            formModalTitle.textContent = 'Tambah Jadwal Baru';
+            populatePeriodDropdowns(formStartTimeSelect, formEndTimeSelect, formStartTime, formEndTime, formMapel, 0, 'upacara');
             formScheduleModal.classList.remove('hidden');
         });
 
@@ -1013,48 +1037,107 @@
         };
 
         // =========================================================================
-        // LOGIKA PERIODE JAM PELAJARAN (JAM KE 1-10) & PENGURANGAN WAKTU
+        // LOGIKA PERIODE JAM PELAJARAN (JAM KE 1-10 & ISTIRAHAT I/II), WAKTU TAMBAHAN & PENGURANGAN
         // =========================================================================
-        function getSchedulePeriods(reductionMin = 0) {
-            const periodDuration = 45 - reductionMin;
-            const periods = [];
-            let currentMin = 7 * 60 + 15; // 07:15
+        function getSchedulePeriods(reductionMin = 0, extraTime = 'none') {
+            const formatTime = (mins) => {
+                const h = String(Math.floor(mins / 60)).padStart(2, '0');
+                const m = String(mins % 60).padStart(2, '0');
+                return `${h}:${m}`;
+            };
 
-            for (let i = 1; i <= 10; i++) {
-                if (i === 4) {
-                    currentMin += 15; // Istirahat 1 (15m)
-                }
-                if (i === 7) {
-                    currentMin += 30; // Istirahat 2 / Dzuhur (30m)
-                }
+            let baseSlots = [];
+            if (extraTime === 'upacara') {
+                baseSlots = [
+                    { jam: 1, label: 'Jam Ke 1', dur: 35, isBreak: false, start: '08:00', end: '08:35' },
+                    { jam: 2, label: 'Jam Ke 2', dur: 35, isBreak: false, start: '08:35', end: '09:10' },
+                    { jam: 3, label: 'Jam Ke 3', dur: 35, isBreak: false, start: '09:10', end: '09:45' },
+                    { jam: 'IST1', label: 'Istirahat I', dur: 15, isBreak: true, start: '09:45', end: '10:00' },
+                    { jam: 4, label: 'Jam Ke 4', dur: 35, isBreak: false, start: '10:00', end: '10:35' },
+                    { jam: 5, label: 'Jam Ke 5', dur: 35, isBreak: false, start: '10:35', end: '11:10' },
+                    { jam: 6, label: 'Jam Ke 6', dur: 35, isBreak: false, start: '11:10', end: '11:45' },
+                    { jam: 'IST2', label: 'Istirahat II', dur: 60, isBreak: true, start: '11:45', end: '12:45' },
+                    { jam: 7, label: 'Jam Ke 7', dur: 40, isBreak: false, start: '12:45', end: '13:25' },
+                    { jam: 8, label: 'Jam Ke 8', dur: 35, isBreak: false, start: '13:25', end: '14:00' },
+                    { jam: 9, label: 'Jam Ke 9', dur: 35, isBreak: false, start: '14:00', end: '14:35' },
+                    { jam: 10, label: 'Jam Ke 10', dur: 35, isBreak: false, start: '14:35', end: '15:10' },
+                ];
+            } else if (extraTime === 'literasi') {
+                baseSlots = [
+                    { jam: 1, label: 'Jam Ke 1', dur: 40, isBreak: false, start: '07:30', end: '08:10' },
+                    { jam: 2, label: 'Jam Ke 2', dur: 40, isBreak: false, start: '08:10', end: '08:50' },
+                    { jam: 3, label: 'Jam Ke 3', dur: 40, isBreak: false, start: '08:50', end: '09:30' },
+                    { jam: 'IST1', label: 'Istirahat I', dur: 15, isBreak: true, start: '09:30', end: '09:45' },
+                    { jam: 4, label: 'Jam Ke 4', dur: 40, isBreak: false, start: '09:45', end: '10:25' },
+                    { jam: 5, label: 'Jam Ke 5', dur: 40, isBreak: false, start: '10:25', end: '11:05' },
+                    { jam: 6, label: 'Jam Ke 6', dur: 40, isBreak: false, start: '11:05', end: '11:45' },
+                    { jam: 'IST2', label: 'Istirahat II', dur: 60, isBreak: true, start: '11:45', end: '12:45' },
+                    { jam: 7, label: 'Jam Ke 7', dur: 40, isBreak: false, start: '12:45', end: '13:25' },
+                    { jam: 8, label: 'Jam Ke 8', dur: 35, isBreak: false, start: '13:25', end: '14:00' },
+                    { jam: 9, label: 'Jam Ke 9', dur: 35, isBreak: false, start: '14:00', end: '14:35' },
+                    { jam: 10, label: 'Jam Ke 10', dur: 35, isBreak: false, start: '14:35', end: '15:10' },
+                ];
+            } else {
+                baseSlots = [
+                    { jam: 1, label: 'Jam Ke 1', dur: 40, isBreak: false, start: '07:15', end: '07:55' },
+                    { jam: 2, label: 'Jam Ke 2', dur: 40, isBreak: false, start: '07:55', end: '08:35' },
+                    { jam: 3, label: 'Jam Ke 3', dur: 40, isBreak: false, start: '08:35', end: '09:15' },
+                    { jam: 'IST1', label: 'Istirahat I', dur: 15, isBreak: true, start: '09:15', end: '09:30' },
+                    { jam: 4, label: 'Jam Ke 4', dur: 40, isBreak: false, start: '09:30', end: '10:10' },
+                    { jam: 5, label: 'Jam Ke 5', dur: 40, isBreak: false, start: '10:10', end: '10:50' },
+                    { jam: 6, label: 'Jam Ke 6', dur: 40, isBreak: false, start: '10:50', end: '11:30' },
+                    { jam: 'IST2', label: 'Istirahat II', dur: 60, isBreak: true, start: '11:30', end: '12:30' },
+                    { jam: 7, label: 'Jam Ke 7', dur: 40, isBreak: false, start: '12:30', end: '13:10' },
+                    { jam: 8, label: 'Jam Ke 8', dur: 40, isBreak: false, start: '13:10', end: '13:50' },
+                    { jam: 9, label: 'Jam Ke 9', dur: 40, isBreak: false, start: '13:50', end: '14:30' },
+                    { jam: 10, label: 'Jam Ke 10', dur: 40, isBreak: false, start: '14:30', end: '15:10' },
+                ];
+            }
 
-                const startMin = currentMin;
-                const endMin = currentMin + periodDuration;
-                currentMin = endMin;
+            if (reductionMin === 0) {
+                return baseSlots.map(s => ({
+                    jam: s.jam,
+                    label: s.label,
+                    isBreak: s.isBreak,
+                    startTime: s.start,
+                    endTime: s.end
+                }));
+            }
 
-                const formatTime = (mins) => {
-                    const h = String(Math.floor(mins / 60)).padStart(2, '0');
-                    const m = String(mins % 60).padStart(2, '0');
-                    return `${h}:${m}`;
-                };
+            // Hitung penyesuaian jika ada pengurangan waktu
+            const parseMin = (t) => {
+                const [h, m] = t.split(':').map(Number);
+                return h * 60 + m;
+            };
 
-                periods.push({
-                    jam: i,
-                    startTime: formatTime(startMin),
-                    endTime: formatTime(endMin)
+            let currentM = parseMin(baseSlots[0].start);
+            const adjusted = [];
+
+            for (const s of baseSlots) {
+                const sMin = currentM;
+                const dur = s.isBreak ? s.dur : Math.max(15, s.dur - reductionMin);
+                const eMin = sMin + dur;
+                currentM = eMin;
+
+                adjusted.push({
+                    jam: s.jam,
+                    label: s.label,
+                    isBreak: s.isBreak,
+                    startTime: formatTime(sMin),
+                    endTime: formatTime(eMin)
                 });
             }
-            return periods;
+            return adjusted;
         }
 
-        function populatePeriodDropdowns(selectStart, selectEnd, hiddenStart, hiddenEnd, reductionMin = 0, defaultStartVal = '', defaultEndVal = '') {
-            const periods = getSchedulePeriods(reductionMin);
+        function populatePeriodDropdowns(selectStart, selectEnd, hiddenStart, hiddenEnd, mapelInput = null, reductionMin = 0, extraTime = 'none', defaultStartVal = '', defaultEndVal = '') {
+            const periods = getSchedulePeriods(reductionMin, extraTime);
 
             selectStart.innerHTML = '<option value="">-- Pilih Jam Mulai --</option>' + 
-                periods.map(p => `<option value="${p.startTime}" data-jam="${p.jam}">Jam Ke ${p.jam} (${p.startTime})</option>`).join('');
+                periods.map(p => `<option value="${p.startTime}" data-jam="${p.jam}" data-is-break="${p.isBreak}" data-label="${p.label}">${p.label} (${p.startTime})</option>`).join('');
 
             selectEnd.innerHTML = '<option value="">-- Pilih Jam Selesai --</option>' + 
-                periods.map(p => `<option value="${p.endTime}" data-jam="${p.jam}">Jam Ke ${p.jam} (${p.endTime})</option>`).join('');
+                periods.map(p => `<option value="${p.endTime}" data-jam="${p.jam}" data-is-break="${p.isBreak}" data-label="${p.label}">${p.label} (${p.endTime})</option>`).join('');
 
             if (defaultStartVal) {
                 selectStart.value = defaultStartVal;
@@ -1068,9 +1151,15 @@
             selectStart.onchange = () => {
                 hiddenStart.value = selectStart.value;
                 const selectedOpt = selectStart.options[selectStart.selectedIndex];
-                const jam = selectedOpt ? Number(selectedOpt.getAttribute('data-jam')) : 0;
-                if (jam > 0 && (!selectEnd.value || selectEnd.selectedIndex <= selectStart.selectedIndex)) {
-                    const matchingEnd = periods.find(p => p.jam === jam);
+                const jam = selectedOpt ? selectedOpt.getAttribute('data-jam') : null;
+                const isBreak = selectedOpt ? (selectedOpt.getAttribute('data-is-break') === 'true') : false;
+
+                if (isBreak && mapelInput) {
+                    mapelInput.value = 'Istirahat';
+                }
+
+                if (jam && (!selectEnd.value || selectEnd.selectedIndex <= selectStart.selectedIndex)) {
+                    const matchingEnd = periods.find(p => String(p.jam) === String(jam));
                     if (matchingEnd) {
                         selectEnd.value = matchingEnd.endTime;
                         hiddenEnd.value = matchingEnd.endTime;
@@ -1080,22 +1169,53 @@
 
             selectEnd.onchange = () => {
                 hiddenEnd.value = selectEnd.value;
+                const selectedOpt = selectEnd.options[selectEnd.selectedIndex];
+                const isBreak = selectedOpt ? (selectedOpt.getAttribute('data-is-break') === 'true') : false;
+                if (isBreak && mapelInput) {
+                    mapelInput.value = 'Istirahat';
+                }
             };
         }
 
-        // Event listener perubahan pengurangan waktu pada form tambah dan edit
+        // Event listener perubahan hari, pengurangan waktu, dan waktu tambahan pada form tambah & edit
+        formDay.addEventListener('change', () => {
+            const d = formDay.value;
+            if (d === 'Senin') formExtraTime.value = 'upacara';
+            else if (d === 'Selasa') formExtraTime.value = 'literasi';
+            else formExtraTime.value = 'none';
+
+            const red = Number(formTimeReduction.value) || 0;
+            populatePeriodDropdowns(formStartTimeSelect, formEndTimeSelect, formStartTime, formEndTime, formMapel, red, formExtraTime.value);
+        });
+
+        formExtraTime.addEventListener('change', () => {
+            const red = Number(formTimeReduction.value) || 0;
+            populatePeriodDropdowns(formStartTimeSelect, formEndTimeSelect, formStartTime, formEndTime, formMapel, red, formExtraTime.value, formStartTime.value, formEndTime.value);
+        });
+
         formTimeReduction.addEventListener('change', () => {
             const red = Number(formTimeReduction.value) || 0;
-            const curStart = formStartTime.value;
-            const curEnd = formEndTime.value;
-            populatePeriodDropdowns(formStartTimeSelect, formEndTimeSelect, formStartTime, formEndTime, red, curStart, curEnd);
+            populatePeriodDropdowns(formStartTimeSelect, formEndTimeSelect, formStartTime, formEndTime, formMapel, red, formExtraTime.value, formStartTime.value, formEndTime.value);
+        });
+
+        editFormDay.addEventListener('change', () => {
+            const d = editFormDay.value;
+            if (d === 'Senin') editFormExtraTime.value = 'upacara';
+            else if (d === 'Selasa') editFormExtraTime.value = 'literasi';
+            else editFormExtraTime.value = 'none';
+
+            const red = Number(editFormTimeReduction.value) || 0;
+            populatePeriodDropdowns(editFormStartTimeSelect, editFormEndTimeSelect, editFormStartTime, editFormEndTime, editFormMapel, red, editFormExtraTime.value);
+        });
+
+        editFormExtraTime.addEventListener('change', () => {
+            const red = Number(editFormTimeReduction.value) || 0;
+            populatePeriodDropdowns(editFormStartTimeSelect, editFormEndTimeSelect, editFormStartTime, editFormEndTime, editFormMapel, red, editFormExtraTime.value, editFormStartTime.value, editFormEndTime.value);
         });
 
         editFormTimeReduction.addEventListener('change', () => {
             const red = Number(editFormTimeReduction.value) || 0;
-            const curStart = editFormStartTime.value;
-            const curEnd = editFormEndTime.value;
-            populatePeriodDropdowns(editFormStartTimeSelect, editFormEndTimeSelect, editFormStartTime, editFormEndTime, red, curStart, curEnd);
+            populatePeriodDropdowns(editFormStartTimeSelect, editFormEndTimeSelect, editFormStartTime, editFormEndTime, editFormMapel, red, editFormExtraTime.value, editFormStartTime.value, editFormEndTime.value);
         });
 
         // Buka form pop up edit tunggal saat baris jadwal diklik (Dengan dropdown jam ke)
@@ -1113,8 +1233,13 @@
             editFormDay.value = target.day_of_week;
             const startVal = (target.start_time || '').substring(0, 5);
             const endVal = (target.end_time || '').substring(0, 5);
+
+            if (target.day_of_week === 'Senin') editFormExtraTime.value = 'upacara';
+            else if (target.day_of_week === 'Selasa') editFormExtraTime.value = 'literasi';
+            else editFormExtraTime.value = 'none';
+
             editFormTimeReduction.value = '0';
-            populatePeriodDropdowns(editFormStartTimeSelect, editFormEndTimeSelect, editFormStartTime, editFormEndTime, 0, startVal, endVal);
+            populatePeriodDropdowns(editFormStartTimeSelect, editFormEndTimeSelect, editFormStartTime, editFormEndTime, editFormMapel, 0, editFormExtraTime.value, startVal, endVal);
             editFormMapel.value = target.mapel || '';
             editFormGuru.value = target.id_guru;
             editFormRoom.value = target.id_room;
@@ -1635,8 +1760,8 @@
             if (!fileJadwal || !fileRuang) return;
 
             importPdfProgressBox.classList.remove('hidden');
-            importPdfProgressBar.style.width = '20%';
-            importPdfProgressPct.textContent = '20%';
+            importPdfProgressBar.style.width = '10%';
+            importPdfProgressPct.textContent = '10%';
             importPdfProgressLabel.textContent = 'Membaca berkas PDF Jadwal & Ruang...';
 
             try {
@@ -1646,42 +1771,85 @@
                 const abRuang = await fileRuang.arrayBuffer();
                 const pdfRuang = await pdfjsLib.getDocument({ data: new Uint8Array(abRuang) }).promise;
 
-                importPdfProgressBar.style.width = '40%';
-                importPdfProgressPct.textContent = '40%';
-                importPdfProgressLabel.textContent = 'Mengekstrak alokasi ruangan...';
+                importPdfProgressBar.style.width = '30%';
+                importPdfProgressPct.textContent = '30%';
+                importPdfProgressLabel.textContent = 'Mengekstrak peta ruangan per kelas...';
 
-                // 1. Ekstrak peta ruangan dari berkas jadwal ruang (Halaman 1-3)
-                const roomAllocationMap = {};
-                for (let rPage = 1; rPage <= pdfRuang.numPages; rPage++) {
-                    const page = await pdfRuang.getPage(rPage);
-                    const tc = await page.getTextContent();
-                    const textLines = tc.items.map(it => it.str.trim()).filter(Boolean);
-                    textLines.forEach(line => {
-                        const m = line.match(/(X|XI|XII)\s+([A-Za-z0-9\-]+)\s+(.+)/);
-                        if (m) {
-                            const cKey = `${m[1]} ${m[2]}`.trim().toLowerCase();
-                            roomAllocationMap[cKey] = m[3].trim();
-                        }
-                    });
+                const RUANG_CLASSES = [
+                    '10 RPL 1', '10 RPL 2', '10 TKJ 1', '10 TKJ 2', '10 DKV 1', '10 DKV 2', '10 AK 1', '10 AK 2', '10 AK 3', '10 LPS 1', '10 LPS 2', '10 MP 1', '10 MP 2', '10 BR 1', '10 BR 2', '10 BD',
+                    '11 RPL 1', '11 RPL 2', '11 TKJ 1', '11 TKJ 2', '11 DKV 1', '11 DKV 2', '11 AK 1', '11 AK 2', '11 AK 3', '11 LPS 1', '11 LPS 2', '11 MP 1', '11 MP 2', '11 BR 1', '11 BR 2', '11 BD',
+                    '12 RPL 1', '12 RPL 2', '12 TKJ 1', '12 TKJ 2', '12 DKV 1', '12 DKV 2', '12 AK 1', '12 AK 2', '12 AK 3', '12 AK 4', '12 LPS', '12 MP 1', '12 MP 2', '12 BR 1', '12 BR 2', '12 BD'
+                ];
+                function cleanClassKey(str) {
+                    return (str || '').toUpperCase().replace(/\s+/g, '').replace(/^10/, 'X').replace(/^11/, 'XI').replace(/^12/, 'XII');
+                }
+                const RUANG_KEYS = RUANG_CLASSES.map(cleanClassKey);
+
+                function normalizeRoomStr(raw) {
+                    if (!raw || raw === '-') return '-';
+                    const tr = raw.trim();
+                    if (/^L\.(\d+)$/i.test(tr)) return `Lab ${tr.match(/^L\.(\d+)$/i)[1]}`;
+                    if (/^L\.(.+)$/i.test(tr)) return `Lab ${tr.match(/^L\.(.+)$/i)[1].toUpperCase()}`;
+                    if (/^\d+$/.test(tr)) return `Ruang ${tr}`;
+                    return tr;
                 }
 
-                importPdfProgressBar.style.width = '60%';
-                importPdfProgressPct.textContent = '60%';
-                importPdfProgressLabel.textContent = 'Menganalisis tabel jadwal pelajaran...';
+                // 1. Ekstrak Grid Ruangan dari pdfRuang
+                const roomGrid = { Senin: {}, Selasa: {}, Rabu: {}, Kamis: {}, Jumat: {} };
+                const dayPages = [
+                    [['Senin', 0, 131], ['Selasa', 132, 274]],
+                    [['Rabu', 0, 131], ['Kamis', 132, 268]],
+                    [['Jumat', 0, 145]]
+                ];
 
-                const TIME_END_MAP = {
-                    '07:15': '08:00',
-                    '08:00': '08:45',
-                    '08:45': '09:30',
-                    '09:45': '10:30',
-                    '10:30': '11:15',
-                    '11:15': '12:00',
-                    '12:30': '13:15',
-                    '13:15': '14:00',
-                    '14:00': '14:45',
-                    '14:45': '15:30'
-                };
+                for (let pIdx = 0; pIdx < Math.min(3, pdfRuang.numPages); pIdx++) {
+                    const page = await pdfRuang.getPage(pIdx + 1);
+                    const tc = await page.getTextContent();
+                    const lines = tc.items.map(it => it.str.trim()).filter(Boolean);
+
+                    const sections = dayPages[pIdx] || [];
+                    for (const [dayName] of sections) {
+                        for (const line of lines) {
+                            const m = line.match(/^(\d+|IST)\s+(\d{2}[\.:]\d{2})\s*[-–]\s*(\d{2}[\.:]\d{2})\s+(.+)/);
+                            if (m) {
+                                const jamId = m[1];
+                                const tStart = m[2].replace('.', ':');
+                                const tEnd = m[3].replace('.', ':');
+                                const tokens = m[4].split(/\s+/).filter(Boolean);
+                                if (tokens.length >= RUANG_KEYS.length) {
+                                    for (let cIdx = 0; cIdx < RUANG_KEYS.length; cIdx++) {
+                                        const cKey = RUANG_KEYS[cIdx];
+                                        if (!roomGrid[dayName][cKey]) roomGrid[dayName][cKey] = {};
+                                        roomGrid[dayName][cKey][jamId] = {
+                                            room: normalizeRoomStr(tokens[cIdx]),
+                                            start: tStart,
+                                            end: tEnd
+                                        };
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                importPdfProgressBar.style.width = '50%';
+                importPdfProgressPct.textContent = '50%';
+                importPdfProgressLabel.textContent = 'Menganalisis tabel jadwal pelajaran FET per kelas...';
+
                 const TIME_SLOTS_ORDERED = ['07:15', '08:00', '08:45', '09:45', '10:30', '11:15', '12:30', '13:15', '14:00', '14:45'];
+                const PERIOD_INDEX_MAP = {
+                    '07:15': 1, '08:00': 2, '08:45': 3,
+                    '09:45': 4, '10:30': 5, '11:15': 6,
+                    '12:30': 7, '13:15': 8, '14:00': 9, '14:45': 10
+                };
+                const DEFAULT_BREAK_TIMES = {
+                    Senin: { ist1: '09:45 - 10:00', ist2: '11:45 - 12:45' },
+                    Selasa: { ist1: '09:30 - 09:45', ist2: '11:45 - 12:45' },
+                    Rabu: { ist1: '09:15 - 09:30', ist2: '11:30 - 12:30' },
+                    Kamis: { ist1: '09:15 - 09:30', ist2: '11:30 - 12:30' },
+                    Jumat: { ist1: '09:15 - 09:30', ist2: '11:25 - 12:40' }
+                };
+
                 const payloadItems = [];
 
                 for (let pageNum = 1; pageNum <= pdfJadwal.numPages; pageNum++) {
@@ -1693,144 +1861,159 @@
                         text: it.str.trim()
                     })).filter(it => it.text.length > 0);
 
-                    // Deteksi nama guru atau nama kelas di halaman ini
-                    let teacherName = null;
+                    // Deteksi nama kelas di halaman ini (contoh: X RPL1, XI TKJ 2, XII AK 1)
                     let detectedClassName = null;
-
                     for (const it of items) {
-                        const mTeacher = it.text.match(/^"?(\d+[\.,][^"]+)"?$/);
-                        if (mTeacher) {
-                            teacherName = mTeacher[1].replace(/^\d+[\.,]\s*/, '').replace(/^[",\s]+|[",\s]+$/g, '');
+                        const mClass = it.text.match(/^(X|XI|XII)\s+[A-Za-z0-9\-]+(\s*\d+)?$/i);
+                        if (mClass) {
+                            detectedClassName = mClass[0].trim();
                             break;
                         }
-                        const mClass = it.text.match(/^(X|XI|XII)\s+[A-Za-z0-9\-]+(\s+\d+)?$/i);
-                        if (mClass && !detectedClassName) {
-                            detectedClassName = mClass[0];
-                        }
+                    }
+                    if (!detectedClassName) continue;
+
+                    const classKey = cleanClassKey(detectedClassName);
+
+                    // Cari label hari (Senin - Jumat)
+                    let dayCols = items.filter(it => ['senin', 'selasa', 'rabu', 'kamis', 'jumat'].includes(it.text.toLowerCase())).map(d => ({
+                        day: d.text.charAt(0).toUpperCase() + d.text.slice(1).toLowerCase(),
+                        x: d.x
+                    }));
+                    dayCols.sort((a, b) => a.x - b.x);
+                    if (dayCols.length < 5) {
+                        dayCols = [
+                            { day: 'Senin', x: 100 },
+                            { day: 'Selasa', x: 190 },
+                            { day: 'Rabu', x: 280 },
+                            { day: 'Kamis', x: 370 },
+                            { day: 'Jumat', x: 460 }
+                        ];
                     }
 
-                    const dayLabels = items.filter(it => ['senin', 'selasa', 'rabu', 'kamis', 'jumat'].includes(it.text.toLowerCase()));
-                    dayLabels.sort((a, b) => a.x - b.x);
-                    if (dayLabels.length < 5) continue;
-
+                    // Cari label waktu (07:15, dsb.)
                     const timeLabels = items.filter(it => /^\d{2}:\d{2}$/.test(it.text));
                     timeLabels.sort((a, b) => b.y - a.y);
-                    if (timeLabels.length < 5) continue;
 
-                    const minDayX = Math.min(...dayLabels.map(d => d.x)) - 40;
+                    const minDayX = Math.min(...dayCols.map(d => d.x)) - 30;
 
+                    // Filter item sel (abaikan header dan footer)
                     const cellItems = items.filter(it => {
                         if (it.x < minDayX) return false;
                         const t = it.text;
-                        if (t.includes('SMK NEGERI') || (teacherName && t.includes(teacherName)) || ['senin', 'selasa', 'rabu', 'kamis', 'jumat', '---', '-x-'].includes(t.toLowerCase()) || t.includes('Jadwal dihasilkan') || t.includes('Kembali ke atas')) {
+                        if (t.includes('SMK NEGERI') || t === detectedClassName || ['senin', 'selasa', 'rabu', 'kamis', 'jumat', '---', '-x-'].includes(t.toLowerCase()) || t.includes('Jadwal dihasilkan') || t.includes('Kembali ke atas')) {
                             return false;
                         }
                         return true;
                     });
 
+                    // Petakan item teks ke sel terdekat (hari & waktu)
                     const cells = {};
                     for (const it of cellItems) {
-                        let closestDay = dayLabels[0];
-                        let minDayDist = Math.abs(it.x - closestDay.x);
-                        for (let i = 1; i < dayLabels.length; i++) {
-                            const d = Math.abs(it.x - dayLabels[i].x);
-                            if (d < minDayDist) {
-                                minDayDist = d;
-                                closestDay = dayLabels[i];
-                            }
+                        const closestDay = dayCols.reduce((prev, curr) => Math.abs(curr.x - it.x) < Math.abs(prev.x - it.x) ? curr : prev, dayCols[0]);
+                        let tStart = '07:15';
+                        if (timeLabels.length > 0) {
+                            const closestTime = timeLabels.reduce((prev, curr) => Math.abs(curr.y - it.y) < Math.abs(prev.y - it.y) ? curr : prev, timeLabels[0]);
+                            tStart = closestTime.text;
                         }
 
-                        let closestTime = timeLabels[0];
-                        let minTimeDist = Math.abs(it.y - closestTime.y);
-                        for (let i = 1; i < timeLabels.length; i++) {
-                            const d = Math.abs(it.y - timeLabels[i].y);
-                            if (d < minTimeDist) {
-                                minTimeDist = d;
-                                closestTime = timeLabels[i];
-                            }
-                        }
-
-                        const dayName = closestDay.text.charAt(0).toUpperCase() + closestDay.text.slice(1).toLowerCase();
-                        const tStart = closestTime.text;
-
+                        const dayName = closestDay.day;
                         const key = `${dayName}_${tStart}`;
                         if (!cells[key]) cells[key] = [];
                         cells[key].push(it);
                     }
 
-                    for (const dayLabel of dayLabels) {
-                        const dayName = dayLabel.text.charAt(0).toUpperCase() + dayLabel.text.slice(1).toLowerCase();
-                        let prevRecord = null;
+                    // Untuk setiap hari, ekstrak jadwal dan sisipkan jam istirahat sesuai aturan
+                    for (const dayCol of dayCols) {
+                        const dayName = dayCol.day;
+                        const daySchedules = {};
 
                         for (const tStart of TIME_SLOTS_ORDERED) {
                             const key = `${dayName}_${tStart}`;
                             const cItems = cells[key] || [];
                             cItems.sort((a, b) => b.y - a.y);
                             const texts = cItems.map(it => it.text).filter(t => !['---', '-x-'].includes(t));
+                            if (texts.length === 0) continue;
 
-                            if (texts.length === 0) {
-                                prevRecord = null;
-                                continue;
-                            }
+                            let teacherName = '-';
+                            let mapelParts = [];
 
-                            let clsRaw = detectedClassName || texts[0];
-                            let roomRaw = '-';
-                            let mapelRaw = '-';
-
-                            const isContinuation = Boolean(
-                                prevRecord && (
-                                    /^(LAB|RUANG|R\.|BENGKEL|AULA|PERPUS)/i.test(texts[0]) ||
-                                    texts[0].endsWith(')') ||
-                                    !/\b(X|XI|XII)\b/i.test(texts[0])
-                                )
-                            );
-
-                            if (isContinuation) {
-                                if (/^(LAB|RUANG|R\.|BENGKEL|AULA|PERPUS)/i.test(texts[0])) {
-                                    prevRecord.ruangan = texts[0];
-                                    roomRaw = texts[0];
-                                    mapelRaw = prevRecord.mapel;
-                                } else if (texts[0].endsWith(')')) {
-                                    prevRecord.mapel += ' ' + texts[0];
-                                    mapelRaw = prevRecord.mapel;
-                                    if (texts.length > 1 && /^(LAB|RUANG|R\.|BENGKEL|AULA|PERPUS)/i.test(texts[texts.length - 1])) {
-                                        prevRecord.ruangan = texts[texts.length - 1];
-                                        roomRaw = texts[texts.length - 1];
-                                    }
-                                }
-                                clsRaw = prevRecord.kelas;
-                            } else {
-                                if (texts.length > 2 && /^(LAB|RUANG|R\.|BENGKEL|AULA|PERPUS)/i.test(texts[texts.length - 1])) {
-                                    roomRaw = texts[texts.length - 1];
-                                    mapelRaw = texts.slice(1, -1).join(' ');
-                                } else if (texts.length > 1) {
-                                    mapelRaw = texts.slice(1).join(' ');
+                            for (const txt of texts) {
+                                if (txt.includes('"')) {
+                                    // Guru pengampu berada di dalam tanda petik
+                                    teacherName = txt.replace(/^[",\s]+|[",\s]+$/g, '').replace(/^\d+[\.,]\s*/, '');
+                                } else {
+                                    mapelParts.push(txt);
                                 }
                             }
 
-                            // Cek fallback ruangan dari berkas jadwal ruang jika belum ada ruangan spesifik
-                            if ((!roomRaw || roomRaw === '-') && clsRaw) {
-                                const cleanClsKey = clsRaw.trim().toLowerCase();
-                                if (roomAllocationMap[cleanClsKey]) {
-                                    roomRaw = roomAllocationMap[cleanClsKey];
-                                }
+                            const mapelName = mapelParts.join(' ').trim() || 'Pelajaran';
+                            const periodIdx = PERIOD_INDEX_MAP[tStart] || 1;
+
+                            // Cari alokasi ruangan dari roomGrid
+                            let roomFound = '-';
+                            const dayRooms = roomGrid[dayName]?.[classKey];
+                            if (dayRooms && dayRooms[String(periodIdx)]) {
+                                roomFound = dayRooms[String(periodIdx)].room;
+                            } else if (dayRooms && dayRooms[periodIdx]) {
+                                roomFound = dayRooms[periodIdx].room;
                             }
 
-                            const tEnd = TIME_END_MAP[tStart] || '';
-                            const waktuStr = tEnd ? `${tStart} - ${tEnd}` : tStart;
-
-                            const record = {
-                                kelas: clsRaw,
+                            daySchedules[periodIdx] = {
+                                kelas: detectedClassName,
                                 hari: dayName,
-                                waktu: waktuStr,
-                                mapel: mapelRaw,
-                                guru: teacherName || '-',
-                                ruangan: roomRaw,
+                                waktu: `${tStart} - ${(getSchedulePeriods(0, dayName === 'Senin' ? 'upacara' : (dayName === 'Selasa' ? 'literasi' : 'none')).find(p => p.jam === periodIdx)?.endTime || tStart)}`,
+                                mapel: mapelName,
+                                guru: teacherName,
+                                ruangan: roomFound,
                                 cycle_type: String(currentCycle)
                             };
+                        }
 
-                            payloadItems.push(record);
-                            prevRecord = record;
+                        // Sisipkan Istirahat I & II sesuai aturan:
+                        // Jika ruangan/guru sebelum dan sesudah sama -> gunakan itu, jika beda -> gunakan yang sesudah istirahat
+                        const breakTimes = DEFAULT_BREAK_TIMES[dayName] || DEFAULT_BREAK_TIMES.Rabu;
+
+                        // Istirahat I (antara Jam 3 dan Jam 4)
+                        const p3 = daySchedules[3];
+                        const p4 = daySchedules[4];
+                        const ist1Room = (p3 && p4 && p3.ruangan === p4.ruangan) ? p3.ruangan : (p4 ? p4.ruangan : (p3 ? p3.ruangan : 'Ruang Kelas'));
+                        const ist1Guru = (p3 && p4 && p3.guru === p4.guru) ? p3.guru : (p4 ? p4.guru : (p3 ? p3.guru : '-'));
+                        const ist1Schedule = {
+                            kelas: detectedClassName,
+                            hari: dayName,
+                            waktu: breakTimes.ist1,
+                            mapel: 'Istirahat',
+                            guru: ist1Guru,
+                            ruangan: ist1Room,
+                            cycle_type: String(currentCycle)
+                        };
+
+                        // Istirahat II (antara Jam 6 dan Jam 7)
+                        const p6 = daySchedules[6];
+                        const p7 = daySchedules[7];
+                        const ist2Room = (p6 && p7 && p6.ruangan === p7.ruangan) ? p6.ruangan : (p7 ? p7.ruangan : (p6 ? p6.ruangan : 'Ruang Kelas'));
+                        const ist2Guru = (p6 && p7 && p6.guru === p7.guru) ? p6.guru : (p7 ? p7.guru : (p6 ? p6.guru : '-'));
+                        const ist2Schedule = {
+                            kelas: detectedClassName,
+                            hari: dayName,
+                            waktu: breakTimes.ist2,
+                            mapel: 'Istirahat',
+                            guru: ist2Guru,
+                            ruangan: ist2Room,
+                            cycle_type: String(currentCycle)
+                        };
+
+                        // Urutkan dan masukkan ke payload: 1..3, IST 1, 4..6, IST 2, 7..10
+                        for (let j = 1; j <= 3; j++) {
+                            if (daySchedules[j]) payloadItems.push(daySchedules[j]);
+                        }
+                        payloadItems.push(ist1Schedule);
+                        for (let j = 4; j <= 6; j++) {
+                            if (daySchedules[j]) payloadItems.push(daySchedules[j]);
+                        }
+                        payloadItems.push(ist2Schedule);
+                        for (let j = 7; j <= 10; j++) {
+                            if (daySchedules[j]) payloadItems.push(daySchedules[j]);
                         }
                     }
                 }
@@ -1840,46 +2023,57 @@
                     return;
                 }
 
-                importPdfProgressBar.style.width = '85%';
-                importPdfProgressPct.textContent = '85%';
-                importPdfProgressLabel.textContent = `Menyimpan ${payloadItems.length} jadwal ke server...`;
+                importPdfProgressBar.style.width = '75%';
+                importPdfProgressPct.textContent = '75%';
+                importPdfProgressLabel.textContent = `Menyimpan ${payloadItems.length} jadwal ke database server...`;
 
-                const res = await fetch(`${API_BASE_URL}/schedules/import-batch`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ items: payloadItems })
-                });
+                // Kirim per batch 200 agar stabil
+                const BATCH_SIZE = 200;
+                let totalSuccess = 0;
+                let totalErrors = [];
 
-                const resJson = await res.json();
+                for (let b = 0; b < payloadItems.length; b += BATCH_SIZE) {
+                    const chunk = payloadItems.slice(b, b + BATCH_SIZE);
+                    const pct = Math.round(75 + ((b / payloadItems.length) * 20));
+                    importPdfProgressBar.style.width = `${pct}%`;
+                    importPdfProgressPct.textContent = `${pct}%`;
+
+                    const res = await fetch(`${API_BASE_URL}/schedules/import-batch`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ items: chunk })
+                    });
+                    const resJson = await res.json();
+                    if (res.ok) {
+                        totalSuccess += (resJson.data?.imported_count || chunk.length);
+                        if (resJson.errors) totalErrors.push(...resJson.errors);
+                    } else {
+                        if (resJson.errors && Array.isArray(resJson.errors)) {
+                            totalErrors.push(...resJson.errors);
+                        }
+                    }
+                }
 
                 importPdfProgressBar.style.width = '100%';
                 importPdfProgressPct.textContent = '100%';
                 importPdfProgressLabel.textContent = 'Selesai!';
 
-                if (res.ok) {
-                    let msg = resJson.message || `Import ${payloadItems.length} jadwal berhasil!`;
-                    if (resJson.errors && resJson.errors.length > 0) {
-                        msg += '\n\nCatatan baris dilewati:\n' + resJson.errors.slice(0, 5).join('\n');
-                        if (resJson.errors.length > 5) {
-                            msg += `\n...dan ${resJson.errors.length - 5} lainnya.`;
-                        }
+                let msg = `Import ${totalSuccess} data jadwal pelajaran berhasil disimpan!`;
+                if (totalErrors.length > 0) {
+                    msg += '\n\nCatatan:\n' + totalErrors.slice(0, 5).join('\n');
+                    if (totalErrors.length > 5) {
+                        msg += `\n...dan ${totalErrors.length - 5} lainnya.`;
                     }
-                    alert(msg);
-                    modalImportPdf.classList.add('hidden');
-                    formScheduleModal.classList.add('hidden');
-                    await fetchSchedules();
-                    renderClassTable();
-                } else {
-                    let errorMsg = resJson.message || 'Gagal mengimpor data jadwal.';
-                    if (resJson.errors && Array.isArray(resJson.errors)) {
-                        errorMsg += '\n' + resJson.errors.slice(0, 5).join('\n');
-                    }
-                    alert(errorMsg);
                 }
+                alert(msg);
+                modalImportPdf.classList.add('hidden');
+                formScheduleModal.classList.add('hidden');
+                await fetchSchedules();
+                renderClassTable();
             } catch (err) {
                 console.error(err);
                 alert('Gagal memproses file PDF: ' + (err.message || 'Format tidak dikenali'));
@@ -2027,6 +2221,6 @@
             doc.save(`Jadwal_Kelas_${currentTingkat}_Putaran_${currentCycle}.pdf`);
         });
     </script>
-    <script src="../js/global-layout.js?v=20261108_4.0"></script>
+    <script src="../js/global-layout.js?v=20261108_5.0"></script>
 </body>
 </html>

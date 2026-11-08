@@ -33,6 +33,15 @@ class User extends Authenticatable
         'password',
     ];
 
+    protected $appends = [
+        'avatar_url',
+    ];
+
+    public function getAvatarUrlAttribute()
+    {
+        return $this->avatar ? url('storage/' . ltrim($this->avatar, '/')) : null;
+    }
+
     protected function casts(): array
     {
         return [

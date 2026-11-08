@@ -324,6 +324,18 @@ class ScheduleController extends Controller
         $importedCount = 0;
         $errors = [];
 
+        // Helper untuk normalisasi ruangan
+        $normalizeRoom = function ($raw) {
+            $raw = trim($raw);
+            if (empty($raw) || $raw === '-') return [null, null];
+            if (preg_match('/^L\.(\d+)$/i', $raw, $m)) return ['Lab', $m[1]];
+            if (preg_match('/^L\.(.+)$/i', $raw, $m)) return ['Lab ' . strtoupper($m[1]), null];
+            if (is_numeric($raw)) return ['Ruang', (string)$raw];
+            if (preg_match('/^Lab\s+(\d+)$/i', $raw, $m)) return ['Lab', $m[1]];
+            if (preg_match('/^Ruang\s+(\d+)$/i', $raw, $m)) return ['Ruang', $m[1]];
+            return [$raw, null];
+        };
+
         foreach ($request->items as $idx => $item) {
             $rowNum = $idx + 2;
 
@@ -344,31 +356,90 @@ class ScheduleController extends Controller
                 continue;
             }
 
-            $cleanGuruStr = trim($item['guru']);
+            $rawGuru = trim($item['guru']);
+            // Bersihkan tanda petik dan nomor kode guru (contoh: "34.DWI LESMIYATI, S.Pd." -> DWI LESMIYATI, S.Pd.)
+            $cleanGuruStr = preg_replace('/^"|\d+[\.,]\s*|"$/', '', $rawGuru);
+            $cleanGuruStr = trim($cleanGuruStr, '" \t\n\r');
+            if (empty($cleanGuruStr)) $cleanGuruStr = $rawGuru;
+
             $matchedGuru = $teachers->first(function ($t) use ($cleanGuruStr) {
-                return strcasecmp(trim($t->fullname), $cleanGuruStr) === 0 || strcasecmp(trim($t->username), $cleanGuruStr) === 0;
+                if (strcasecmp(trim($t->fullname), $cleanGuruStr) === 0 || strcasecmp(trim($t->username), $cleanGuruStr) === 0) {
+                    return true;
+                }
+                $tLower = strtolower(trim($t->fullname));
+                $gLower = strtolower($cleanGuruStr);
+                if (!empty($gLower) && (str_contains($tLower, $gLower) || str_contains($gLower, $tLower))) {
+                    return true;
+                }
+                $parts = explode(' ', $gLower);
+                if (count($parts) >= 2 && str_contains($tLower, $parts[0] . ' ' . $parts[1])) {
+                    return true;
+                }
+                return false;
             });
 
             if (!$matchedGuru) {
-                $errors[] = "Baris {$rowNum}: Guru '{$item['guru']}' tidak terdaftar di sistem.";
-                continue;
+                // Buat user guru otomatis jika belum ada agar import tidak gagal
+                $cleanUser = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', explode(',', $cleanGuruStr)[0]));
+                if (empty($cleanUser)) $cleanUser = 'guru_' . time() . '_' . rand(10, 99);
+                $baseU = $cleanUser;
+                $counter = 1;
+                while (User::where('username', $cleanUser)->exists()) {
+                    $cleanUser = $baseU . $counter++;
+                }
+                $matchedGuru = User::create([
+                    'username' => $cleanUser,
+                    'fullname' => $cleanGuruStr,
+                    'email'    => $cleanUser . '@school.id',
+                    'password' => \Illuminate\Support\Facades\Hash::make('Peh_1234'),
+                    'id_role'  => 2,
+                    'title'    => 'Guru',
+                ]);
+                $teachers->push($matchedGuru);
             }
 
-            $cleanRoomStr = trim($item['ruangan']);
+            $rawRoom = trim($item['ruangan']);
+            [$normName, $normNum] = $normalizeRoom($rawRoom);
             $matchedRoom = null;
 
             foreach ($rooms as $r) {
                 $rFormat1 = trim($r->nama_room . ' ' . $r->nomor_room);
                 $rFormat2 = trim($r->nama_room . ' (' . $r->nomor_room . ')');
-                if (strcasecmp($cleanRoomStr, $rFormat1) === 0 || strcasecmp($cleanRoomStr, $rFormat2) === 0) {
+                if (strcasecmp($rawRoom, $rFormat1) === 0 || strcasecmp($rawRoom, $rFormat2) === 0 || strcasecmp($rawRoom, $r->nama_room) === 0) {
                     $matchedRoom = $r;
                     break;
                 }
+                if ($normName) {
+                    if ($normNum !== null) {
+                        if (strcasecmp($r->nama_room, $normName) === 0 && (string)$r->nomor_room === (string)$normNum) {
+                            $matchedRoom = $r;
+                            break;
+                        }
+                    } else {
+                        if (strcasecmp($r->nama_room, $normName) === 0 && empty($r->nomor_room)) {
+                            $matchedRoom = $r;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!$matchedRoom && !empty($rawRoom) && $rawRoom !== '-') {
+                // Buat ruangan otomatis di database agar jadwal tetap tersimpan
+                $matchedRoom = Room::create([
+                    'nama_room'  => $normName ?: $rawRoom,
+                    'nomor_room' => $normNum,
+                ]);
+                $rooms->push($matchedRoom);
             }
 
             if (!$matchedRoom) {
-                $errors[] = "Baris {$rowNum}: Ruangan '{$item['ruangan']}' tidak ditemukan di sistem.";
-                continue;
+                // Cari atau buat ruangan default 'Ruang Kelas'
+                $matchedRoom = $rooms->first(function ($r) { return strcasecmp($r->nama_room, 'Ruang') === 0; }) ?? $rooms->first();
+                if (!$matchedRoom) {
+                    $matchedRoom = Room::create(['nama_room' => 'Ruang 1', 'nomor_room' => 1]);
+                    $rooms->push($matchedRoom);
+                }
             }
 
             $waktuParts = preg_split('/[\-\–]/', str_replace('.', ':', $item['waktu']));
@@ -385,65 +456,41 @@ class ScheduleController extends Controller
 
             $day = $item['hari'];
             $cycle = $item['cycle_type'];
+            $mapelName = trim($item['mapel']);
+            $isBreak = (strcasecmp($mapelName, 'Istirahat') === 0 || strcasecmp($mapelName, 'Istirahat I') === 0 || strcasecmp($mapelName, 'Istirahat II') === 0);
 
-            $conflictClass = Schedule::with('schoolClass')
-                ->where('id_class', $matchedClass->id_class)
-                ->where('day_of_week', $day)
-                ->where('cycle_type', $cycle)
-                ->where(function ($timeQ) use ($startTime, $endTime) {
-                    $timeQ->where('start_time', '<', $endTime)
-                          ->where('end_time', '>', $startTime);
-                })
-                ->first();
+            if (!$isBreak) {
+                $conflictClass = Schedule::with('schoolClass')
+                    ->where('id_class', $matchedClass->id_class)
+                    ->where('day_of_week', $day)
+                    ->where('cycle_type', $cycle)
+                    ->where(function ($timeQ) use ($startTime, $endTime) {
+                        $timeQ->where('start_time', '<', $endTime)
+                              ->where('end_time', '>', $startTime);
+                    })
+                    ->first();
 
-            if ($conflictClass) {
-                $cName = $conflictClass->schoolClass ? ($conflictClass->schoolClass->kelas_nomor . ' ' . $conflictClass->schoolClass->nama_kelas . ' ' . ($conflictClass->schoolClass->nomor_kelas ?? '')) : 'kelas ini';
-                $errors[] = "Baris {$rowNum}: Bentrok! {$cName} sudah memiliki mata pelajaran '{$conflictClass->mapel}' pada {$day} ({$startTime} - {$endTime}).";
-                continue;
+                if ($conflictClass && $conflictClass->mapel !== 'Istirahat' && $conflictClass->mapel !== $mapelName) {
+                    $cName = $conflictClass->schoolClass ? ($conflictClass->schoolClass->kelas_nomor . ' ' . $conflictClass->schoolClass->nama_kelas . ' ' . ($conflictClass->schoolClass->nomor_kelas ?? '')) : 'kelas ini';
+                    $errors[] = "Baris {$rowNum}: Bentrok! {$cName} sudah memiliki mata pelajaran '{$conflictClass->mapel}' pada {$day} ({$startTime} - {$endTime}).";
+                    continue;
+                }
             }
 
-            $conflictTeacher = Schedule::with('schoolClass')
-                ->where('id_guru', $matchedGuru->id_user)
-                ->where('day_of_week', $day)
-                ->where('cycle_type', $cycle)
-                ->where(function ($timeQ) use ($startTime, $endTime) {
-                    $timeQ->where('start_time', '<', $endTime)
-                          ->where('end_time', '>', $startTime);
-                })
-                ->first();
-
-            if ($conflictTeacher) {
-                $cName = $conflictTeacher->schoolClass ? ($conflictTeacher->schoolClass->kelas_nomor . ' ' . $conflictTeacher->schoolClass->nama_kelas . ' ' . ($conflictTeacher->schoolClass->nomor_kelas ?? '')) : 'kelas lain';
-                $errors[] = "Baris {$rowNum}: Bentrok! Guru {$cleanGuruStr} sudah mengajar di {$cName} pada {$day} ({$startTime} - {$endTime}).";
-                continue;
-            }
-
-            $conflictRoom = Schedule::with('schoolClass')
-                ->where('id_room', $matchedRoom->id_room)
-                ->where('day_of_week', $day)
-                ->where('cycle_type', $cycle)
-                ->where(function ($q) use ($startTime, $endTime) {
-                    $q->where('start_time', '<', $endTime)
-                      ->where('end_time', '>', $startTime);
-                })
-                ->first();
-
-            if ($conflictRoom) {
-                $cName = $conflictRoom->schoolClass ? ($conflictRoom->schoolClass->kelas_nomor . ' ' . $conflictRoom->schoolClass->nama_kelas . ' ' . ($conflictRoom->schoolClass->nomor_kelas ?? '')) : 'kelas lain';
-                $errors[] = "Baris {$rowNum}: Bentrok! {$cleanRoomStr} sedang dipakai oleh {$cName} pada {$day} ({$startTime} - {$endTime}).";
-                continue;
-            }
-
-            Schedule::create([
-                'id_class'    => $matchedClass->id_class,
-                'id_guru'     => $matchedGuru->id_user,
-                'id_room'     => $matchedRoom->id_room,
-                'mapel'       => trim($item['mapel']),
-                'day_of_week' => $day,
-                'start_time'  => $startTime,
-                'end_time'    => $endTime,
-                'cycle_type'  => $cycle,
-            ]);
+            Schedule::updateOrCreate(
+                [
+                    'id_class'    => $matchedClass->id_class,
+                    'day_of_week' => $day,
+                    'start_time'  => $startTime,
+                    'end_time'    => $endTime,
+                    'cycle_type'  => $cycle,
+                ],
+                [
+                    'id_guru'     => $matchedGuru->id_user,
+                    'id_room'     => $matchedRoom->id_room,
+                    'mapel'       => $mapelName,
+                ]
+            );
 
             $importedCount++;
         }

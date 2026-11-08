@@ -242,7 +242,7 @@
     </div>
 
     <!-- Script Global Layout -->
-    <script src="../js/global-layout.js"></script>
+    <script src="../js/global-layout.js?v=20261108_5.0"></script>
 
     <script>
         const token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
@@ -345,7 +345,7 @@
             const month = filterMonth.value;
             const classId = filterClass.value;
 
-            let url = `${API_BASE_URL}/journals?id_teacher=${userData.id_user}&year=${year}&month=${month}`;
+            let url = `${API_BASE_URL}/journals?id_guru=${userData.id_user}&id_teacher=${userData.id_user}&year=${year}&month=${month}`;
             if (classId !== 'all') {
                 url += `&id_class=${classId}`;
             }
@@ -369,9 +369,10 @@
             const weekVal = filterWeek.value;
 
             let filtered = allJournals.filter(j => {
+                const jDate = j.journal_date || j.date || '';
                 // Filter Minggu Ke (1-4)
-                if (weekVal !== 'all' && j.journal_date) {
-                    const dayNum = parseInt(j.journal_date.substring(8, 10)) || 1;
+                if (weekVal !== 'all' && jDate) {
+                    const dayNum = parseInt(jDate.substring(8, 10)) || 1;
                     let weekNum = 1;
                     if (dayNum <= 7) weekNum = 1;
                     else if (dayNum <= 14) weekNum = 2;
@@ -400,7 +401,9 @@
             }
 
             tbody.innerHTML = filtered.map((j, idx) => {
-                const editable = isJournalEditable(j.journal_date);
+                const jDate = j.journal_date || j.date || '';
+                const jId = j.id_journal || j.id_jurnal;
+                const editable = isJournalEditable(jDate);
                 const clsName = j.schedule?.school_class ? `${j.schedule.school_class.kelas_nomor} ${j.schedule.school_class.nama_kelas} ${j.schedule.school_class.nomor_kelas || ''}`.trim() : '-';
                 const timeSlot = j.schedule ? `${(j.schedule.start_time || '').substring(0, 5)} - ${(j.schedule.end_time || '').substring(0, 5)}` : '-';
                 
@@ -411,7 +414,19 @@
                 const sCount = atts.filter(a => a.status === 'Sakit').length;
                 const aCount = atts.filter(a => a.status === 'Alpa').length;
 
-                const photoUrl = j.photos && j.photos.length > 0 ? (j.photos[0].photo_path.startsWith('http') ? j.photos[0].photo_path : `/${j.photos[0].photo_path.replace(/^\/+/, '')}`) : null;
+                let photoUrl = null;
+                if (j.photos && j.photos.length > 0) {
+                    photoUrl = j.photos[0].photo_path;
+                } else if (j.photos_list && j.photos_list.length > 0) {
+                    photoUrl = j.photos_list[0].photo_path;
+                } else if (j.photo_path) {
+                    try {
+                        const parsed = JSON.parse(j.photo_path);
+                        if (Array.isArray(parsed) && parsed.length > 0) photoUrl = `/storage/${parsed[0].replace(/^\/+/, '')}`;
+                    } catch {
+                        photoUrl = `/storage/${j.photo_path.replace(/^\/+/, '')}`;
+                    }
+                }
 
                 const statusBadge = editable
                     ? `<span class="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">Aktif (1 Hari)</span>`
@@ -421,13 +436,13 @@
                 if (editable) {
                     actionHtml = `
                         <div class="inline-flex items-center space-x-1.5">
-                            <button onclick="openEditJournal(${j.id_journal})" class="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg transition" title="Edit Jurnal">
+                            <button onclick="openEditJournal(${jId})" class="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg transition" title="Edit Jurnal">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                             </button>
-                            <button onclick="openEditAttendance(${j.id_journal})" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition" title="Edit Presensi Siswa">
+                            <button onclick="openEditAttendance(${jId})" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition" title="Edit Presensi Siswa">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
                             </button>
-                            <button onclick="deleteJournalPrompt(${j.id_journal})" class="p-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition" title="Hapus Jurnal">
+                            <button onclick="deleteJournalPrompt(${jId})" class="p-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition" title="Hapus Jurnal">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                             </button>
                         </div>
@@ -441,7 +456,7 @@
                 return `
                     <tr class="hover:bg-slate-50 transition border-b border-slate-200/80">
                         <td class="py-3 px-4 text-center font-bold text-slate-600">${idx + 1}</td>
-                        <td class="py-3 px-4 text-center font-semibold text-slate-800 whitespace-nowrap">${j.journal_date}</td>
+                        <td class="py-3 px-4 text-center font-semibold text-slate-800 whitespace-nowrap">${jDate}</td>
                         <td class="py-3 px-4 text-center font-mono text-xs text-slate-600">${timeSlot}</td>
                         <td class="py-3 px-4 text-center font-bold text-indigo-700">${clsName}</td>
                         <td class="py-3 px-4">
@@ -476,17 +491,18 @@
         const editJournalFileInput = document.getElementById('editJournalFileInput');
 
         window.openEditJournal = function(idJournal) {
-            const j = allJournals.find(item => Number(item.id_journal) === Number(idJournal));
+            const j = allJournals.find(item => Number(item.id_journal || item.id_jurnal) === Number(idJournal));
             if (!j) return;
 
-            if (!isJournalEditable(j.journal_date)) {
+            const jDate = j.journal_date || j.date;
+            if (!isJournalEditable(jDate)) {
                 alert('Jurnal ini telah melewati batas waktu 1 hari dan tidak dapat diedit!');
                 return;
             }
 
-            editJournalIdInput.value = j.id_journal;
+            editJournalIdInput.value = j.id_journal || j.id_jurnal;
             document.getElementById('editJournalInfoClass').textContent = j.schedule?.school_class ? `${j.schedule.school_class.kelas_nomor} ${j.schedule.school_class.nama_kelas} ${j.schedule.school_class.nomor_kelas || ''}` : '-';
-            document.getElementById('editJournalInfoDate').textContent = j.journal_date;
+            document.getElementById('editJournalInfoDate').textContent = jDate;
             editTopicDescription.value = j.topic_description || '';
 
             editJournalPhotosPreview.innerHTML = '';
@@ -550,17 +566,18 @@
         let currentEditingJournal = null;
 
         window.openEditAttendance = async function(idJournal) {
-            const j = allJournals.find(item => Number(item.id_journal) === Number(idJournal));
+            const j = allJournals.find(item => Number(item.id_journal || item.id_jurnal) === Number(idJournal));
             if (!j) return;
 
-            if (!isJournalEditable(j.journal_date)) {
+            const jDate = j.journal_date || j.date;
+            if (!isJournalEditable(jDate)) {
                 alert('Presensi untuk jurnal ini telah melewati batas waktu 1 hari dan tidak dapat diedit!');
                 return;
             }
 
             currentEditingJournal = j;
             const clsName = j.schedule?.school_class ? `${j.schedule.school_class.kelas_nomor} ${j.schedule.school_class.nama_kelas} ${j.schedule.school_class.nomor_kelas || ''}` : '';
-            document.getElementById('attendanceModalSubtitle').textContent = `${clsName} • Tanggal: ${j.journal_date}`;
+            document.getElementById('attendanceModalSubtitle').textContent = `${clsName} • Tanggal: ${jDate}`;
 
             const tbody = document.getElementById('attendanceEditTableBody');
             tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-400">Memuat data siswa kelas...</td></tr>';
@@ -687,17 +704,18 @@
         // LOGIKA HAPUS JURNAL
         // =========================================================================
         window.deleteJournalPrompt = function(idJournal) {
-            const j = allJournals.find(item => Number(item.id_journal) === Number(idJournal));
+            const j = allJournals.find(item => Number(item.id_journal || item.id_jurnal) === Number(idJournal));
             if (!j) return;
 
-            if (!isJournalEditable(j.journal_date)) {
+            const jDate = j.journal_date || j.date;
+            if (!isJournalEditable(jDate)) {
                 alert('Jurnal ini telah melewati batas waktu 1 hari dan tidak dapat dihapus!');
                 return;
             }
 
             showConfirmModal(
                 'Konfirmasi Hapus Jurnal',
-                `Apakah Anda yakin ingin menghapus jurnal tanggal ${j.journal_date}? Seluruh foto dan catatan materi akan dihapus permanen.`,
+                `Apakah Anda yakin ingin menghapus jurnal tanggal ${jDate}? Seluruh foto dan catatan materi akan dihapus permanen.`,
                 true,
                 async () => {
                     try {
