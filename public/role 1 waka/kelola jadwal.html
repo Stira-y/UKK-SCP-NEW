@@ -1576,38 +1576,59 @@
         }
 
         async function executeDeleteSchedules(idClass) {
-            const targets = allSchedules.filter(s => Number(s.id_class) === Number(idClass) && String(s.cycle_type) === String(currentCycle));
-
             try {
-                for (const item of targets) {
-                    await fetch(`${API_BASE_URL}/schedules/${item.id_schedule}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                    });
+                const res = await fetch(`${API_BASE_URL}/schedules/bulk-delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id_class: idClass,
+                        cycle_type: String(currentCycle)
+                    })
+                });
+                const resJson = await res.json();
+                if (res.ok) {
+                    alert('Jadwal kelas berhasil dihapus!');
+                    await fetchSchedules();
+                    renderClassTable();
+                } else {
+                    alert(resJson.message || 'Gagal menghapus jadwal.');
                 }
-                alert('Jadwal kelas berhasil dihapus!');
-                await fetchSchedules();
-                renderClassTable();
             } catch (err) {
-                alert('Terjadi kesalahan saat menghapus jadwal.');
+                console.error(err);
+                alert('Terjadi kesalahan saat menghapus jadwal: ' + err.message);
             }
         }
 
         // Hapus Massal Jadwal untuk Kelas Tercentang
         async function executeBulkDeleteSchedules(classIds) {
             try {
-                const targets = allSchedules.filter(s => classIds.includes(Number(s.id_class)) && String(s.cycle_type) === String(currentCycle));
-                for (const item of targets) {
-                    await fetch(`${API_BASE_URL}/schedules/${item.id_schedule}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                    });
+                const res = await fetch(`${API_BASE_URL}/schedules/bulk-delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        class_ids: classIds,
+                        cycle_type: String(currentCycle)
+                    })
+                });
+                const resJson = await res.json();
+                if (res.ok) {
+                    alert(`Semua jadwal untuk ${classIds.length} kelas terpilih berhasil dihapus!`);
+                    if (checkAllClasses) checkAllClasses.checked = false;
+                    await fetchSchedules();
+                    renderClassTable();
+                } else {
+                    alert(resJson.message || 'Gagal menghapus jadwal.');
                 }
-                alert(`Semua jadwal untuk ${classIds.length} kelas terpilih berhasil dihapus!`);
-                if (checkAllClasses) checkAllClasses.checked = false;
-                await fetchSchedules();
-                renderClassTable();
             } catch (err) {
+                console.error(err);
                 alert('Terjadi kesalahan saat menghapus jadwal: ' + err.message);
             }
         }
@@ -2113,12 +2134,31 @@
                     return;
                 }
 
+                importPdfProgressBar.style.width = '70%';
+                importPdfProgressPct.textContent = '70%';
+                importPdfProgressLabel.textContent = `Menyiapkan jadwal Putaran ${targetCycle}...`;
+
+                // Bersihkan jadwal putaran target terlebih dahulu dengan bulk-delete 1 kali (sangat cepat & aman)
+                try {
+                    await fetch(`${API_BASE_URL}/schedules/bulk-delete`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ cycle_type: String(targetCycle) })
+                    });
+                } catch (delErr) {
+                    console.warn('Pembersihan jadwal awal dilewati:', delErr);
+                }
+
                 importPdfProgressBar.style.width = '75%';
                 importPdfProgressPct.textContent = '75%';
                 importPdfProgressLabel.textContent = `Menyimpan ${payloadItems.length} jadwal (Putaran ${targetCycle}) ke database...`;
 
-                // Kirim per batch 150 agar cepat dan stabil tanpa timeout
-                const BATCH_SIZE = 150;
+                // Kirim per batch 200 (sekarang secepat kilat tanpa timeout)
+                const BATCH_SIZE = 200;
                 let totalSuccess = 0;
                 let totalErrors = [];
 
@@ -2316,6 +2356,6 @@
             doc.save(`Jadwal_Kelas_${currentTingkat}_Putaran_${currentCycle}.pdf`);
         });
     </script>
-    <script src="../js/global-layout.js?v=20261108_6.0"></script>
+    <script src="../js/global-layout.js?v=20261108_7.0"></script>
 </body>
 </html>

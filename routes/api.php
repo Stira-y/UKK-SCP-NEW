@@ -216,8 +216,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('attendances', AttendanceController::class);
     Route::apiResource('leave-requests', LeaveRequestController::class);
 
-    // Route Import Excel Batch Jadwal
+    // Route Import Excel/PDF Batch & Bulk Delete Jadwal
     Route::post('schedules/import-batch', [ScheduleController::class, 'importBatch']);
+    Route::post('schedules/bulk-delete', [ScheduleController::class, 'bulkDelete']);
     Route::apiResource('schedules', ScheduleController::class);
 });
 
@@ -235,6 +236,19 @@ Route::get('deploy-migrate-{secret}', function (Request $request, $secret) {
     }
 
     try {
+        if ($request->has('log')) {
+            $logFile = storage_path('logs/laravel.log');
+            if (file_exists($logFile)) {
+                $lines = file($logFile);
+                $lastLines = array_slice($lines, -150);
+                return response()->json([
+                    'status' => 'success',
+                    'log'    => implode('', $lastLines)
+                ]);
+            }
+            return response()->json(['status' => 'success', 'log' => 'No log file found.']);
+        }
+
         // 1. Jalankan migrasi database
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         $migrateOutput = trim(\Illuminate\Support\Facades\Artisan::output());

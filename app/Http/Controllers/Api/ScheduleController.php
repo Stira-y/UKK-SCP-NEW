@@ -304,6 +304,30 @@ class ScheduleController extends Controller
         ], 200);
     }
 
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'cycle_type' => 'required',
+        ]);
+
+        $cycle = (string)$request->cycle_type;
+        $query = Schedule::where('cycle_type', $cycle);
+
+        if ($request->has('class_ids') && is_array($request->class_ids) && count($request->class_ids) > 0) {
+            $query->whereIn('id_class', $request->class_ids);
+        } elseif ($request->has('id_class') && !empty($request->id_class)) {
+            $query->where('id_class', $request->id_class);
+        }
+
+        $deletedCount = $query->delete();
+
+        return response()->json([
+            'status'        => 'success',
+            'message'       => "Berhasil menghapus {$deletedCount} data jadwal.",
+            'deleted_count' => $deletedCount
+        ], 200);
+    }
+
     public function importBatch(Request $request)
     {
         $request->validate([
@@ -323,6 +347,8 @@ class ScheduleController extends Controller
 
         $importedCount = 0;
         $errors = [];
+        $now = now();
+        $insertRows = [];
 
         // Helper untuk normalisasi ruangan
         $normalizeRoom = function ($raw) {
@@ -357,7 +383,6 @@ class ScheduleController extends Controller
             }
 
             if (!$matchedClass) {
-                // Fallback check dengan format teks biasa
                 $cleanClassRegular = preg_replace('/\s+/', ' ', trim($item['kelas']));
                 foreach ($classes as $c) {
                     $fullC1 = trim($c->kelas_nomor . ' ' . $c->nama_kelas . ' ' . ($c->nomor_kelas ?? ''));
@@ -375,7 +400,6 @@ class ScheduleController extends Controller
             }
 
             $rawGuru = trim($item['guru']);
-            // Bersihkan tanda petik dan nomor kode guru (contoh: "34.DWI LESMIYATI, S.Pd." -> DWI LESMIYATI, S.Pd.)
             $cleanGuruStr = preg_replace('/^"|\d+[\.,]\s*|"$/', '', $rawGuru);
             $cleanGuruStr = trim($cleanGuruStr, '" \t\n\r');
             if (empty($cleanGuruStr)) $cleanGuruStr = $rawGuru;
@@ -397,7 +421,6 @@ class ScheduleController extends Controller
             });
 
             if (!$matchedGuru) {
-                // Buat user guru otomatis jika belum ada agar import tidak gagal
                 $cleanUser = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', explode(',', $cleanGuruStr)[0]));
                 if (empty($cleanUser)) $cleanUser = 'guru_' . time() . '_' . rand(10, 99);
                 $baseU = $cleanUser;
@@ -443,7 +466,6 @@ class ScheduleController extends Controller
             }
 
             if (!$matchedRoom && !empty($rawRoom) && $rawRoom !== '-') {
-                // Buat ruangan otomatis di database agar jadwal tetap tersimpan
                 $matchedRoom = Room::create([
                     'nama_room'  => $normName ?: $rawRoom,
                     'nomor_room' => $normNum,
@@ -452,7 +474,6 @@ class ScheduleController extends Controller
             }
 
             if (!$matchedRoom) {
-                // Cari atau buat ruangan default 'Ruang Kelas'
                 $matchedRoom = $rooms->first(function ($r) { return strcasecmp($r->nama_room, 'Ruang') === 0; }) ?? $rooms->first();
                 if (!$matchedRoom) {
                     $matchedRoom = Room::create(['nama_room' => 'Ruang 1', 'nomor_room' => 1]);
@@ -475,37 +496,25 @@ class ScheduleController extends Controller
             $day = $item['hari'];
             $cycle = $item['cycle_type'];
             $mapelName = trim($item['mapel']);
-            $isBreak = (strcasecmp($mapelName, 'Istirahat') === 0 || strcasecmp($mapelName, 'Istirahat I') === 0 || strcasecmp($mapelName, 'Istirahat II') === 0);
 
-            if (!$isBreak) {
-                // Hapus jadwal usang yang tumpang-tindih dengan jam berbeda agar jadwal impor resmi PDF dapat masuk tanpa bentrok
-                Schedule::where('id_class', $matchedClass->id_class)
-                    ->where('day_of_week', $day)
-                    ->where('cycle_type', $cycle)
-                    ->where(function ($timeQ) use ($startTime, $endTime) {
-                        $timeQ->where('start_time', '<', $endTime)
-                              ->where('end_time', '>', $startTime);
-                    })
-                    ->where('start_time', '!=', $startTime)
-                    ->delete();
-            }
+            $insertRows[] = [
+                'id_class'    => $matchedClass->id_class,
+                'id_guru'     => $matchedGuru->id_user,
+                'id_room'     => $matchedRoom->id_room,
+                'mapel'       => $mapelName,
+                'day_of_week' => $day,
+                'start_time'  => $startTime,
+                'end_time'    => $endTime,
+                'cycle_type'  => $cycle,
+                'created_at'  => $now,
+                'updated_at'  => $now,
+            ];
+        }
 
-            Schedule::updateOrCreate(
-                [
-                    'id_class'    => $matchedClass->id_class,
-                    'day_of_week' => $day,
-                    'start_time'  => $startTime,
-                    'end_time'    => $endTime,
-                    'cycle_type'  => $cycle,
-                ],
-                [
-                    'id_guru'     => $matchedGuru->id_user,
-                    'id_room'     => $matchedRoom->id_room,
-                    'mapel'       => $mapelName,
-                ]
-            );
-
-            $importedCount++;
+        if (count($insertRows) > 0) {
+            // Bulk insert secepat kilat (1 single SQL query)
+            Schedule::insert($insertRows);
+            $importedCount = count($insertRows);
         }
 
         if ($importedCount === 0 && count($errors) > 0) {
