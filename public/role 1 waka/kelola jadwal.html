@@ -83,21 +83,24 @@
                                 </button>
                             </div>
 
-                            <!-- Tombol Room -->
-                            <button id="btnOpenRooms" onclick="handleOpenRooms()" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5">
-                                <span id="roomBtnIcon">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                                </span>
-                                <span>Room</span>
-                            </button>
+                            <!-- Group Tombol Room & Tambah Jadwal (Selalu Bersisian) -->
+                            <div class="flex items-center space-x-2 shrink-0">
+                                <!-- Tombol Room -->
+                                <button id="btnOpenRooms" onclick="handleOpenRooms()" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5 whitespace-nowrap">
+                                    <span id="roomBtnIcon">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    </span>
+                                    <span>Room</span>
+                                </button>
 
-                            <!-- Tombol Tambah Jadwal -->
-                            <button id="btnOpenAddSchedule" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5">
-                                <span id="addScheduleBtnIcon">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                                </span>
-                                <span>Tambah Jadwal</span>
-                            </button>
+                                <!-- Tombol Tambah Jadwal -->
+                                <button id="btnOpenAddSchedule" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5 whitespace-nowrap">
+                                    <span id="addScheduleBtnIcon">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    </span>
+                                    <span>Tambah Jadwal</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -138,7 +141,12 @@
                                     <th class="py-3.5 px-4 font-semibold text-center w-24">Kelas</th>
                                     <th class="py-3.5 px-4 font-semibold">Nama Kelas</th>
                                     <th class="py-3.5 px-4 font-semibold text-center w-36">Nomor Kelas</th>
-                                    <th class="py-3.5 px-4 font-semibold text-center w-44">Aksi</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-48">
+                                        <div class="inline-flex items-center justify-center space-x-2">
+                                            <input type="checkbox" id="checkAllClasses" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer" title="Pilih Semua Kelas">
+                                            <span>Aksi</span>
+                                        </div>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody id="classTableBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
@@ -287,9 +295,15 @@
                 </div>
             </form>
 
-            <div class="bg-slate-50 px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 shrink-0">
-                <button type="button" id="btnCancelEditSchedule" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">Batal</button>
-                <button type="button" id="btnTriggerEditScheduleSave" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition shadow">Simpan</button>
+            <div class="bg-slate-50 px-6 py-3.5 flex justify-between items-center border-t border-slate-200 shrink-0">
+                <button type="button" id="btnDeleteSingleSchedule" class="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs" title="Hapus jadwal ini">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    <span>Hapus</span>
+                </button>
+                <div class="flex items-center space-x-2">
+                    <button type="button" id="btnCancelEditSchedule" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition">Batal</button>
+                    <button type="button" id="btnTriggerEditScheduleSave" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow">Simpan</button>
+                </div>
             </div>
         </div>
     </div>
@@ -401,6 +415,67 @@
             <div class="bg-slate-50 px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 shrink-0">
                 <button type="button" id="btnCancelFormSchedule" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">Batal</button>
                 <button type="button" id="btnTriggerScheduleSave" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition shadow">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POP-UP FITUR IMPORT PDF: UPLOAD JADWAL & UPLOAD RUANG -->
+    <div id="modalImportPdf" class="fixed inset-0 bg-slate-950/70 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col transform transition-all animate-in fade-in zoom-in duration-150">
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    <h3 class="font-bold text-base md:text-lg">Import File PDF</h3>
+                </div>
+                <button type="button" id="btnCloseModalImportPdf" class="text-indigo-200 hover:text-white text-2xl font-bold leading-none">&times;</button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    Silakan unggah kedua berkas PDF (Jadwal Pelajaran & Jadwal Ruangan) di bawah ini. Tombol simpan akan aktif secara otomatis setelah kedua berkas terpenuhi.
+                </p>
+
+                <!-- 1. Upload jadwal -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1 flex items-center justify-between">
+                        <span>Upload jadwal</span>
+                        <span id="badgeFileJadwal" class="text-[11px] font-semibold text-red-500">Belum dipilih</span>
+                    </label>
+                    <div id="dropzoneJadwal" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-xl p-3.5 text-center cursor-pointer bg-slate-50 transition" onclick="document.getElementById('inputPdfJadwal').click()">
+                        <svg class="w-6 h-6 mx-auto text-slate-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <p id="labelPdfJadwal" class="text-xs font-medium text-slate-600 truncate">Pilih berkas PDF Jadwal Pelajaran...</p>
+                        <input type="file" id="inputPdfJadwal" accept=".pdf" class="hidden">
+                    </div>
+                </div>
+
+                <!-- 2. Upload ruang -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1 flex items-center justify-between">
+                        <span>Upload ruang</span>
+                        <span id="badgeFileRuang" class="text-[11px] font-semibold text-red-500">Belum dipilih</span>
+                    </label>
+                    <div id="dropzoneRuang" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-xl p-3.5 text-center cursor-pointer bg-slate-50 transition" onclick="document.getElementById('inputPdfRuang').click()">
+                        <svg class="w-6 h-6 mx-auto text-slate-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                        <p id="labelPdfRuang" class="text-xs font-medium text-slate-600 truncate">Pilih berkas PDF Jadwal Ruangan...</p>
+                        <input type="file" id="inputPdfRuang" accept=".pdf" class="hidden">
+                    </div>
+                </div>
+
+                <!-- Status & Progress -->
+                <div id="importPdfProgressBox" class="hidden space-y-1.5 bg-indigo-50/70 p-3 rounded-xl border border-indigo-100">
+                    <div class="flex items-center justify-between text-xs font-semibold text-indigo-800">
+                        <span id="importPdfProgressLabel">Membaca berkas...</span>
+                        <span id="importPdfProgressPct">0%</span>
+                    </div>
+                    <div class="w-full bg-indigo-200/60 rounded-full h-2 overflow-hidden">
+                        <div id="importPdfProgressBar" class="bg-indigo-600 h-2 rounded-full transition-all duration-200" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 shrink-0">
+                <button type="button" id="btnCancelModalImportPdf" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition">Batal</button>
+                <button type="button" id="btnSubmitModalImportPdf" disabled class="px-5 py-2 rounded-xl text-xs font-bold transition shadow opacity-40 cursor-not-allowed bg-slate-300 text-slate-500">Simpan</button>
             </div>
         </div>
     </div>
@@ -847,6 +922,7 @@
                 if (isScheduleLocked) {
                     actionButtonsHtml = `
                         <div class="inline-flex items-center justify-center space-x-2">
+                            <input type="checkbox" disabled class="class-row-checkbox w-4 h-4 rounded text-slate-300 opacity-50 cursor-not-allowed mr-1" value="${c.id_class}">
                             <span class="text-slate-400 p-2 cursor-not-allowed" title="Jadwal Terkunci">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                             </span>
@@ -858,12 +934,13 @@
                 } else {
                     actionButtonsHtml = `
                         <div class="inline-flex items-center justify-center space-x-2">
+                            <input type="checkbox" class="class-row-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer mr-1" value="${c.id_class}">
                             <!-- Tombol Edit Jadwal Kelas -->
                             <button onclick="openClassScheduleModal(${c.id_class}, '${c.kelas_nomor}', '${c.nama_kelas}', '${nomor}')" class="text-amber-600 bg-amber-50 hover:bg-amber-100 p-2 rounded-lg transition active:scale-95 shadow-sm" title="Edit Jadwal Kelas">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                             </button>
                             <!-- Tombol Hapus Jadwal Kelas -->
-                            <button onclick="deleteSchedulesByClass(${c.id_class})" class="text-red-600 bg-red-50 hover:bg-red-100 p-2 rounded-lg transition active:scale-95 shadow-sm" title="Hapus Semua Jadwal Kelas Ini">
+                            <button onclick="handleDeleteAction(${c.id_class})" class="text-red-600 bg-red-50 hover:bg-red-100 p-2 rounded-lg transition active:scale-95 shadow-sm" title="Hapus Jadwal Kelas">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                             </button>
                         </div>
@@ -874,7 +951,8 @@
                     <tr class="${rowHoverClass} transition border-b border-slate-200/80">
                         <td class="py-3.5 px-4 font-semibold text-center text-slate-800">${c.kelas_nomor}</td>
                         <td class="py-3.5 px-4 font-bold ${nameColorClass} cursor-pointer" onclick="openClassScheduleModal(${c.id_class}, '${c.kelas_nomor}', '${c.nama_kelas}', '${nomor}')">
-                            ${c.nama_kelas}
+                            <span>${c.nama_kelas}</span>
+                            <span class="text-xs text-slate-400 font-normal italic opacity-60 ml-2">klik untuk melihat</span>
                         </td>
                         <td class="py-3.5 px-4 font-medium text-center">${nomor}</td>
                         <td class="py-3.5 px-4 text-center">
@@ -885,8 +963,11 @@
             }).join('');
         }
 
+        let currentClassDetailId = null;
+
         // Tampilkan semua jadwal di modal tanpa kolom Jam Ke
         window.openClassScheduleModal = function(idClass, tingkat, namaKelas, nomor) {
+            currentClassDetailId = idClass;
             const classNameFull = `${tingkat} ${namaKelas} ${nomor !== '-' ? nomor : ''}`.trim();
             modalDetailTitle.textContent = `Jadwal Pelajaran - ${classNameFull}`;
             badgeCurrentCycle.textContent = `Putaran ${currentCycle}`;
@@ -901,14 +982,28 @@
                     const room = s.room ? `${s.room.nama_room || ''} ${s.room.nomor_room ? '(' + s.room.nomor_room + ')' : ''}`.trim() : '-';
                     const waktu = `${(s.start_time || '').substring(0, 5)} - ${(s.end_time || '').substring(0, 5)}`;
 
+                    let rowBgClass = 'bg-blue-50/80 hover:bg-blue-100 text-blue-900 border-b border-blue-200';
+                    let titleColor = 'text-blue-950';
+                    let cycleColor = 'text-blue-700';
+
+                    if (s.day_of_week === 'Selasa') {
+                        rowBgClass = 'bg-amber-50/90 hover:bg-amber-100 text-amber-950 border-b border-amber-200';
+                        titleColor = 'text-amber-950';
+                        cycleColor = 'text-amber-700';
+                    } else if (s.day_of_week === 'Kamis') {
+                        rowBgClass = 'bg-emerald-50/90 hover:bg-emerald-100 text-emerald-950 border-b border-emerald-200';
+                        titleColor = 'text-emerald-950';
+                        cycleColor = 'text-emerald-700';
+                    }
+
                     return `
-                        <tr onclick="openSingleScheduleEdit(${s.id_schedule})" class="bg-blue-50/80 hover:bg-blue-100 text-blue-900 border-b border-blue-200 transition cursor-pointer font-medium" title="Klik baris ini untuk mengedit data jadwal">
+                        <tr onclick="openSingleScheduleEdit(${s.id_schedule})" class="${rowBgClass} transition cursor-pointer font-medium" title="Klik baris ini untuk mengedit data jadwal">
                             <td class="py-3 px-3 font-bold text-center">${s.day_of_week}</td>
                             <td class="py-3 px-3 font-mono text-center text-xs">${waktu}</td>
-                            <td class="py-3 px-4 font-bold text-blue-950">${s.mapel}</td>
+                            <td class="py-3 px-4 font-bold ${titleColor}">${s.mapel}</td>
                             <td class="py-3 px-4">${guru}</td>
                             <td class="py-3 px-3 text-center">${room}</td>
-                            <td class="py-3 px-3 text-center font-bold text-blue-700">${s.cycle_type}</td>
+                            <td class="py-3 px-3 text-center font-bold ${cycleColor}">P${s.cycle_type}</td>
                         </tr>
                     `;
                 }).join('');
@@ -1098,10 +1193,70 @@
             confirmScheduleActionModal.classList.remove('hidden');
         };
 
+        // Handler Checkbox Aksi & Bulk Delete Jadwal
+        let pendingBulkDeleteClassIds = [];
+        let pendingDeleteScheduleId = null;
+
+        const checkAllClasses = document.getElementById('checkAllClasses');
+        if (checkAllClasses) {
+            checkAllClasses.addEventListener('change', (e) => {
+                const checked = e.target.checked;
+                document.querySelectorAll('.class-row-checkbox:not(:disabled)').forEach(cb => {
+                    cb.checked = checked;
+                });
+            });
+        }
+
+        window.handleDeleteAction = function(idClass) {
+            if (isScheduleLocked) return;
+            const checkedBoxes = Array.from(document.querySelectorAll('.class-row-checkbox:checked'));
+            if (checkedBoxes.length > 0) {
+                const ids = checkedBoxes.map(cb => Number(cb.value));
+                pendingActionType = 'bulk_delete_schedules';
+                pendingBulkDeleteClassIds = ids;
+
+                confirmActionTitle.textContent = 'Hapus Jadwal Terpilih';
+                confirmActionDesc.textContent = `Apakah Anda yakin ingin menghapus seluruh jadwal untuk ${ids.length} kelas yang dipilih pada Putaran ${currentCycle}?`;
+                confirmActionIconWrapper.className = 'w-12 h-12 rounded-full bg-red-50 text-red-600 mx-auto flex items-center justify-center mb-4';
+                btnConfirmActionYes.className = 'w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-md';
+                btnConfirmActionYes.textContent = 'Yakin';
+
+                confirmScheduleActionModal.classList.remove('hidden');
+            } else {
+                deleteSchedulesByClass(idClass);
+            }
+        };
+
+        // Tombol Hapus Single Jadwal pada Modal Edit
+        const btnDeleteSingleSchedule = document.getElementById('btnDeleteSingleSchedule');
+        if (btnDeleteSingleSchedule) {
+            btnDeleteSingleSchedule.addEventListener('click', () => {
+                if (isScheduleLocked) {
+                    alert('Jadwal sedang dikunci oleh Waka/Admin!');
+                    return;
+                }
+                const sid = editScheduleId.value;
+                if (!sid) return;
+
+                pendingActionType = 'delete_single_schedule';
+                pendingDeleteScheduleId = sid;
+
+                confirmActionTitle.textContent = 'Konfirmasi Hapus Jadwal';
+                confirmActionDesc.textContent = 'Apakah Anda yakin ingin menghapus data jadwal pelajaran ini? Tindakan ini tidak dapat dibatalkan.';
+                confirmActionIconWrapper.className = 'w-12 h-12 rounded-full bg-red-50 text-red-600 mx-auto flex items-center justify-center mb-4';
+                btnConfirmActionYes.className = 'w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-md';
+                btnConfirmActionYes.textContent = 'Yakin';
+
+                confirmScheduleActionModal.classList.remove('hidden');
+            });
+        }
+
         btnConfirmActionNo.addEventListener('click', () => {
             confirmScheduleActionModal.classList.add('hidden');
             pendingActionType = null;
             pendingDeleteClassId = null;
+            pendingBulkDeleteClassIds = [];
+            pendingDeleteScheduleId = null;
             pendingLockCycleVal = null;
             pendingToggleLockVal = null;
         });
@@ -1115,6 +1270,12 @@
                 await executeSaveEditSchedule();
             } else if (pendingActionType === 'delete') {
                 await executeDeleteSchedules(pendingDeleteClassId);
+            } else if (pendingActionType === 'bulk_delete_schedules') {
+                await executeBulkDeleteSchedules(pendingBulkDeleteClassIds);
+            } else if (pendingActionType === 'delete_single_schedule') {
+                await executeDeleteSingleSchedule(pendingDeleteScheduleId);
+            } else if (pendingActionType === 'import_pdf') {
+                await executeImportPdfModal();
             } else if (pendingActionType === 'lock_cycle') {
                 await executeLockActiveCycle(pendingLockCycleVal);
             } else if (pendingActionType === 'toggle_lock') {
@@ -1123,6 +1284,8 @@
 
             pendingActionType = null;
             pendingDeleteClassId = null;
+            pendingBulkDeleteClassIds = [];
+            pendingDeleteScheduleId = null;
             pendingLockCycleVal = null;
             pendingToggleLockVal = null;
         });
@@ -1305,44 +1468,206 @@
             }
         }
 
-        // Download Template PDF Jadwal Guru FET
+        // Hapus Massal Jadwal untuk Kelas Tercentang
+        async function executeBulkDeleteSchedules(classIds) {
+            try {
+                const targets = allSchedules.filter(s => classIds.includes(Number(s.id_class)) && String(s.cycle_type) === String(currentCycle));
+                for (const item of targets) {
+                    await fetch(`${API_BASE_URL}/schedules/${item.id_schedule}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    });
+                }
+                alert(`Semua jadwal untuk ${classIds.length} kelas terpilih berhasil dihapus!`);
+                if (checkAllClasses) checkAllClasses.checked = false;
+                await fetchSchedules();
+                renderClassTable();
+            } catch (err) {
+                alert('Terjadi kesalahan saat menghapus jadwal: ' + err.message);
+            }
+        }
+
+        // Hapus Single Jadwal dari Modal Edit
+        async function executeDeleteSingleSchedule(scheduleId) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/schedules/${scheduleId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                if (res.ok) {
+                    alert('Data jadwal berhasil dihapus!');
+                    formEditScheduleModal.classList.add('hidden');
+                    await fetchSchedules();
+                    renderClassTable();
+                    if (!detailScheduleModal.classList.contains('hidden') && currentClassDetailId) {
+                        const c = allClasses.find(item => Number(item.id_class) === Number(currentClassDetailId));
+                        if (c) {
+                            openClassScheduleModal(c.id_class, c.kelas_nomor, c.nama_kelas, c.nomor_kelas || '-');
+                        }
+                    }
+                } else {
+                    const json = await res.json();
+                    alert(json.message || 'Gagal menghapus jadwal.');
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan koneksi saat menghapus jadwal.');
+            }
+        }
+
+        // Download Template PDF: Unduh 2 file PDF (Jadwal Pelajaran & Jadwal Ruang)
         btnDownloadTemplate.addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.href = '../templates/TEMPLATE_JADWAL_GURU.pdf';
-            link.download = 'TEMPLATE_JADWAL_GURU_PDF.pdf';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const link1 = document.createElement('a');
+            link1.href = '../templates/TEMPLATE_JADWAL_PELAJARAN.pdf';
+            link1.download = 'TEMPLATE_JADWAL_PELAJARAN.pdf';
+            document.body.appendChild(link1);
+            link1.click();
+            document.body.removeChild(link1);
+
+            setTimeout(() => {
+                const link2 = document.createElement('a');
+                link2.href = '../templates/TEMPLATE_JADWAL_RUANG.pdf';
+                link2.download = 'TEMPLATE_JADWAL_RUANG.pdf';
+                document.body.appendChild(link2);
+                link2.click();
+                document.body.removeChild(link2);
+            }, 400);
         });
 
-        // Trigger PDF File Selector
+        // =========================================================================
+        // FITUR IMPORT BERKAS PDF (JADWAL & RUANG)
+        // =========================================================================
+        const modalImportPdf = document.getElementById('modalImportPdf');
+        const btnCloseModalImportPdf = document.getElementById('btnCloseModalImportPdf');
+        const btnCancelModalImportPdf = document.getElementById('btnCancelModalImportPdf');
+        const inputPdfJadwal = document.getElementById('inputPdfJadwal');
+        const inputPdfRuang = document.getElementById('inputPdfRuang');
+        const labelPdfJadwal = document.getElementById('labelPdfJadwal');
+        const labelPdfRuang = document.getElementById('labelPdfRuang');
+        const badgeFileJadwal = document.getElementById('badgeFileJadwal');
+        const badgeFileRuang = document.getElementById('badgeFileRuang');
+        const btnSubmitModalImportPdf = document.getElementById('btnSubmitModalImportPdf');
+        const importPdfProgressBox = document.getElementById('importPdfProgressBox');
+        const importPdfProgressLabel = document.getElementById('importPdfProgressLabel');
+        const importPdfProgressPct = document.getElementById('importPdfProgressPct');
+        const importPdfProgressBar = document.getElementById('importPdfProgressBar');
+
         btnTriggerPdfImport.addEventListener('click', () => {
             if (isScheduleLocked) {
                 alert('Jadwal sedang dikunci oleh Waka/Admin!');
                 return;
             }
-            pdfFileInput.value = '';
-            pdfFileInput.click();
+            inputPdfJadwal.value = '';
+            inputPdfRuang.value = '';
+            labelPdfJadwal.textContent = 'Pilih berkas PDF Jadwal Pelajaran...';
+            labelPdfRuang.textContent = 'Pilih berkas PDF Jadwal Ruangan...';
+            badgeFileJadwal.className = 'text-[11px] font-semibold text-red-500';
+            badgeFileJadwal.textContent = 'Belum dipilih';
+            badgeFileRuang.className = 'text-[11px] font-semibold text-red-500';
+            badgeFileRuang.textContent = 'Belum dipilih';
+
+            btnSubmitModalImportPdf.disabled = true;
+            btnSubmitModalImportPdf.className = 'px-5 py-2 rounded-xl text-xs font-bold transition shadow opacity-40 cursor-not-allowed bg-slate-300 text-slate-500';
+            importPdfProgressBox.classList.add('hidden');
+
+            modalImportPdf.classList.remove('hidden');
         });
 
-        // Handler Parsing File PDF Jadwal Guru FET 5.44.9
-        pdfFileInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+        if (btnCloseModalImportPdf) btnCloseModalImportPdf.addEventListener('click', () => modalImportPdf.classList.add('hidden'));
+        if (btnCancelModalImportPdf) btnCancelModalImportPdf.addEventListener('click', () => modalImportPdf.classList.add('hidden'));
 
-            if (!file.name.toLowerCase().endsWith('.pdf')) {
-                alert('Harap unggah file dokumen berformat PDF!');
-                pdfFileInput.value = '';
-                return;
+        function checkBothPdfSelected() {
+            const hasJadwal = inputPdfJadwal.files && inputPdfJadwal.files.length > 0;
+            const hasRuang = inputPdfRuang.files && inputPdfRuang.files.length > 0;
+            if (hasJadwal && hasRuang) {
+                btnSubmitModalImportPdf.disabled = false;
+                btnSubmitModalImportPdf.className = 'px-5 py-2 rounded-xl text-xs font-bold transition shadow bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer active:scale-95';
+            } else {
+                btnSubmitModalImportPdf.disabled = true;
+                btnSubmitModalImportPdf.className = 'px-5 py-2 rounded-xl text-xs font-bold transition shadow opacity-40 cursor-not-allowed bg-slate-300 text-slate-500';
             }
+        }
 
-            btnTriggerPdfImport.disabled = true;
-            btnTriggerPdfImport.innerHTML = `<span>Membaca PDF...</span>`;
+        inputPdfJadwal.addEventListener('change', (e) => {
+            const f = e.target.files[0];
+            if (f) {
+                labelPdfJadwal.textContent = f.name;
+                badgeFileJadwal.className = 'text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full';
+                badgeFileJadwal.textContent = 'Sudah dipilih';
+            } else {
+                labelPdfJadwal.textContent = 'Pilih berkas PDF Jadwal Pelajaran...';
+                badgeFileJadwal.className = 'text-[11px] font-semibold text-red-500';
+                badgeFileJadwal.textContent = 'Belum dipilih';
+            }
+            checkBothPdfSelected();
+        });
+
+        inputPdfRuang.addEventListener('change', (e) => {
+            const f = e.target.files[0];
+            if (f) {
+                labelPdfRuang.textContent = f.name;
+                badgeFileRuang.className = 'text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full';
+                badgeFileRuang.textContent = 'Sudah dipilih';
+            } else {
+                labelPdfRuang.textContent = 'Pilih berkas PDF Jadwal Ruangan...';
+                badgeFileRuang.className = 'text-[11px] font-semibold text-red-500';
+                badgeFileRuang.textContent = 'Belum dipilih';
+            }
+            checkBothPdfSelected();
+        });
+
+        btnSubmitModalImportPdf.addEventListener('click', () => {
+            if (btnSubmitModalImportPdf.disabled) return;
+
+            pendingActionType = 'import_pdf';
+
+            confirmActionTitle.textContent = 'Konfirmasi Import Jadwal & Ruang';
+            confirmActionDesc.textContent = 'Apakah Anda yakin ingin memproses dan mengimpor jadwal serta ruangan dari kedua berkas PDF ini? Data jadwal yang ada akan diperbarui sesuai berkas.';
+            confirmActionIconWrapper.className = 'w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 mx-auto flex items-center justify-center mb-4';
+            btnConfirmActionYes.className = 'w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md';
+            btnConfirmActionYes.textContent = 'Yakin';
+
+            confirmScheduleActionModal.classList.remove('hidden');
+        });
+
+        async function executeImportPdfModal() {
+            const fileJadwal = inputPdfJadwal.files[0];
+            const fileRuang = inputPdfRuang.files[0];
+            if (!fileJadwal || !fileRuang) return;
+
+            importPdfProgressBox.classList.remove('hidden');
+            importPdfProgressBar.style.width = '20%';
+            importPdfProgressPct.textContent = '20%';
+            importPdfProgressLabel.textContent = 'Membaca berkas PDF Jadwal & Ruang...';
 
             try {
-                const arrayBuffer = await file.arrayBuffer();
-                const typedarray = new Uint8Array(arrayBuffer);
-                const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+                const abJadwal = await fileJadwal.arrayBuffer();
+                const pdfJadwal = await pdfjsLib.getDocument({ data: new Uint8Array(abJadwal) }).promise;
+
+                const abRuang = await fileRuang.arrayBuffer();
+                const pdfRuang = await pdfjsLib.getDocument({ data: new Uint8Array(abRuang) }).promise;
+
+                importPdfProgressBar.style.width = '40%';
+                importPdfProgressPct.textContent = '40%';
+                importPdfProgressLabel.textContent = 'Mengekstrak alokasi ruangan...';
+
+                // 1. Ekstrak peta ruangan dari berkas jadwal ruang (Halaman 1-3)
+                const roomAllocationMap = {};
+                for (let rPage = 1; rPage <= pdfRuang.numPages; rPage++) {
+                    const page = await pdfRuang.getPage(rPage);
+                    const tc = await page.getTextContent();
+                    const textLines = tc.items.map(it => it.str.trim()).filter(Boolean);
+                    textLines.forEach(line => {
+                        const m = line.match(/(X|XI|XII)\s+([A-Za-z0-9\-]+)\s+(.+)/);
+                        if (m) {
+                            const cKey = `${m[1]} ${m[2]}`.trim().toLowerCase();
+                            roomAllocationMap[cKey] = m[3].trim();
+                        }
+                    });
+                }
+
+                importPdfProgressBar.style.width = '60%';
+                importPdfProgressPct.textContent = '60%';
+                importPdfProgressLabel.textContent = 'Menganalisis tabel jadwal pelajaran...';
 
                 const TIME_END_MAP = {
                     '07:15': '08:00',
@@ -1357,11 +1682,10 @@
                     '14:45': '15:30'
                 };
                 const TIME_SLOTS_ORDERED = ['07:15', '08:00', '08:45', '09:45', '10:30', '11:15', '12:30', '13:15', '14:00', '14:45'];
-
                 const payloadItems = [];
 
-                for (let pageNum = 3; pageNum <= pdf.numPages; pageNum++) {
-                    const page = await pdf.getPage(pageNum);
+                for (let pageNum = 1; pageNum <= pdfJadwal.numPages; pageNum++) {
+                    const page = await pdfJadwal.getPage(pageNum);
                     const textContent = await page.getTextContent();
                     const items = textContent.items.map(it => ({
                         x: Math.round(it.transform[4] * 10) / 10,
@@ -1369,40 +1693,41 @@
                         text: it.str.trim()
                     })).filter(it => it.text.length > 0);
 
-                    // 1. Deteksi nama guru
+                    // Deteksi nama guru atau nama kelas di halaman ini
                     let teacherName = null;
+                    let detectedClassName = null;
+
                     for (const it of items) {
-                        const m = it.text.match(/^"?(\d+[\.,][^"]+)"?$/);
-                        if (m) {
-                            teacherName = m[1].replace(/^\d+[\.,]\s*/, '').replace(/^[",\s]+|[",\s]+$/g, '');
+                        const mTeacher = it.text.match(/^"?(\d+[\.,][^"]+)"?$/);
+                        if (mTeacher) {
+                            teacherName = mTeacher[1].replace(/^\d+[\.,]\s*/, '').replace(/^[",\s]+|[",\s]+$/g, '');
                             break;
                         }
+                        const mClass = it.text.match(/^(X|XI|XII)\s+[A-Za-z0-9\-]+(\s+\d+)?$/i);
+                        if (mClass && !detectedClassName) {
+                            detectedClassName = mClass[0];
+                        }
                     }
-                    if (!teacherName) continue;
 
-                    // 2. Deteksi header hari
                     const dayLabels = items.filter(it => ['senin', 'selasa', 'rabu', 'kamis', 'jumat'].includes(it.text.toLowerCase()));
                     dayLabels.sort((a, b) => a.x - b.x);
                     if (dayLabels.length < 5) continue;
 
-                    // 3. Deteksi label waktu
                     const timeLabels = items.filter(it => /^\d{2}:\d{2}$/.test(it.text));
                     timeLabels.sort((a, b) => b.y - a.y);
                     if (timeLabels.length < 5) continue;
 
                     const minDayX = Math.min(...dayLabels.map(d => d.x)) - 40;
 
-                    // 4. Filter cell items
                     const cellItems = items.filter(it => {
                         if (it.x < minDayX) return false;
                         const t = it.text;
-                        if (t.includes('SMK NEGERI') || t.includes(teacherName) || ['senin', 'selasa', 'rabu', 'kamis', 'jumat', '---', '-x-'].includes(t.toLowerCase()) || t.includes('Jadwal dihasilkan') || t.includes('Kembali ke atas')) {
+                        if (t.includes('SMK NEGERI') || (teacherName && t.includes(teacherName)) || ['senin', 'selasa', 'rabu', 'kamis', 'jumat', '---', '-x-'].includes(t.toLowerCase()) || t.includes('Jadwal dihasilkan') || t.includes('Kembali ke atas')) {
                             return false;
                         }
                         return true;
                     });
 
-                    // 5. Kelompokkan ke hari & jam terdekat
                     const cells = {};
                     for (const it of cellItems) {
                         let closestDay = dayLabels[0];
@@ -1433,7 +1758,6 @@
                         cells[key].push(it);
                     }
 
-                    // 6. Susun jadwal per hari secara berurutan
                     for (const dayLabel of dayLabels) {
                         const dayName = dayLabel.text.charAt(0).toUpperCase() + dayLabel.text.slice(1).toLowerCase();
                         let prevRecord = null;
@@ -1449,25 +1773,25 @@
                                 continue;
                             }
 
-                            let clsRaw = texts[0];
+                            let clsRaw = detectedClassName || texts[0];
                             let roomRaw = '-';
                             let mapelRaw = '-';
 
                             const isContinuation = Boolean(
                                 prevRecord && (
-                                    /^(LAB|RUANG|R\.|BENGKEL|AULA|PERPUS)/i.test(clsRaw) ||
-                                    clsRaw.endsWith(')') ||
-                                    !/\b(X|XI|XII)\b/i.test(clsRaw)
+                                    /^(LAB|RUANG|R\.|BENGKEL|AULA|PERPUS)/i.test(texts[0]) ||
+                                    texts[0].endsWith(')') ||
+                                    !/\b(X|XI|XII)\b/i.test(texts[0])
                                 )
                             );
 
                             if (isContinuation) {
-                                if (/^(LAB|RUANG|R\.|BENGKEL|AULA|PERPUS)/i.test(clsRaw)) {
-                                    prevRecord.ruangan = clsRaw;
-                                    roomRaw = clsRaw;
+                                if (/^(LAB|RUANG|R\.|BENGKEL|AULA|PERPUS)/i.test(texts[0])) {
+                                    prevRecord.ruangan = texts[0];
+                                    roomRaw = texts[0];
                                     mapelRaw = prevRecord.mapel;
-                                } else if (clsRaw.endsWith(')')) {
-                                    prevRecord.mapel += ' ' + clsRaw;
+                                } else if (texts[0].endsWith(')')) {
+                                    prevRecord.mapel += ' ' + texts[0];
                                     mapelRaw = prevRecord.mapel;
                                     if (texts.length > 1 && /^(LAB|RUANG|R\.|BENGKEL|AULA|PERPUS)/i.test(texts[texts.length - 1])) {
                                         prevRecord.ruangan = texts[texts.length - 1];
@@ -1484,6 +1808,14 @@
                                 }
                             }
 
+                            // Cek fallback ruangan dari berkas jadwal ruang jika belum ada ruangan spesifik
+                            if ((!roomRaw || roomRaw === '-') && clsRaw) {
+                                const cleanClsKey = clsRaw.trim().toLowerCase();
+                                if (roomAllocationMap[cleanClsKey]) {
+                                    roomRaw = roomAllocationMap[cleanClsKey];
+                                }
+                            }
+
                             const tEnd = TIME_END_MAP[tStart] || '';
                             const waktuStr = tEnd ? `${tStart} - ${tEnd}` : tStart;
 
@@ -1492,7 +1824,7 @@
                                 hari: dayName,
                                 waktu: waktuStr,
                                 mapel: mapelRaw,
-                                guru: teacherName,
+                                guru: teacherName || '-',
                                 ruangan: roomRaw,
                                 cycle_type: String(currentCycle)
                             };
@@ -1504,15 +1836,13 @@
                 }
 
                 if (payloadItems.length === 0) {
-                    alert('Tidak ditemukan data jadwal yang dapat diekstrak dari PDF! Pastikan format file sesuai jadwal guru FET.');
+                    alert('Tidak ditemukan data jadwal yang dapat diekstrak dari PDF! Pastikan berkas sesuai format jadwal FET.');
                     return;
                 }
 
-                if (!confirm(`Berhasil membaca ${payloadItems.length} baris jadwal dari file PDF. Simpan ke database sekarang?`)) {
-                    return;
-                }
-
-                btnTriggerPdfImport.innerHTML = `<span>Menyimpan ke server...</span>`;
+                importPdfProgressBar.style.width = '85%';
+                importPdfProgressPct.textContent = '85%';
+                importPdfProgressLabel.textContent = `Menyimpan ${payloadItems.length} jadwal ke server...`;
 
                 const res = await fetch(`${API_BASE_URL}/schedules/import-batch`, {
                     method: 'POST',
@@ -1526,15 +1856,20 @@
 
                 const resJson = await res.json();
 
+                importPdfProgressBar.style.width = '100%';
+                importPdfProgressPct.textContent = '100%';
+                importPdfProgressLabel.textContent = 'Selesai!';
+
                 if (res.ok) {
                     let msg = resJson.message || `Import ${payloadItems.length} jadwal berhasil!`;
                     if (resJson.errors && resJson.errors.length > 0) {
-                        msg += '\n\nCatatan baris dilewati (bentrok/tidak ditemukan):\n' + resJson.errors.slice(0, 5).join('\n');
+                        msg += '\n\nCatatan baris dilewati:\n' + resJson.errors.slice(0, 5).join('\n');
                         if (resJson.errors.length > 5) {
-                            msg += `\n...dan ${resJson.errors.length - 5} kendala lainnya.`;
+                            msg += `\n...dan ${resJson.errors.length - 5} lainnya.`;
                         }
                     }
                     alert(msg);
+                    modalImportPdf.classList.add('hidden');
                     formScheduleModal.classList.add('hidden');
                     await fetchSchedules();
                     renderClassTable();
@@ -1549,14 +1884,9 @@
                 console.error(err);
                 alert('Gagal memproses file PDF: ' + (err.message || 'Format tidak dikenali'));
             } finally {
-                btnTriggerPdfImport.disabled = false;
-                btnTriggerPdfImport.innerHTML = `
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                    <span>Import PDF</span>
-                `;
-                pdfFileInput.value = '';
+                importPdfProgressBox.classList.add('hidden');
             }
-        });
+        }
 
         // Export PDF: Header & Data Jam Ke Dihapus
         btnDownloadPdf.addEventListener('click', () => {

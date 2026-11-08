@@ -64,6 +64,22 @@ class AttendanceController extends Controller
             'items.*.status'   => 'required|in:Hadir,Sakit,Izin,Alpa,Terlambat',
         ]);
 
+        // Cek batasan waktu 1 hari jika yang mengubah bukan Waka/Admin (Role 1)
+        $user = $request->user();
+        if ($user && (int) $user->id_role !== 1) {
+            $journal = \App\Models\Journal::find($request->id_jurnal);
+            if ($journal) {
+                $journalDate = \Carbon\Carbon::parse($journal->date)->startOfDay();
+                $today = \Carbon\Carbon::now()->startOfDay();
+                if ($journalDate->diffInDays($today, false) > 1) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Batas waktu edit presensi telah berakhir (Maksimal 1 hari dari jadwal mengajar).'
+                    ], 403);
+                }
+            }
+        }
+
         $idJurnal = $request->id_jurnal;
         $date = $request->date;
 

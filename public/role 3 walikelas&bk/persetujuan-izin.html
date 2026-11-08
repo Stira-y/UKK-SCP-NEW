@@ -200,15 +200,15 @@
         let userData = JSON.parse(sessionStorage.getItem('user_data') || localStorage.getItem('user_data') || '{}');
 
         if (!token || Number(userData.id_role) !== 3) {
-            alert('Akses ditolak! Silakan login sebagai Wali Kelas atau Guru BK Pengajar.');
+            alert('Akses ditolak! Silakan login sebagai Wali Kelas atau Guru BK.');
             window.location.href = '../login/login.html';
         }
 
         const userTitle = (userData.title || '').replace(/\s+/g, '').toLowerCase();
         const isWaliKelas = userTitle === 'walikelas';
-        const isGuruBkPengajar = userTitle === 'gurubkpengajar';
+        const isGuruBk = userTitle === 'gurubk' || userTitle === 'gurubkpengajar';
 
-        if (!isWaliKelas && !isGuruBkPengajar) {
+        if (!isWaliKelas && !isGuruBk) {
             alert('Akses ditolak! Title ini tidak memiliki izin akses ke halaman ini.');
             window.location.href = '../login/login.html';
         }

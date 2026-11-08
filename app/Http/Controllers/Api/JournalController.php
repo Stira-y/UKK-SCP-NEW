@@ -25,7 +25,27 @@ class JournalController extends Controller
             $query->whereDate('date', $request->date);
         }
 
-        $journals = $query->latest('date')->get();
+        if ($request->has('id_teacher')) {
+            $query->whereHas('schedule', function ($q) use ($request) {
+                $q->where('id_teacher', $request->id_teacher);
+            });
+        }
+
+        if ($request->has('id_class')) {
+            $query->whereHas('schedule', function ($q) use ($request) {
+                $q->where('id_class', $request->id_class);
+            });
+        }
+
+        if ($request->has('month')) {
+            $query->whereMonth('date', $request->month);
+        }
+
+        if ($request->has('year')) {
+            $query->whereYear('date', $request->year);
+        }
+
+        $journals = $query->latest('date')->latest('id_jurnal')->get();
 
         return response()->json([
             'status' => 'success',
@@ -108,6 +128,19 @@ class JournalController extends Controller
             ], 404);
         }
 
+        // Cek batasan waktu 1 hari jika yang mengubah bukan Waka/Admin (Role 1)
+        $user = $request->user();
+        if ($user && (int) $user->id_role !== 1) {
+            $journalDate = \Carbon\Carbon::parse($journal->date)->startOfDay();
+            $today = \Carbon\Carbon::now()->startOfDay();
+            if ($journalDate->diffInDays($today, false) > 1) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Batas waktu edit jurnal telah berakhir (Maksimal 1 hari dari jadwal mengajar).'
+                ], 403);
+            }
+        }
+
         $validated = $request->validate([
             'id_schedule'       => 'sometimes|required|exists:schedules,id_schedule',
             'date'              => 'sometimes|required|date',
@@ -154,6 +187,19 @@ class JournalController extends Controller
                 'status' => 'error',
                 'message' => 'Jurnal tidak ditemukan'
             ], 404);
+        }
+
+        // Cek batasan waktu 1 hari jika yang menghapus bukan Waka/Admin (Role 1)
+        $user = request()->user();
+        if ($user && (int) $user->id_role !== 1) {
+            $journalDate = \Carbon\Carbon::parse($journal->date)->startOfDay();
+            $today = \Carbon\Carbon::now()->startOfDay();
+            if ($journalDate->diffInDays($today, false) > 1) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Batas waktu hapus jurnal telah berakhir (Maksimal 1 hari dari jadwal mengajar).'
+                ], 403);
+            }
         }
 
         if ($journal->photo_path) {

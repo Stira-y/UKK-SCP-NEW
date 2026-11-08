@@ -210,6 +210,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ], 200);
     });
 
+    Route::post('journals/{id}', [JournalController::class, 'update']);
     Route::apiResource('journals', JournalController::class);
     Route::apiResource('attendances', AttendanceController::class);
     Route::apiResource('leave-requests', LeaveRequestController::class);

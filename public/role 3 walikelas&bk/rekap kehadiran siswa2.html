@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rekap Kehadiran Siswa - Panel Wali Kelas & Guru BK Pengajar</title>
+    <title>Rekap Kehadiran Siswa - Panel Wali Kelas & Guru BK</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- jsPDF & autoTable untuk Export PDF -->
@@ -135,16 +135,16 @@
         let userData = JSON.parse(sessionStorage.getItem('user_data') || localStorage.getItem('user_data') || '{}');
 
         if (!token || Number(userData.id_role) !== 3) {
-            alert('Akses ditolak! Silakan login sebagai Wali Kelas atau Guru BK Pengajar.');
+            alert('Akses ditolak! Silakan login sebagai Wali Kelas atau Guru BK.');
             window.location.href = '../login/login.html';
         }
 
         const userTitle = (userData.title || '').replace(/\s+/g, '').toLowerCase();
         const isWaliKelas = userTitle === 'walikelas';
-        const isGuruBkPengajar = userTitle === 'gurubkpengajar';
+        const isGuruBk = userTitle === 'gurubk' || userTitle === 'gurubkpengajar';
 
-        // Tolak akses jika bukan Wali Kelas dan bukan Guru BK Pengajar
-        if (!isWaliKelas && !isGuruBkPengajar) {
+        // Tolak akses jika bukan Wali Kelas dan bukan Guru BK
+        if (!isWaliKelas && !isGuruBk) {
             alert('Akses ditolak! Title ini tidak memiliki akses ke panel ini.');
             window.location.href = '../login/login.html';
         }

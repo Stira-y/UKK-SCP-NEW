@@ -45,15 +45,6 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // Tolak login jika pengguna merupakan Role 3 dengan Title "Guru BK" murni
-        $cleanTitle = strtolower(str_replace(' ', '', $user->title ?? ''));
-        if ((int) $user->id_role === 3 && $cleanTitle === 'gurubk') {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Akses ditolak. Title Guru BK tidak memiliki izin login ke sistem.'
-            ], 403);
-        }
-
         // Tolak login jika siswa sudah lulus / berstatus alumni atau dikeluarkan (nonaktif)
         if ((int) $user->id_role === 4) {
             $statusTitle = strtolower(trim($user->title ?? ''));

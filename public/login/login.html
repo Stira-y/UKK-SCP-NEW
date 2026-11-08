@@ -198,12 +198,6 @@
                         } else if (user.id_role === 2) {
                             window.location.href = '../role 2 guru/dashboard2.html';
                         } else if (user.id_role === 3) {
-                            // Blokir jika title Guru BK non-pengajar
-                            if (userTitle === 'gurubk') {
-                                showAlert('Akses ditolak! Akun dengan title Guru BK tidak memiliki izin login ke sistem.', false);
-                                setLoading(false);
-                                return;
-                            }
                             window.location.href = '../role 3 walikelas&bk/dashboard3.html';
                         } else if (user.id_role === 4) {
                             window.location.href = '../role 4 siswa/dashboard4.html';

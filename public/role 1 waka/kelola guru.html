@@ -61,7 +61,7 @@
                         <span class="text-slate-300">|</span>
                         <button class="cat-btn" data-cat="Walikelas">Wali Kelas</button>
                         <span class="text-slate-300">|</span>
-                        <button class="cat-btn" data-cat="Guru BK Pengajar">Guru BK Pengajar</button>
+                        <button class="cat-btn" data-cat="Guru BK">Guru BK</button>
                         <span class="text-slate-300">|</span>
                         <button class="cat-btn" data-cat="Waka">Waka</button>
                     </div>
@@ -496,7 +496,7 @@
         function getAvailableTitles() {
             return [
                 { name: "Wali Kelas", role: "Kesiswaan" },
-                { name: "Guru BK Pengajar", role: "Kesiswaan" },
+                { name: "Guru BK", role: "Kesiswaan" },
                 { name: "Guru Normada", role: "Guru" },
                 { name: "Guru Produktif", role: "Guru" }
             ];
@@ -854,8 +854,8 @@
                     matchesCat = (roleNum === 2) && (titleClean === 'guruproduktif');
                 } else if (currentCategory === 'Walikelas') {
                     matchesCat = (roleNum === 3) && (titleClean === 'walikelas');
-                } else if (currentCategory === 'Guru BK Pengajar') {
-                    matchesCat = (roleNum === 3) && (titleClean === 'gurubkpengajar');
+                } else if (currentCategory === 'Guru BK' || currentCategory === 'Guru BK Pengajar') {
+                    matchesCat = (roleNum === 3) && (titleClean === 'gurubk' || titleClean === 'gurubkpengajar');
                 } else if (currentCategory === 'Waka') {
                     matchesCat = (roleNum === 1);
                 }
@@ -997,7 +997,7 @@
                     'Username': 'rahmathidayat',
                     'Email': 'rahmat@gmail.com',
                     'Password': 'Peh_1234',
-                    'Title': 'Guru BK Pengajar',
+                    'Title': 'Guru BK',
                     'Role': 'Kesiswaan',
                     'Kelas Diampu': 'XI RPL 1'
                 }

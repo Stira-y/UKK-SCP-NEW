@@ -154,8 +154,8 @@ class UserController extends Controller
                 $query->where('id_role', 1);
             } elseif ($category === 'Walikelas') {
                 $query->where('id_role', 3)->where('title', 'Walikelas');
-            } elseif ($category === 'Guru BK Pengajar') {
-                $query->where('id_role', 3)->where('title', 'Guru BK Pengajar');
+            } elseif ($category === 'Guru BK' || $category === 'Guru BK Pengajar') {
+                $query->where('id_role', 3)->whereIn('title', ['Guru BK', 'Guru BK Pengajar', 'gurubk', 'gurubkpengajar']);
             } elseif ($category === 'Guru Normada') {
                 $query->where('id_role', 2)->whereIn('title', ['Guru Normada', 'Guru Biasa']);
             } elseif ($category === 'Guru Produktif') {
