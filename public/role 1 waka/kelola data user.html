@@ -62,6 +62,8 @@
                             <button class="cat-btn" data-cat="XI">Siswa XI</button>
                             <span class="text-slate-300">|</span>
                             <button class="cat-btn" data-cat="XII">Siswa XII</button>
+                            <span class="text-slate-300">|</span>
+                            <button class="cat-btn" data-cat="orang_tua">Akun Orang Tua</button>
                         </div>
                         <div class="flex flex-wrap items-center gap-3">
                             <button id="btnOpenAddClass" onclick="window.location.href='kelola kelas.html'" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5">
@@ -106,13 +108,14 @@
                                     <th class="py-3.5 px-3 font-semibold text-center">NISN</th>
                                     <th class="py-3.5 px-3 font-semibold">Fullname</th>
                                     <th class="py-3.5 px-3 font-semibold">Username</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center">Nomor Telepon</th>
                                     <th class="py-3.5 px-3 font-semibold text-center">Email</th>
                                     <th class="py-3.5 px-3 font-semibold text-center w-28">Password (Encrypted)</th>
                                 </tr>
                             </thead>
                             <tbody id="studentTableBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
                                 <tr>
-                                    <td colspan="8" class="py-8 text-center text-slate-400">Memuat data siswa...</td>
+                                    <td colspan="9" class="py-8 text-center text-slate-400">Memuat data siswa...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -846,7 +849,7 @@
 
         async function fetchStudents() {
             try {
-                studentTableBody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Memuat data siswa...</td></tr>`;
+                studentTableBody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Memuat data...</td></tr>`;
                 const response = await fetch(`${API_BASE_URL}/waka/students?category=${currentCategory}&_t=${Date.now()}`, {
                     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
                 });
@@ -854,7 +857,7 @@
                 allStudentsData = res.data || [];
                 renderTable();
             } catch (err) {
-                studentTableBody.innerHTML = `<tr><td colspan="8" class="py-6 text-center text-red-500">Gagal memuat data.</td></tr>`;
+                studentTableBody.innerHTML = `<tr><td colspan="9" class="py-6 text-center text-red-500">Gagal memuat data.</td></tr>`;
             }
         }
 
@@ -890,13 +893,14 @@
                 const nisn = (st.nisn || '').toLowerCase();
                 const fullname = (st.fullname || '').toLowerCase();
                 const username = (st.username || '').toLowerCase();
+                const noTelp = (st.no_telp || '').toLowerCase();
                 const email = (st.email || '').toLowerCase();
                 const className = st.school_class ? `${st.school_class.kelas_nomor} ${st.school_class.nama_kelas}${st.school_class.nomor_kelas || ''}`.toLowerCase() : '';
                 const password = (st.password || '').toLowerCase();
 
                 return nis.includes(searchVal) || nisn.includes(searchVal) || fullname.includes(searchVal) ||
-                       username.includes(searchVal) || email.includes(searchVal) || className.includes(searchVal) ||
-                       password.includes(searchVal);
+                       username.includes(searchVal) || noTelp.includes(searchVal) || email.includes(searchVal) ||
+                       className.includes(searchVal) || password.includes(searchVal);
             });
 
             filtered.sort((a, b) => {
@@ -919,7 +923,8 @@
             }
 
             if (filtered.length === 0) {
-                studentTableBody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Tidak ada data siswa ditemukan.</td></tr>`;
+                const emptyText = currentCategory === 'orang_tua' ? 'Tidak ada data akun orang tua ditemukan.' : 'Tidak ada data siswa ditemukan.';
+                studentTableBody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">${emptyText}</td></tr>`;
                 renderRecentBox([]);
                 return;
             }
@@ -927,7 +932,14 @@
             let recentItems = [];
 
             studentTableBody.innerHTML = filtered.map(st => {
-                const className = st.school_class ? `${st.school_class.kelas_nomor} ${st.school_class.nama_kelas}${st.school_class.nomor_kelas || ''}` : '-';
+                let className = st.school_class ? `${st.school_class.kelas_nomor} ${st.school_class.nama_kelas}${st.school_class.nomor_kelas || ''}` : '-';
+                if (className === '-' && st.linked_students && st.linked_students.length > 0) {
+                    className = st.linked_students.map(ls => {
+                        const sc = ls.school_class || ls.schoolClass;
+                        const clsStr = sc ? `${sc.kelas_nomor} ${sc.nama_kelas}${sc.nomor_kelas || ''}` : '';
+                        return `${ls.fullname || ls.username}${clsStr ? ' (' + clsStr + ')' : ''}`;
+                    }).join(', ');
+                }
                 const createdTime = new Date(st.created_at).getTime();
                 const updatedTime = new Date(st.updated_at).getTime();
 
@@ -960,7 +972,8 @@
                         <td class="py-3 px-3 font-medium text-center">${highlightMatch(st.nisn, searchVal)}</td>
                         <td class="py-3 px-3 font-semibold text-slate-800">${highlightMatch(st.fullname, searchVal)}</td>
                         <td class="py-3 px-3 font-medium">${highlightMatch(st.username, searchVal)}</td>
-                        <td class="py-3 px-3 font-medium text-center">${highlightMatch(st.email, searchVal)}</td>
+                        <td class="py-3 px-3 font-medium text-center">${highlightMatch(st.no_telp || '-', searchVal)}</td>
+                        <td class="py-3 px-3 font-medium text-center">${highlightMatch(st.email || '-', searchVal)}</td>
                         <td class="py-3 px-3 font-mono text-xs text-slate-500 text-center truncate" title="${rawPwd}">${highlightMatch(maskedPwd, searchVal)}</td>
                     </tr>
                 `;

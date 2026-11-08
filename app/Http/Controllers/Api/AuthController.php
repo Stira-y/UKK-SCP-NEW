@@ -30,30 +30,45 @@ class AuthController extends Controller
         $loginInput = trim($request->username);
         $cleanInput = strtolower($loginInput);
 
-        // Cari user berdasarkan username, email, ATAU nis
+        // Cari user berdasarkan username, email, nis, ATAU nomor telepon
         $user = User::with(['role', 'schoolClass'])
-            ->whereRaw('LOWER(TRIM(username)) = ?', [$cleanInput])
-            ->orWhereRaw("LOWER(TRIM(REPLACE(REPLACE(email, CHAR(13), ''), CHAR(10), '')))= ?", [$cleanInput])
-            ->orWhere('nis', $loginInput)
+            ->where(function ($q) use ($cleanInput, $loginInput) {
+                $q->whereRaw('LOWER(TRIM(username)) = ?', [$cleanInput])
+                  ->orWhereRaw("LOWER(TRIM(REPLACE(REPLACE(email, CHAR(13), ''), CHAR(10), '')))= ?", [$cleanInput])
+                  ->orWhere('nis', $loginInput)
+                  ->orWhere('no_telp', $loginInput);
+            })
+            ->orderByRaw("CASE WHEN LOWER(TRIM(COALESCE(title, ''))) = 'orang tua' THEN 1 ELSE 0 END ASC")
             ->first();
 
         // Cek jika user tidak ditemukan ATAU password salah
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Username/Email/NIS atau password salah'
+                'message' => 'Username/Email/NIS/Nomor Telepon atau password salah'
             ], 401);
         }
 
         // Tolak login jika siswa sudah lulus / berstatus alumni atau dikeluarkan (nonaktif)
         if ((int) $user->id_role === 4) {
             $statusTitle = strtolower(trim($user->title ?? ''));
-            if ($user->id_class === null || in_array($statusTitle, ['alumni', 'lulus', 'dikeluarkan'])) {
-                $statusKet = ($statusTitle === 'dikeluarkan') ? 'dikeluarkan' : 'sudah lulus / alumni';
-                return response()->json([
-                    'status' => 'error',
-                    'message' => "Akun Anda telah dinonaktifkan karena berstatus {$statusKet}. Silakan hubungi pihak sekolah jika terjadi kesalahan."
-                ], 403);
+            if ($statusTitle === 'orang tua') {
+                $user->load(['linkedStudents.schoolClass']);
+                if ($user->linkedStudents && $user->linkedStudents->count() > 0 && !$user->schoolClass) {
+                    $firstChild = $user->linkedStudents->first();
+                    if ($firstChild && $firstChild->schoolClass) {
+                        $user->setRelation('schoolClass', $firstChild->schoolClass);
+                    }
+                }
+            } else {
+                if ($user->id_class === null || in_array($statusTitle, ['alumni', 'lulus', 'dikeluarkan'])) {
+                    $statusKet = ($statusTitle === 'dikeluarkan') ? 'dikeluarkan' : 'sudah lulus / alumni';
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Akun Anda telah dinonaktifkan karena berstatus {$statusKet}. Silakan hubungi pihak sekolah jika terjadi kesalahan."
+                    ], 403);
+                }
+                $user->load(['parents']);
             }
         }
 

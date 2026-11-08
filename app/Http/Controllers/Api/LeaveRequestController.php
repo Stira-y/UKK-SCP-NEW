@@ -25,12 +25,11 @@ class LeaveRequestController extends Controller
             $query->where('id_siswa', $request->id_siswa);
         }
 
-        // Filter Kelas (Wali Kelas & Guru BK Pengajar)
+        // Filter Kelas (Wali Kelas & Guru BK Pengajar) - Dioptimasi agar cepat tanpa subquery berat
         if ($request->has('id_class')) {
-            $classIds = explode(',', $request->id_class);
-            $query->whereHas('student', function ($q) use ($classIds) {
-                $q->whereIn('id_class', $classIds);
-            });
+            $classIds = array_filter(array_map('trim', explode(',', (string) $request->id_class)));
+            $studentIds = User::whereIn('id_class', $classIds)->pluck('id_user');
+            $query->whereIn('id_siswa', $studentIds);
         }
 
         if ($request->has('status_approval')) {

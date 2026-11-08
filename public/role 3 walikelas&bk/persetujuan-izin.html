@@ -256,19 +256,35 @@
         let currentZoom = 1;
 
         let activeLeaveRequests = [];
-        let allClasses = [];
+        let allClasses = JSON.parse(localStorage.getItem('scp_classes_cache') || '[]');
         let myAssignedClasses = [];
         let currentSelectedClassId = null;
         let realtimeTeachingClassId = null;
         let verifyingRequestId = null;
         let pendingDecision = null;
         let pendingReasonDitolak = null;
+        let dropdownInitializedListener = false;
 
         document.addEventListener('DOMContentLoaded', async () => {
-            await syncLatestUserData();
-            await fetchClasses();
+            // 1. Inisialisasi dropdown kelas secara instan dari data lokal tanpa menunggu request berurutan
             initDropdownPresenceView();
-            await fetchIzinList();
+
+            // 2. Jalankan pengambilan daftar izin secara paralel bersama sinkronisasi data terbaru
+            const initialClassId = currentSelectedClassId;
+            const izinPromise = (initialClassId && initialClassId !== 'none') ? fetchIzinList() : Promise.resolve();
+
+            await Promise.all([
+                syncLatestUserData(),
+                fetchClasses(),
+                izinPromise
+            ]);
+
+            // 3. Perbarui dropdown jika ada perubahan data kelas dari server
+            const prevSelected = currentSelectedClassId;
+            initDropdownPresenceView(prevSelected);
+            if (currentSelectedClassId !== initialClassId) {
+                await fetchIzinList();
+            }
         });
 
         async function syncLatestUserData() {
@@ -300,25 +316,33 @@
                 });
                 const json = await res.json();
                 allClasses = json.data || json || [];
+                localStorage.setItem('scp_classes_cache', JSON.stringify(allClasses));
             } catch (e) {
                 console.error(e);
             }
         }
 
-        function initDropdownPresenceView() {
+        function initDropdownPresenceView(preserveSelectedId = null) {
             let rawAssignedClassIds = [];
+            let directClassObjects = [];
 
-            if (Array.isArray(userData.counselor_classes) && userData.counselor_classes.length > 0) {
-                rawAssignedClassIds = userData.counselor_classes.map(c => String(c.id_class || c));
-            } else if (Array.isArray(userData.counselorClasses) && userData.counselorClasses.length > 0) {
-                rawAssignedClassIds = userData.counselorClasses.map(c => String(c.id_class || c));
+            const counselorArr = userData.counselor_classes || userData.counselorClasses || [];
+            if (Array.isArray(counselorArr) && counselorArr.length > 0) {
+                rawAssignedClassIds = counselorArr.map(c => String(c.id_class || c));
+                directClassObjects = counselorArr.filter(c => typeof c === 'object' && c !== null && c.id_class);
             }
 
             if (rawAssignedClassIds.length === 0 && userData.id_class) {
                 rawAssignedClassIds = String(userData.id_class).split(',').map(s => s.trim()).filter(Boolean);
             }
 
-            myAssignedClasses = allClasses.filter(c => rawAssignedClassIds.includes(String(c.id_class)));
+            if (allClasses.length > 0) {
+                myAssignedClasses = allClasses.filter(c => rawAssignedClassIds.includes(String(c.id_class)));
+            } else if (directClassObjects.length > 0) {
+                myAssignedClasses = directClassObjects;
+            } else {
+                myAssignedClasses = [];
+            }
 
             selectPresenceViewMode.innerHTML = '';
 
@@ -328,13 +352,23 @@
                 if (userData.school_class) {
                     const sc = userData.school_class;
                     waliClassName = `${sc.kelas_nomor} ${sc.nama_kelas} ${sc.nomor_kelas || ''}`.trim();
+                } else if (allClasses.length > 0 && waliClassId) {
+                    const foundSc = allClasses.find(c => String(c.id_class) === String(waliClassId));
+                    if (foundSc) {
+                        waliClassName = `${foundSc.kelas_nomor} ${foundSc.nama_kelas} ${foundSc.nomor_kelas || ''}`.trim();
+                    }
                 }
 
                 selectPresenceViewMode.innerHTML = `
                     <option value="${waliClassId}">${waliClassName}</option>
                     <option value="teaching_time">Sesuai Jam Mengajar</option>
                 `;
-                currentSelectedClassId = String(waliClassId);
+                if (preserveSelectedId && (preserveSelectedId === String(waliClassId) || preserveSelectedId === 'teaching_time')) {
+                    selectPresenceViewMode.value = preserveSelectedId;
+                    currentSelectedClassId = preserveSelectedId;
+                } else {
+                    currentSelectedClassId = String(waliClassId);
+                }
             } else if (isGuruBkPengajar) {
                 if (myAssignedClasses.length === 0) {
                     selectPresenceViewMode.innerHTML = `
@@ -347,20 +381,26 @@
                         const opt = document.createElement('option');
                         opt.value = String(c.id_class);
                         opt.textContent = `${c.kelas_nomor} ${c.nama_kelas} ${c.nomor_kelas || ''}`.trim();
-                        if (idx === 0) opt.selected = true;
+                        if (preserveSelectedId ? String(c.id_class) === String(preserveSelectedId) : idx === 0) {
+                            opt.selected = true;
+                        }
                         selectPresenceViewMode.appendChild(opt);
                     });
 
                     const optTeaching = document.createElement('option');
                     optTeaching.value = 'teaching_time';
                     optTeaching.textContent = 'Sesuai Jam Mengajar';
+                    if (preserveSelectedId === 'teaching_time') optTeaching.selected = true;
                     selectPresenceViewMode.appendChild(optTeaching);
 
-                    currentSelectedClassId = String(myAssignedClasses[0].id_class);
+                    currentSelectedClassId = selectPresenceViewMode.value || String(myAssignedClasses[0].id_class);
                 }
             }
 
-            selectPresenceViewMode.addEventListener('change', onPresenceViewModeChange);
+            if (!dropdownInitializedListener) {
+                selectPresenceViewMode.addEventListener('change', onPresenceViewModeChange);
+                dropdownInitializedListener = true;
+            }
         }
 
         async function onPresenceViewModeChange() {
@@ -633,7 +673,6 @@
             document.getElementById('viewEndDate').value = item.end_date;
             document.getElementById('viewReason').value = (item.reason || '-').replace(/\[(?:Jenis:\s*)?([^\]]+)\]/gi, '[$1]');
 
-            const sNorm = (item.status_approval || '').trim().toLowerCase();
             if ((sNorm === 'aju banding' || sNorm === 'di tolak' || sNorm === 'ditolak') && item.reason_ditolak) {
                 viewReasonDitolakVal.value = item.reason_ditolak;
                 containerViewReasonDitolak.classList.remove('hidden');

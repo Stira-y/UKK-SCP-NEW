@@ -41,10 +41,19 @@
             </h1>
         </div>
 
-        <!-- Tombol Logout -->
-        <button id="btnLogout" onclick="handleLogout()" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition flex-shrink-0">
-            Keluar
-        </button>
+        <!-- Dropdown Siswa (Khusus Akun Orang Tua) & Tombol Logout -->
+        <div class="flex items-center space-x-2.5 flex-shrink-0">
+            <div id="parentStudentDropdownWrapper" class="hidden flex items-center bg-indigo-700/80 border border-indigo-400/40 rounded-lg px-2.5 py-1">
+                <svg class="w-4 h-4 text-indigo-200 mr-1.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <select id="parentStudentSelector" class="bg-transparent text-white text-xs md:text-sm font-semibold outline-none cursor-pointer pr-1">
+                </select>
+            </div>
+            <button id="btnLogout" onclick="handleLogout()" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition flex-shrink-0">
+                Keluar
+            </button>
+        </div>
     </nav>
 
     <!-- Layout Utama -->
@@ -330,6 +339,15 @@
                     <input type="text" id="modalUsername" placeholder="Masukkan username baru..." class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
                     <p id="usernameError" class="text-[11px] text-red-500 italic mt-1 hidden"></p>
                 </div>
+                <div>
+                    <label for="modalPhone" class="block text-xs font-semibold text-slate-500 uppercase mb-1">Nomor Telepon <span class="text-slate-400 font-normal normal-case">(Opsional)</span></label>
+                    <input type="text" id="modalPhone" placeholder="Masukkan nomor telepon..." class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                    <p id="phoneError" class="text-[11px] text-red-500 italic mt-1 hidden"></p>
+                </div>
+                <div id="initParentAccountContainer" class="flex items-center justify-between border border-slate-200 p-3 rounded-xl bg-slate-50">
+                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">AKUN ORANG TUA</span>
+                    <button type="button" id="btnProfileCreateParent" onclick="window.openCreateParentModal()" class="w-36 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm flex items-center justify-center">Buat Akun Ortu</button>
+                </div>
                 <div id="initEmailContainer" class="flex items-center justify-between border border-slate-200 p-3 rounded-xl bg-slate-50">
                     <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">EMAIL</span>
                     <button type="button" id="btnInitChangeEmail" class="w-32 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm flex items-center justify-center">Ganti Email</button>
@@ -417,13 +435,13 @@
     </div>
 
     <!-- Script Utama Profil -->
-    <script src="../js/profile-role siswa.js?v=20261108_4.0"></script>
+    <script src="../js/profile-role siswa.js?v=20261108_5.0"></script>
 
     <!-- Script Logika Halaman Surat Izin -->
     <script>
-        // Menggunakan variabel global API_BASE_URL dari profile-role siswa.js?v=20261108_4.0 tanpa deklarasi ulang
+        // Menggunakan variabel global API_BASE_URL dari profile-role siswa.js tanpa deklarasi ulang
         const tokenIzin = localStorage.getItem('auth_token');
-        const userDataIzin = JSON.parse(localStorage.getItem('user_data') || '{}');
+        const userDataIzin = window.getEffectiveStudentData ? window.getEffectiveStudentData() : JSON.parse(localStorage.getItem('user_data') || '{}');
 
         const leaveTableBody = document.getElementById('leaveTableBody');
         const createLeaveModal = document.getElementById('createLeaveModal');

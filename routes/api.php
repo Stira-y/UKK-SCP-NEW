@@ -48,6 +48,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/verify-new-email-otp', [UserController::class, 'verifyNewEmailOtp']);
     Route::post('/profile/update', [UserController::class, 'updateProfile']);
 
+    // Route Akun Orang Tua (Role 4 Siswa + Title Orang Tua)
+    Route::get('/parent-account/status', [UserController::class, 'getParentAccountStatus']);
+    Route::get('/parent-account/check', [UserController::class, 'checkParentAccount']);
+    Route::post('/parent-account/create', [UserController::class, 'createParentAccount']);
+    Route::post('/parent-account/link', [UserController::class, 'linkParentAccount']);
+
     Route::get('/waka/users', [UserController::class, 'index']);
     Route::get('/waka/students', [UserController::class, 'getStudentsGrouped']);
     Route::post('/waka/students', [UserController::class, 'storeStudentByWaka']);
@@ -66,11 +72,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/waka/teachers/send-otp', [UserController::class, 'sendWakaOtp']);
     Route::post('/waka/teachers/verify-otp', [UserController::class, 'verifyWakaOtp']);
     Route::put('/waka/teachers/{id}', [UserController::class, 'updateTeacherByWaka']);
+    Route::delete('/waka/teachers/{id}', [UserController::class, 'destroy']);
 
     Route::get('/user', function (Request $request) {
         return response()->json([
             'status' => 'success',
-            'data' => $request->user()->load(['role', 'schoolClass'])
+            'data' => $request->user()->load(['role', 'schoolClass', 'parents', 'linkedStudents.schoolClass'])
         ]);
     });
 
@@ -135,6 +142,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/journals/monitoring/today', [JournalController::class, 'getTodayMonitoring']);
     Route::get('/attendances/students-list', [AttendanceController::class, 'getStudentsForAttendance']);
     Route::post('/attendances/store-batch', [AttendanceController::class, 'storeBatch']);
+    Route::post('/attendances/batch', [AttendanceController::class, 'storeBatch']);
 
     // Endpoint Rekap Kehadiran Siswa 1 Bulan (Hanya Status Hadir = +1, status lainnya +0)
     Route::get('/waka/attendance-recap-monthly', function (Request $request) {
@@ -142,7 +150,12 @@ Route::middleware('auth:sanctum')->group(function () {
         $year = (int) $request->query('year', date('Y'));
         $idClass = $request->query('id_class');
 
-        $studentsQuery = User::where('id_role', 4)->with('schoolClass');
+        $studentsQuery = User::where('id_role', 4)
+            ->where(function ($q) {
+                $q->whereNull('title')
+                  ->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
+            })
+            ->with('schoolClass');
         if ($idClass && $idClass !== 'all') {
             $studentsQuery->where('id_class', $idClass);
         }

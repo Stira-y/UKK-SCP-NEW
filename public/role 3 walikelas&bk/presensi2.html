@@ -31,6 +31,9 @@
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="p-4 border-b border-slate-100 flex items-center justify-between">
                         <span class="font-bold text-slate-700 text-sm">Daftar Kehadiran Siswa</span>
+                        <button type="button" id="btnSetAllHadir" onclick="setAllHadir()" class="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition shadow-xs">
+                            Set Hadir
+                        </button>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -253,6 +256,15 @@
                 `;
             }).join('');
         }
+
+        window.setAllHadir = function() {
+            for (const st of studentsList) {
+                if (st.locked_status !== 'Izin') {
+                    const radio = document.querySelector(`input[name="status_${st.id_user}"][value="Hadir"]`);
+                    if (radio) radio.checked = true;
+                }
+            }
+        };
 
         window.openSuratIzinModal = function(index) {
             const student = studentsList[index];

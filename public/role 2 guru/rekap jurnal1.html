@@ -585,9 +585,9 @@
             modalEditAttendance.classList.remove('hidden');
 
             try {
-                // Ambil daftar siswa kelas
+                // Ambil daftar siswa kelas beserta status surat izin yang telah disetujui Wali Kelas / BK
                 const classId = j.schedule.id_class;
-                const res = await fetch(`${API_BASE_URL}/waka/users?id_role=4&id_class=${classId}`, {
+                const res = await fetch(`${API_BASE_URL}/attendances/students-list?id_class=${classId}&date=${jDate}`, {
                     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
                 });
                 const json = await res.json();
@@ -596,7 +596,7 @@
                 // Petakan presensi yang sudah ada
                 const existingAttMap = new Map();
                 (j.attendances || []).forEach(a => {
-                    existingAttMap.set(Number(a.id_student), a.status);
+                    existingAttMap.set(Number(a.id_siswa || a.id_student), a.status);
                 });
 
                 if (students.length === 0) {
@@ -605,31 +605,48 @@
                 }
 
                 tbody.innerHTML = students.map((st, idx) => {
-                    const currentStatus = existingAttMap.get(Number(st.id_user)) || 'Hadir';
+                    const isLockedIzin = st.locked_status === 'Izin' || st.has_leave;
+                    let currentStatus = existingAttMap.get(Number(st.id_user)) || 'Hadir';
+                    if (!['Hadir', 'Terlambat', 'Alpa'].includes(currentStatus)) {
+                        currentStatus = 'Hadir';
+                    }
+
+                    let statusOptionsHtml = '';
+                    if (isLockedIzin) {
+                        statusOptionsHtml = `
+                            <div class="inline-flex items-center justify-center">
+                                <span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold shadow-xs">
+                                    Izin (Terverifikasi Sistem)
+                                </span>
+                                <input type="hidden" name="att_${st.id_user}" value="Izin" data-locked="true">
+                            </div>
+                        `;
+                    } else {
+                        statusOptionsHtml = `
+                            <div class="inline-flex items-center space-x-3">
+                                <label class="flex items-center space-x-1 cursor-pointer">
+                                    <input type="radio" name="att_${st.id_user}" value="Hadir" ${currentStatus === 'Hadir' ? 'checked' : ''} class="text-emerald-600 focus:ring-emerald-500">
+                                    <span class="text-xs font-bold text-emerald-700">Hadir</span>
+                                </label>
+                                <label class="flex items-center space-x-1 cursor-pointer">
+                                    <input type="radio" name="att_${st.id_user}" value="Terlambat" ${currentStatus === 'Terlambat' ? 'checked' : ''} class="text-amber-600 focus:ring-amber-500">
+                                    <span class="text-xs font-bold text-amber-700">Terlambat</span>
+                                </label>
+                                <label class="flex items-center space-x-1 cursor-pointer">
+                                    <input type="radio" name="att_${st.id_user}" value="Alpa" ${currentStatus === 'Alpa' ? 'checked' : ''} class="text-rose-600 focus:ring-rose-500">
+                                    <span class="text-xs font-bold text-rose-700">Alpa</span>
+                                </label>
+                            </div>
+                        `;
+                    }
+
                     return `
                         <tr class="hover:bg-slate-50 transition border-b border-slate-100 student-att-row" data-student-id="${st.id_user}">
                             <td class="py-2.5 px-3 text-center text-slate-500 font-bold">${idx + 1}</td>
                             <td class="py-2.5 px-3 text-center font-mono text-slate-700">${st.nis || '-'}</td>
                             <td class="py-2.5 px-3 font-semibold text-slate-800">${st.fullname || st.username}</td>
                             <td class="py-2.5 px-3 text-center">
-                                <div class="inline-flex items-center space-x-2">
-                                    <label class="flex items-center space-x-1 cursor-pointer">
-                                        <input type="radio" name="att_${st.id_user}" value="Hadir" ${currentStatus === 'Hadir' ? 'checked' : ''} class="text-emerald-600 focus:ring-emerald-500">
-                                        <span class="text-xs font-bold text-emerald-700">H</span>
-                                    </label>
-                                    <label class="flex items-center space-x-1 cursor-pointer">
-                                        <input type="radio" name="att_${st.id_user}" value="Izin" ${currentStatus === 'Izin' ? 'checked' : ''} class="text-amber-600 focus:ring-amber-500">
-                                        <span class="text-xs font-bold text-amber-700">I</span>
-                                    </label>
-                                    <label class="flex items-center space-x-1 cursor-pointer">
-                                        <input type="radio" name="att_${st.id_user}" value="Sakit" ${currentStatus === 'Sakit' ? 'checked' : ''} class="text-blue-600 focus:ring-blue-500">
-                                        <span class="text-xs font-bold text-blue-700">S</span>
-                                    </label>
-                                    <label class="flex items-center space-x-1 cursor-pointer">
-                                        <input type="radio" name="att_${st.id_user}" value="Alpa" ${currentStatus === 'Alpa' ? 'checked' : ''} class="text-rose-600 focus:ring-rose-500">
-                                        <span class="text-xs font-bold text-rose-700">A</span>
-                                    </label>
-                                </div>
+                                ${statusOptionsHtml}
                             </td>
                         </tr>
                     `;
@@ -642,7 +659,7 @@
         };
 
         window.markAllAttendance = function(status) {
-            document.querySelectorAll(`.student-att-row input[value="${status}"]`).forEach(radio => {
+            document.querySelectorAll(`.student-att-row input[type="radio"][value="${status}"]`).forEach(radio => {
                 radio.checked = true;
             });
         };
@@ -657,28 +674,36 @@
             const items = [];
             rows.forEach(r => {
                 const sId = r.getAttribute('data-student-id');
-                const checked = r.querySelector(`input[name="att_${sId}"]:checked`);
-                if (checked) {
+                const lockedInput = r.querySelector(`input[type="hidden"][name="att_${sId}"]`);
+                const checked = r.querySelector(`input[type="radio"][name="att_${sId}"]:checked`);
+                const finalVal = lockedInput ? lockedInput.value : (checked ? checked.value : null);
+                if (finalVal) {
                     items.push({
+                        id_siswa: Number(sId),
                         id_student: Number(sId),
-                        status: checked.value
+                        status: finalVal
                     });
                 }
             });
 
+            const jDate = currentEditingJournal.journal_date || currentEditingJournal.date;
+            const jId = currentEditingJournal.id_journal || currentEditingJournal.id_jurnal;
+
             showConfirmModal(
                 'Konfirmasi Simpan Presensi',
-                `Apakah Anda yakin ingin memperbarui presensi ${items.length} siswa untuk tanggal ${currentEditingJournal.journal_date}?`,
+                `Apakah Anda yakin ingin memperbarui presensi ${items.length} siswa untuk tanggal ${jDate}?`,
                 false,
                 async () => {
                     try {
                         const payload = {
+                            id_jurnal: jId,
                             id_schedule: currentEditingJournal.id_schedule,
-                            date: currentEditingJournal.journal_date,
+                            date: jDate,
+                            items: items,
                             attendances: items
                         };
 
-                        const res = await fetch(`${API_BASE_URL}/attendances/batch`, {
+                        const res = await fetch(`${API_BASE_URL}/attendances/store-batch`, {
                             method: 'POST',
                             headers: {
                                 'Authorization': `Bearer ${token}`,

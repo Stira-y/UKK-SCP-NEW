@@ -53,21 +53,34 @@ class AttendanceController extends Controller
         ], 201);
     }
 
-    // Endpoint simpan batch presensi 1 kelas sekaligus dari form presensi guru
+    // Endpoint simpan batch presensi 1 kelas sekaligus dari form presensi guru / rekap jurnal
     public function storeBatch(Request $request)
     {
-        $request->validate([
-            'id_jurnal' => 'required|exists:journals,id_jurnal',
-            'date'      => 'required|date',
-            'items'     => 'required|array|min:1',
-            'items.*.id_siswa' => 'required|exists:users,id_user',
-            'items.*.status'   => 'required|in:Hadir,Sakit,Izin,Alpa,Terlambat',
-        ]);
+        $idJurnal = $request->input('id_jurnal', $request->input('id_journal'));
+        $date = $request->input('date');
+
+        if (!$idJurnal && $request->filled('id_schedule') && $date) {
+            $foundJournal = \App\Models\Journal::where('id_schedule', $request->id_schedule)
+                ->whereDate('date', $date)
+                ->first();
+            if ($foundJournal) {
+                $idJurnal = $foundJournal->id_jurnal;
+            }
+        }
+
+        $rawItems = $request->input('items', $request->input('attendances', []));
+
+        if (!$idJurnal || !$date || empty($rawItems)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data jurnal, tanggal, dan daftar presensi siswa wajib diisi.'
+            ], 422);
+        }
 
         // Cek batasan waktu 1 hari jika yang mengubah bukan Waka/Admin (Role 1)
         $user = $request->user();
         if ($user && (int) $user->id_role !== 1) {
-            $journal = \App\Models\Journal::find($request->id_jurnal);
+            $journal = \App\Models\Journal::find($idJurnal);
             if ($journal) {
                 $journalDate = \Carbon\Carbon::parse($journal->date)->startOfDay();
                 $today = \Carbon\Carbon::now()->startOfDay();
@@ -80,18 +93,31 @@ class AttendanceController extends Controller
             }
         }
 
-        $idJurnal = $request->id_jurnal;
-        $date = $request->date;
+        // Otomatis verifikasi sistem jika siswa memiliki surat izin yang telah Di Terima oleh Wali Kelas / BK
+        $approvedLeaveStudentIds = LeaveRequest::whereIn('status_approval', ['Disetujui', 'Di Terima', 'di terima', 'disetujui'])
+            ->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->pluck('id_siswa')
+            ->map(fn($id) => (int) $id)
+            ->flip();
 
-        foreach ($request->items as $item) {
+        foreach ($rawItems as $item) {
+            $studentId = (int) ($item['id_siswa'] ?? $item['id_student'] ?? 0);
+            if (!$studentId) continue;
+
+            $status = $item['status'] ?? 'Hadir';
+            if (isset($approvedLeaveStudentIds[$studentId])) {
+                $status = 'Izin';
+            }
+
             Attendance::updateOrCreate(
                 [
                     'id_jurnal' => $idJurnal,
-                    'id_siswa'  => $item['id_siswa'],
+                    'id_siswa'  => $studentId,
                     'date'      => $date
                 ],
                 [
-                    'status'    => $item['status']
+                    'status'    => $status
                 ]
             );
         }
@@ -115,6 +141,10 @@ class AttendanceController extends Controller
 
         $students = User::where('id_role', 4)
             ->where('id_class', $classId)
+            ->where(function ($q) {
+                $q->whereNull('title')
+                  ->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
+            })
             ->orderBy('fullname', 'asc')
             ->get();
 

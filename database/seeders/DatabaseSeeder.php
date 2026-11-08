@@ -35,7 +35,7 @@ class DatabaseSeeder extends Seeder
             [
                 'id_role'  => 1, 
                 'fullname' => 'Waka Kurikulum Admin',
-                'email'    => 'waka@school.id',
+                'email'    => 'anjasmc78080@gmail.com',
                 'password' => Hash::make('Peh_1234'),
             ]
         );

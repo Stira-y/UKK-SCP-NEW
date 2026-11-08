@@ -18,6 +18,7 @@ class User extends Authenticatable
         'id_role',
         'id_class',
         'username',
+        'no_telp',
         'password',
         'fullname',
         'email',
@@ -64,5 +65,17 @@ class User extends Authenticatable
     public function counselorClasses()
     {
         return $this->belongsToMany(SchoolClass::class, 'counselor_classes', 'id_user', 'id_class');
+    }
+
+    // Untuk Siswa: daftar Akun Orang Tua yang terhubung
+    public function parents()
+    {
+        return $this->belongsToMany(User::class, 'parent_student', 'student_id', 'parent_id')->withTimestamps();
+    }
+
+    // Untuk Orang Tua: daftar Siswa (anak) yang terhubung
+    public function linkedStudents()
+    {
+        return $this->belongsToMany(User::class, 'parent_student', 'parent_id', 'student_id')->withTimestamps();
     }
 }

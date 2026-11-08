@@ -19,10 +19,14 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::with(['role', 'schoolClass', 'counselorClasses']);
+        $query = User::with(['role', 'schoolClass', 'counselorClasses', 'parents', 'linkedStudents.schoolClass']);
 
         if ($request->has('id_role')) {
             $query->where('id_role', $request->id_role);
+        }
+
+        if ($request->has('id_class')) {
+            $query->where('id_class', $request->id_class);
         }
 
         return response()->json([
@@ -35,9 +39,37 @@ class UserController extends Controller
     {
         $category = $request->query('category', 'all');
 
-        $query = User::with(['role', 'schoolClass'])
+        if ($category === 'orang_tua') {
+            $parents = User::with(['role', 'schoolClass', 'linkedStudents.schoolClass'])
+                ->where('id_role', 4)
+                ->whereRaw("LOWER(TRIM(COALESCE(title, ''))) = 'orang tua'")
+                ->get()
+                ->sortBy(fn($u) => strtolower($u->fullname ?? ''))
+                ->values();
+
+            $parents->transform(function ($p) {
+                if (!$p->schoolClass && $p->linkedStudents && $p->linkedStudents->count() > 0) {
+                    $firstChild = $p->linkedStudents->first();
+                    if ($firstChild && $firstChild->schoolClass) {
+                        $p->setRelation('schoolClass', $firstChild->schoolClass);
+                    }
+                }
+                return $p;
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $parents
+            ], 200);
+        }
+
+        $query = User::with(['role', 'schoolClass', 'parents'])
             ->where('id_role', 4)
-            ->whereNotNull('id_class');
+            ->whereNotNull('id_class')
+            ->where(function ($q) {
+                $q->whereNull('title')
+                  ->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
+            });
 
         if (in_array($category, ['X', 'XI', 'XII'], true)) {
             $query->whereHas('schoolClass', function ($q) use ($category) {
@@ -87,7 +119,11 @@ class UserController extends Controller
         $type = $request->query('type');
 
         $query = User::where('id_role', 4)
-            ->whereNull('id_class');
+            ->whereNull('id_class')
+            ->where(function ($q) {
+                $q->whereNull('title')
+                  ->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
+            });
 
         if ($type === 'dikeluarkan') {
             $query->where('title', 'dikeluarkan');
@@ -502,6 +538,7 @@ class UserController extends Controller
             'fullname' => 'required|string|max:255',
             'email' => 'required|string|email:rfc,dns|max:255|unique:users,email',
             'username' => 'nullable|string|max:100|unique:users,username',
+            'no_telp' => 'nullable|string|max:30',
             'nis' => 'nullable|string|max:50|unique:users,nis',
             'nisn' => 'nullable|string|max:50|unique:users,nisn',
             'id_class' => 'nullable|exists:classes,id_class',
@@ -660,7 +697,7 @@ class UserController extends Controller
 
     public function show($id)
     {
-        $user = User::with(['role', 'schoolClass', 'counselorClasses'])->find($id);
+        $user = User::with(['role', 'schoolClass', 'counselorClasses', 'parents', 'linkedStudents.schoolClass'])->find($id);
 
         if (!$user) {
             return response()->json([
@@ -701,6 +738,7 @@ class UserController extends Controller
             'id_role' => 'sometimes|required|exists:roles,id_role',
             'id_class' => 'nullable|exists:classes,id_class',
             'username' => 'nullable|string|max:100|unique:users,username,' . $id . ',id_user',
+            'no_telp' => 'nullable|string|max:30',
             'nis' => 'nullable|string|max:50|unique:users,nis,' . $id . ',id_user',
             'nisn' => 'nullable|string|max:50|unique:users,nisn,' . $id . ',id_user',
             'nip' => 'nullable|string|max:50|unique:users,nip,' . $id . ',id_user',
@@ -728,7 +766,7 @@ class UserController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Data user berhasil diperbarui',
-            'data' => $user->load(['role', 'schoolClass', 'counselorClasses'])
+            'data' => $user->load(['role', 'schoolClass', 'counselorClasses', 'parents', 'linkedStudents.schoolClass'])
         ], 200);
     }
 
@@ -918,7 +956,8 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'fullname' => 'sometimes|required|string|max:255|unique:users,fullname,' . $id . ',id_user',
             'username' => 'nullable|string|max:100|unique:users,username,' . $id . ',id_user',
-            'email' => 'sometimes|required|string|email:rfc,dns|max:255|unique:users,email,' . $id . ',id_user',
+            'no_telp' => 'nullable|string|max:30',
+            'email' => 'sometimes|required|string|email:rfc,dns|max:255',
             'id_class' => 'nullable|exists:classes,id_class',
             'password' => 'nullable|string|min:8'
         ], $messages);
@@ -949,7 +988,7 @@ class UserController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Data siswa berhasil diperbarui',
-            'data' => $student->load(['role', 'schoolClass'])
+            'data' => $student->load(['role', 'schoolClass', 'parents', 'linkedStudents.schoolClass'])
         ], 200);
     }
 
@@ -1027,10 +1066,44 @@ class UserController extends Controller
     {
         $user = $request->user();
 
-        if (!$user || !$user->email) {
+        if (!$user) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Email pengguna tidak ditemukan.'
+                'message' => 'Pengguna tidak ditemukan.'
+            ], 400);
+        }
+
+        $target = $request->input('target', 'siswa');
+        $studentId = $request->input('student_id');
+        $isParent = strtolower(trim($user->title ?? '')) === 'orang tua';
+
+        $recipientEmail = $user->email;
+        $recipientName = $user->fullname;
+
+        if ((int) $user->id_role === 4) {
+            if ($isParent) {
+                $linkedStudents = $user->linkedStudents()->get();
+                $targetStudent = $studentId
+                    ? $linkedStudents->firstWhere('id_user', (int) $studentId)
+                    : $linkedStudents->first();
+                if ($targetStudent && $targetStudent->email) {
+                    $recipientEmail = $targetStudent->email;
+                }
+            } else {
+                if ($target === 'ortu' && $user->parents()->count() === 0) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Akun orang tua belum dibuat. Silakan buat akun orang tua terlebih dahulu.'
+                    ], 422);
+                }
+                $recipientEmail = $user->email;
+            }
+        }
+
+        if (!$recipientEmail) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Email siswa tidak ditemukan.'
             ], 400);
         }
 
@@ -1039,23 +1112,27 @@ class UserController extends Controller
 
         Cache::put($cacheKey, [
             'code' => (string) $otp,
+            'target' => $target,
+            'student_id' => $studentId,
             'expires_at' => now()->addMinutes(5)->timestamp
         ], now()->addMinutes(5));
 
+        $targetLabel = ($target === 'ortu') ? 'Akun Orang Tua' : 'Akun Siswa';
+
         try {
             Mail::raw(
-                "Halo {$user->fullname},\n\n" .
-                "Kode verifikasi OTP ubah password Anda adalah: {$otp}\n\n" .
+                "Halo {$recipientName},\n\n" .
+                "Kode verifikasi OTP ubah password ({$targetLabel}) Anda adalah: {$otp}\n\n" .
                 "Kode ini berlaku selama 5 menit.",
-                function ($message) use ($user) {
-                    $message->to($user->email)
+                function ($message) use ($recipientEmail) {
+                    $message->to($recipientEmail)
                         ->subject('Kode Verifikasi OTP Ubah Password');
                 }
             );
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Kode OTP berhasil dikirim ke email.'
+                'message' => 'Kode OTP berhasil dikirim ke email siswa.'
             ], 200);
         } catch (\Throwable $e) {
             Cache::forget($cacheKey);
@@ -1092,12 +1169,13 @@ class UserController extends Controller
             ], 422);
         }
 
-        Cache::put('profile_verified_' . $user->id_user, (string)$request->otp, now()->addMinutes(15));
+        Cache::put('profile_verified_' . $user->id_user, $cachedOtpData, now()->addMinutes(15));
         Cache::forget($cacheKey);
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Verifikasi berhasil!'
+            'message' => 'Verifikasi berhasil!',
+            'target' => is_array($cachedOtpData) ? ($cachedOtpData['target'] ?? 'siswa') : 'siswa'
         ], 200);
     }
 
@@ -1202,7 +1280,10 @@ class UserController extends Controller
 
         $validator = Validator::make($request->all(), [
             'username' => 'nullable|string|max:100|unique:users,username,' . $user->id_user . ',id_user',
+            'no_telp' => 'nullable|string|max:30',
             'password' => 'nullable|string|min:8',
+            'password_target' => 'nullable|string|in:siswa,ortu,self',
+            'student_id' => 'nullable|integer',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
@@ -1218,8 +1299,43 @@ class UserController extends Controller
             $user->username = $request->username;
         }
 
+        if ($request->has('no_telp')) {
+            $valTelp = trim((string) $request->no_telp);
+            $user->no_telp = $valTelp !== '' ? $valTelp : null;
+        }
+
         if ($request->has('password') && $request->password) {
-            $user->password = Hash::make($request->password);
+            $newHashedPassword = Hash::make($request->password);
+            $passwordTarget = $request->input('password_target', 'self');
+            $isParent = strtolower(trim($user->title ?? '')) === 'orang tua';
+
+            if ((int) $user->id_role === 4 && $passwordTarget === 'ortu' && !$isParent) {
+                $parentAccount = $user->parents()->first();
+                if (!$parentAccount) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Akun orang tua belum terhubung.'
+                    ], 422);
+                }
+                $parentAccount->password = $newHashedPassword;
+                $parentAccount->save();
+            } elseif ((int) $user->id_role === 4 && $passwordTarget === 'siswa' && $isParent) {
+                $studentId = $request->input('student_id');
+                $linkedStudents = $user->linkedStudents()->get();
+                $targetStudent = $studentId
+                    ? $linkedStudents->firstWhere('id_user', (int) $studentId)
+                    : $linkedStudents->first();
+                if (!$targetStudent) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Akun siswa tidak ditemukan.'
+                    ], 422);
+                }
+                $targetStudent->password = $newHashedPassword;
+                $targetStudent->save();
+            } else {
+                $user->password = $newHashedPassword;
+            }
         }
 
         if ($request->hasFile('avatar')) {
@@ -1231,10 +1347,209 @@ class UserController extends Controller
 
         $user->save();
 
+        $freshUser = $user->load(['role', 'schoolClass', 'parents', 'linkedStudents.schoolClass']);
+        if (strtolower(trim($freshUser->title ?? '')) === 'orang tua' && !$freshUser->schoolClass && $freshUser->linkedStudents->count() > 0) {
+            $firstChild = $freshUser->linkedStudents->first();
+            if ($firstChild && $firstChild->schoolClass) {
+                $freshUser->setRelation('schoolClass', $firstChild->schoolClass);
+            }
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Profil berhasil diperbarui',
-            'data' => $user->load(['role', 'schoolClass'])
+            'data' => $freshUser
+        ], 200);
+    }
+
+    public function getParentAccountStatus(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $isParent = strtolower(trim($user->title ?? '')) === 'orang tua';
+        if ($isParent) {
+            $user->load(['role', 'schoolClass', 'linkedStudents.schoolClass']);
+            return response()->json([
+                'status' => 'success',
+                'is_parent' => true,
+                'has_parent' => true,
+                'linked_students' => $user->linkedStudents,
+                'user' => $user
+            ], 200);
+        }
+
+        $user->load(['role', 'schoolClass', 'parents']);
+        return response()->json([
+            'status' => 'success',
+            'is_parent' => false,
+            'has_parent' => $user->parents->count() > 0,
+            'parents' => $user->parents,
+            'user' => $user
+        ], 200);
+    }
+
+    public function checkParentAccount(Request $request)
+    {
+        $fullname = trim((string) $request->query('fullname', ''));
+        if ($fullname === '') {
+            return response()->json([
+                'status' => 'success',
+                'exists' => false
+            ], 200);
+        }
+
+        $existingParent = User::where('id_role', 4)
+            ->whereRaw("LOWER(TRIM(COALESCE(title, ''))) = 'orang tua'")
+            ->whereRaw('LOWER(TRIM(fullname)) = ?', [strtolower($fullname)])
+            ->first();
+
+        if ($existingParent) {
+            return response()->json([
+                'status' => 'success',
+                'exists' => true,
+                'parent' => [
+                    'id_user' => $existingParent->id_user,
+                    'fullname' => $existingParent->fullname,
+                    'username' => $existingParent->username,
+                    'no_telp' => $existingParent->no_telp,
+                ]
+            ], 200);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'exists' => false
+        ], 200);
+    }
+
+    public function createParentAccount(Request $request)
+    {
+        $student = $request->user();
+        if (!$student || (int) $student->id_role !== 4) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Hanya akun siswa yang dapat membuat akun orang tua.'
+            ], 403);
+        }
+
+        $messages = [
+            'fullname.required' => 'Fullname wajib diisi.',
+            'username.required' => 'Username wajib diisi.',
+            'username.unique' => 'Username sudah digunakan oleh akun lain.',
+            'no_telp.required' => 'Nomor telepon wajib diisi.',
+            'password.required' => 'Password wajib diisi.',
+        ];
+
+        $validator = Validator::make($request->all(), [
+            'fullname' => 'required|string|max:255',
+            'username' => 'required|string|max:100|unique:users,username',
+            'no_telp' => 'required|string|max:30',
+            'password' => [
+                'required',
+                'string',
+                function ($attribute, $value, $fail) {
+                    if (preg_match('/\s/', $value) ||
+                        !preg_match('/[a-z]/', $value) ||
+                        !preg_match('/[A-Z]/', $value) ||
+                        !preg_match('/\d/', $value) ||
+                        !preg_match('/[^a-zA-Z0-9\s]/', $value)) {
+                        $fail('Password harus berisi simbol, angka, huruf besar dan huruf kecil, tanpa spasi.');
+                    }
+                }
+            ]
+        ], $messages);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $cleanPhone = trim($request->no_telp);
+        $phoneTaken = User::where('no_telp', $cleanPhone)->exists();
+        if ($phoneTaken) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Nomor telepon sudah digunakan oleh akun lain.',
+                'errors' => ['no_telp' => ['Nomor telepon sudah digunakan oleh akun lain.']]
+            ], 422);
+        }
+
+        $parent = User::create([
+            'id_role' => 4,
+            'id_class' => null,
+            'title' => 'Orang Tua',
+            'fullname' => trim($request->fullname),
+            'username' => trim($request->username),
+            'no_telp' => $cleanPhone,
+            'email' => $student->email ?? '',
+            'password' => Hash::make($request->password),
+        ]);
+
+        $student->parents()->syncWithoutDetaching([$parent->id_user]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Akun telah dibuat',
+            'data' => $parent,
+            'user' => $student->load(['role', 'schoolClass', 'parents'])
+        ], 201);
+    }
+
+    public function linkParentAccount(Request $request)
+    {
+        $student = $request->user();
+        if (!$student || (int) $student->id_role !== 4) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Hanya akun siswa yang dapat menghubungkan akun orang tua.'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'fullname' => 'required|string',
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Fullname dan password wajib diisi.'
+            ], 422);
+        }
+
+        $fullname = strtolower(trim($request->fullname));
+        $parent = User::where('id_role', 4)
+            ->whereRaw("LOWER(TRIM(COALESCE(title, ''))) = 'orang tua'")
+            ->whereRaw('LOWER(TRIM(fullname)) = ?', [$fullname])
+            ->first();
+
+        if (!$parent) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Akun orang tua tidak ditemukan.'
+            ], 404);
+        }
+
+        if (!Hash::check($request->password, $parent->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Password akun orang tua tidak sesuai!'
+            ], 422);
+        }
+
+        $student->parents()->syncWithoutDetaching([$parent->id_user]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Akun telah dibuat',
+            'data' => $parent,
+            'user' => $student->load(['role', 'schoolClass', 'parents'])
         ], 200);
     }
 }
