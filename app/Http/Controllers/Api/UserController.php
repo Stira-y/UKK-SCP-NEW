@@ -205,6 +205,9 @@ class UserController extends Controller
 
         // Menyertakan format id_class gabungan agar frontend yang membaca string koma tetap berjalan
         $teachers->transform(function ($t) {
+            if (strtolower(str_replace(' ', '', trim($t->title ?? ''))) === 'gurubkpengajar') {
+                $t->title = 'Guru BK';
+            }
             if ($t->counselorClasses && $t->counselorClasses->count() > 0) {
                 $t->id_class = $t->counselorClasses->pluck('id_class')->implode(',');
             }
@@ -219,6 +222,10 @@ class UserController extends Controller
 
     public function storeTeacherByWaka(Request $request)
     {
+        if ($request->has('nip') && trim((string) $request->nip) === '') {
+            $request->merge(['nip' => null]);
+        }
+
         $messages = [
             'nip.unique' => 'NIP sudah terdaftar!',
             'username.unique' => 'Username sudah digunakan!',
@@ -234,7 +241,7 @@ class UserController extends Controller
             'id_class' => 'nullable',
             'title' => 'required|string|max:100',
             'username' => 'required|string|max:100|unique:users,username',
-            'email' => 'required|string|email:rfc,dns|max:255|unique:users,email',
+            'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'nullable|string|min:8'
         ], $messages);
 
@@ -247,15 +254,20 @@ class UserController extends Controller
         }
 
         $data = $validator->validated();
+        if (strtolower(str_replace(' ', '', trim($data['title'] ?? ''))) === 'gurubkpengajar') {
+            $data['title'] = 'Guru BK';
+        }
+        $isGuruBk = strtolower(str_replace(' ', '', trim($data['title'] ?? ''))) === 'gurubk';
+
         $plainPassword = !empty($data['password']) ? $data['password'] : 'Peh_1234';
         $data['password'] = Hash::make($plainPassword);
 
-        // Parsing multi-kelas jika dikirim dalam bentuk string '1,3,21'
+        // Parsing multi-kelas (khusus Guru BK, baik 1 kelas maupun banyak kelas tetap masuk ke counselor_classes)
         $multiClasses = [];
         if (!empty($request->id_class)) {
-            if (is_string($request->id_class) && str_contains($request->id_class, ',')) {
-                $multiClasses = array_filter(array_map('trim', explode(',', $request->id_class)));
-                $data['id_class'] = null; // Tabel users tetap aman dengan nilai null
+            if ($isGuruBk || (is_string($request->id_class) && str_contains($request->id_class, ','))) {
+                $multiClasses = array_values(array_filter(array_map('trim', explode(',', (string) $request->id_class))));
+                $data['id_class'] = null;
             } elseif (is_numeric($request->id_class)) {
                 $data['id_class'] = (int) $request->id_class;
             } else {
@@ -270,10 +282,15 @@ class UserController extends Controller
             $teacher->counselorClasses()->sync($multiClasses);
         }
 
+        $teacher->load(['role', 'schoolClass', 'counselorClasses']);
+        if ($teacher->counselorClasses && $teacher->counselorClasses->count() > 0) {
+            $teacher->id_class = $teacher->counselorClasses->pluck('id_class')->implode(',');
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Data guru baru berhasil ditambahkan',
-            'data' => $teacher->load(['role', 'schoolClass', 'counselorClasses'])
+            'data' => $teacher
         ], 201);
     }
 
@@ -286,6 +303,13 @@ class UserController extends Controller
                 'status' => 'error',
                 'message' => 'Data guru tidak ditemukan'
             ], 404);
+        }
+
+        if ($request->has('nip') && trim((string) $request->nip) === '') {
+            $request->merge(['nip' => null]);
+        }
+        if ($request->has('email') && trim((string) $request->email) === '') {
+            $request->request->remove('email');
         }
 
         $messages = [
@@ -301,7 +325,7 @@ class UserController extends Controller
             'id_class' => 'nullable',
             'title' => 'required|string|max:100',
             'username' => 'required|string|max:100|unique:users,username,' . $id . ',id_user',
-            'email' => 'sometimes|required|string|email:rfc,dns|max:255|unique:users,email,' . $id . ',id_user',
+            'email' => 'nullable|string|email|max:255|unique:users,email,' . $id . ',id_user',
             'password' => 'nullable|string|min:8'
         ], $messages);
 
@@ -314,6 +338,14 @@ class UserController extends Controller
         }
 
         $data = $validator->validated();
+        if (strtolower(str_replace(' ', '', trim($data['title'] ?? ''))) === 'gurubkpengajar') {
+            $data['title'] = 'Guru BK';
+        }
+        $isGuruBk = strtolower(str_replace(' ', '', trim($data['title'] ?? ''))) === 'gurubk';
+
+        if (empty($data['email'])) {
+            unset($data['email']);
+        }
 
         if (empty($data['password'])) {
             unset($data['password']);
@@ -321,12 +353,16 @@ class UserController extends Controller
             $data['password'] = Hash::make($data['password']);
         }
 
-        // Parsing multi-kelas saat update
+        // Parsing multi-kelas saat update (Guru BK baik 1 maupun banyak kelas tetap tersimpan di counselor_classes)
         $multiClasses = null;
-        if (array_key_exists('id_class', $data)) {
-            if (is_string($request->id_class) && str_contains($request->id_class, ',')) {
-                $multiClasses = array_filter(array_map('trim', explode(',', $request->id_class)));
-                $data['id_class'] = null; // Menghindari error integer pada kolom users.id_class
+        if (array_key_exists('id_class', $data) || $isGuruBk) {
+            if ($isGuruBk) {
+                $rawCls = (string) ($request->id_class ?? '');
+                $multiClasses = array_values(array_filter(array_map('trim', explode(',', $rawCls))));
+                $data['id_class'] = null;
+            } elseif (is_string($request->id_class) && str_contains($request->id_class, ',')) {
+                $multiClasses = array_values(array_filter(array_map('trim', explode(',', $request->id_class))));
+                $data['id_class'] = null;
             } elseif (is_numeric($request->id_class)) {
                 $data['id_class'] = (int) $request->id_class;
                 $multiClasses = [];
@@ -351,10 +387,15 @@ class UserController extends Controller
             Cache::forget("waka_verified_password_{$wakaUser->id_user}_{$id}");
         }
 
+        $teacher->load(['role', 'schoolClass', 'counselorClasses']);
+        if ($teacher->counselorClasses && $teacher->counselorClasses->count() > 0) {
+            $teacher->id_class = $teacher->counselorClasses->pluck('id_class')->implode(',');
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Data guru berhasil diperbarui',
-            'data' => $teacher->load(['role', 'schoolClass', 'counselorClasses'])
+            'data' => $teacher
         ], 200);
     }
 
@@ -704,6 +745,14 @@ class UserController extends Controller
                 'status' => 'error',
                 'message' => 'User tidak ditemukan'
             ], 404);
+        }
+
+        if (strtolower(str_replace(' ', '', trim($user->title ?? ''))) === 'gurubkpengajar') {
+            $user->title = 'Guru BK';
+        }
+
+        if ($user->counselorClasses && $user->counselorClasses->count() > 0) {
+            $user->id_class = $user->counselorClasses->pluck('id_class')->implode(',');
         }
 
         return response()->json([
@@ -1407,9 +1456,18 @@ class UserController extends Controller
             ->first();
 
         if ($existingParent) {
+            $student = $request->user();
+            $alreadyLinked = false;
+            if ($student) {
+                $alreadyLinked = $student->parents()->where('users.id_user', $existingParent->id_user)->exists();
+            }
+
             return response()->json([
                 'status' => 'success',
                 'exists' => true,
+                'already_linked' => $alreadyLinked,
+                'parent_id' => $existingParent->id_user,
+                'fullname' => $existingParent->fullname,
                 'parent' => [
                     'id_user' => $existingParent->id_user,
                     'fullname' => $existingParent->fullname,
@@ -1512,22 +1570,34 @@ class UserController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'fullname' => 'required|string',
+            'parent_id' => 'nullable|integer',
+            'fullname' => 'nullable|string',
             'password' => 'required|string',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Fullname dan password wajib diisi.'
+                'message' => 'Password akun orang tua wajib diisi.'
             ], 422);
         }
 
-        $fullname = strtolower(trim($request->fullname));
-        $parent = User::where('id_role', 4)
-            ->whereRaw("LOWER(TRIM(COALESCE(title, ''))) = 'orang tua'")
-            ->whereRaw('LOWER(TRIM(fullname)) = ?', [$fullname])
-            ->first();
+        $parent = null;
+
+        if (!empty($request->parent_id)) {
+            $parent = User::where('id_role', 4)
+                ->whereRaw("LOWER(TRIM(COALESCE(title, ''))) = 'orang tua'")
+                ->where('id_user', (int) $request->parent_id)
+                ->first();
+        }
+
+        if (!$parent && !empty($request->fullname) && strtolower(trim($request->fullname)) !== 'undefined') {
+            $fullname = strtolower(trim($request->fullname));
+            $parent = User::where('id_role', 4)
+                ->whereRaw("LOWER(TRIM(COALESCE(title, ''))) = 'orang tua'")
+                ->whereRaw('LOWER(TRIM(fullname)) = ?', [$fullname])
+                ->first();
+        }
 
         if (!$parent) {
             return response()->json([

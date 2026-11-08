@@ -25,9 +25,9 @@ class DatabaseSeeder extends Seeder
         }
 
         // 2. Seed Master Kelas
-        $classX = SchoolClass::firstOrCreate(['kelas_nomor' => 'X', 'nama_kelas' => 'RPL 1']);
-        $classXI = SchoolClass::firstOrCreate(['kelas_nomor' => 'XI', 'nama_kelas' => 'RPL 1']);
-        $classXII = SchoolClass::firstOrCreate(['kelas_nomor' => 'XII', 'nama_kelas' => 'RPL 1']);
+        $classX = SchoolClass::firstOrCreate(['kelas_nomor' => 'X', 'nama_kelas' => 'RPL', 'nomor_kelas' => '1']);
+        $classXI = SchoolClass::firstOrCreate(['kelas_nomor' => 'XI', 'nama_kelas' => 'RPL', 'nomor_kelas' => '1']);
+        $classXII = SchoolClass::firstOrCreate(['kelas_nomor' => 'XII', 'nama_kelas' => 'RPL', 'nomor_kelas' => '1']);
 
         // 3. Seed Users
         User::updateOrCreate(

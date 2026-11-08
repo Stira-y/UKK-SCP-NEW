@@ -10,7 +10,7 @@ class SchoolClassController extends Controller
 {
     public function index()
     {
-        $classes = SchoolClass::all();
+        $classes = SchoolClass::whereNotIn(\Illuminate\Support\Facades\DB::raw("UPPER(TRIM(nama_kelas))"), ['RPL 1', 'RPL1'])->get();
         return response()->json(['status' => 'success', 'data' => $classes], 200);
     }
 
@@ -58,6 +58,12 @@ class SchoolClassController extends Controller
         if (!$class) {
             return response()->json(['status' => 'error', 'message' => 'Data tidak ditemukan'], 404);
         }
+
+        try {
+            \Illuminate\Support\Facades\DB::table('users')->where('id_class', $id)->update(['id_class' => null]);
+            \Illuminate\Support\Facades\DB::table('schedules')->where('id_class', $id)->delete();
+            \Illuminate\Support\Facades\DB::table('counselor_classes')->where('id_class', $id)->delete();
+        } catch (\Throwable $e) {}
 
         $class->delete();
         return response()->json(['status' => 'success', 'message' => 'Kelas berhasil dihapus'], 200);

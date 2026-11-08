@@ -280,9 +280,9 @@
             ]);
 
             // 3. Perbarui dropdown jika ada perubahan data kelas dari server
-            const prevSelected = currentSelectedClassId;
+            const prevSelected = (currentSelectedClassId && currentSelectedClassId !== 'none') ? currentSelectedClassId : null;
             initDropdownPresenceView(prevSelected);
-            if (currentSelectedClassId !== initialClassId) {
+            if (currentSelectedClassId !== initialClassId || initialClassId === 'none' || !initialClassId) {
                 await fetchIzinList();
             }
         });
@@ -369,7 +369,7 @@
                 } else {
                     currentSelectedClassId = String(waliClassId);
                 }
-            } else if (isGuruBkPengajar) {
+            } else if (isGuruBk) {
                 if (myAssignedClasses.length === 0) {
                     selectPresenceViewMode.innerHTML = `
                         <option value="none">-- Belum Ada Kelas Diampu --</option>

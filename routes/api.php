@@ -266,19 +266,41 @@ Route::get('deploy-migrate-{secret}', function (Request $request, $secret) {
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         $migrateOutput = trim(\Illuminate\Support\Facades\Artisan::output());
 
-        // Hapus kelas salah 'RPL 1' / 'RPL1' jika masih tersisa di database produksi
-        try {
-            \Illuminate\Support\Facades\DB::table('classes')
-                ->whereIn('nama_kelas', ['RPL 1', 'RPL1'])
-                ->delete();
-        } catch (\Throwable $e) {}
-
-        // 2. Jalankan seeder jika parameter ?seed=1
+        // 2. Jalankan seeder HANYA jika parameter ?seed=1
         $seedOutput = 'Seeding dilewati.';
-        if ($request->query('seed') === '1' || $request->has('seed')) {
+        if ($request->query('seed') === '1') {
             \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
             $seedOutput = trim(\Illuminate\Support\Facades\Artisan::output());
         }
+
+        // Hapus kelas salah 'RPL 1' / 'RPL1' (tanpa nomor kelas) dan ubah title 'Guru BK Pengajar' -> 'Guru BK'
+        try {
+            \Illuminate\Support\Facades\DB::table('users')
+                ->whereRaw("LOWER(REPLACE(TRIM(COALESCE(title, '')), ' ', '')) = 'gurubkpengajar'")
+                ->update(['title' => 'Guru BK']);
+
+            $badClasses = \Illuminate\Support\Facades\DB::table('classes')
+                ->whereIn(\Illuminate\Support\Facades\DB::raw("UPPER(TRIM(nama_kelas))"), ['RPL 1', 'RPL1'])
+                ->get();
+
+            foreach ($badClasses as $bad) {
+                $goodClass = \Illuminate\Support\Facades\DB::table('classes')
+                    ->where('kelas_nomor', $bad->kelas_nomor)
+                    ->whereRaw("UPPER(TRIM(nama_kelas)) = 'RPL'")
+                    ->where('nomor_kelas', '1')
+                    ->first();
+                $repId = $goodClass ? $goodClass->id_class : null;
+
+                \Illuminate\Support\Facades\DB::table('users')->where('id_class', $bad->id_class)->update(['id_class' => $repId]);
+                if ($repId) {
+                    \Illuminate\Support\Facades\DB::table('schedules')->where('id_class', $bad->id_class)->update(['id_class' => $repId]);
+                } else {
+                    \Illuminate\Support\Facades\DB::table('schedules')->where('id_class', $bad->id_class)->delete();
+                }
+                \Illuminate\Support\Facades\DB::table('counselor_classes')->where('id_class', $bad->id_class)->delete();
+                \Illuminate\Support\Facades\DB::table('classes')->where('id_class', $bad->id_class)->delete();
+            }
+        } catch (\Throwable $e) {}
 
         // 3. Buat symlink storage
         try {

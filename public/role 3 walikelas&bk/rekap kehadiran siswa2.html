@@ -128,7 +128,7 @@
         </main>
     </div>
 
-    <!-- Script Logika Role 3 (Wali Kelas & Guru BK Pengajar) -->
+    <!-- Script Logika Role 3 (Wali Kelas & Guru BK) -->
     <script>
         
         const token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
@@ -227,7 +227,7 @@
 
             myAssignedClasses = allClasses.filter(c => rawAssignedClassIds.includes(String(c.id_class)));
 
-            if (isGuruBkPengajar) {
+            if (isGuruBk) {
                 wrapperCustomPresenceView.classList.remove('hidden');
                 selectPresenceViewMode.innerHTML = '';
 

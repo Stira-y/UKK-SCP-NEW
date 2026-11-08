@@ -182,7 +182,10 @@
                     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
                 });
                 const res = await response.json();
-                rawClassesData = res.data || res || [];
+                rawClassesData = (res.data || res || []).filter(c => {
+                    const nk = (c.nama_kelas || '').trim().toUpperCase();
+                    return nk !== 'RPL 1' && nk !== 'RPL1';
+                });
                 renderClassGroupTable();
             } catch (err) {
                 classTableBody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-red-500">Gagal memuat data kelas.</td></tr>`;

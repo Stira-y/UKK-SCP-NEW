@@ -61,7 +61,7 @@ class User extends Authenticatable
         return $this->belongsTo(SchoolClass::class, 'id_class', 'id_class');
     }
 
-    // Untuk Guru BK & Guru BK Pengajar (Multi Kelas)
+    // Untuk Guru BK (Multi Kelas)
     public function counselorClasses()
     {
         return $this->belongsToMany(SchoolClass::class, 'counselor_classes', 'id_user', 'id_class');

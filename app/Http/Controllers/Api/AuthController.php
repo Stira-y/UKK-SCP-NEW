@@ -31,7 +31,7 @@ class AuthController extends Controller
         $cleanInput = strtolower($loginInput);
 
         // Cari user berdasarkan username, email, nis, ATAU nomor telepon
-        $user = User::with(['role', 'schoolClass'])
+        $user = User::with(['role', 'schoolClass', 'counselorClasses'])
             ->where(function ($q) use ($cleanInput, $loginInput) {
                 $q->whereRaw('LOWER(TRIM(username)) = ?', [$cleanInput])
                   ->orWhereRaw("LOWER(TRIM(REPLACE(REPLACE(email, CHAR(13), ''), CHAR(10), '')))= ?", [$cleanInput])
@@ -47,6 +47,16 @@ class AuthController extends Controller
                 'status' => 'error',
                 'message' => 'Username/Email/NIS/Nomor Telepon atau password salah'
             ], 401);
+        }
+
+        // Normalisasi title Guru BK Pengajar menjadi Guru BK
+        if (strtolower(str_replace(' ', '', trim($user->title ?? ''))) === 'gurubkpengajar') {
+            $user->title = 'Guru BK';
+            $user->save();
+        }
+
+        if ($user->counselorClasses && $user->counselorClasses->count() > 0) {
+            $user->id_class = $user->counselorClasses->pluck('id_class')->implode(',');
         }
 
         // Tolak login jika siswa sudah lulus / berstatus alumni atau dikeluarkan (nonaktif)

@@ -196,7 +196,7 @@
                     </div>
                 </div>
 
-                <!-- Kolom Mengampu Kelas Khusus Guru BK Pengajar -->
+                <!-- Kolom Mengampu Kelas Khusus Guru BK -->
                 <div id="addBkClassesContainer" class="hidden p-3.5 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-2">
                     <div class="flex items-center justify-between">
                         <label class="block text-xs font-bold text-indigo-900 uppercase">Mengampu Kelas</label>
@@ -326,7 +326,7 @@
                     </div>
                 </div>
 
-                <!-- Kolom Mengampu Kelas Khusus Edit Guru BK Pengajar -->
+                <!-- Kolom Mengampu Kelas Khusus Edit Guru BK -->
                 <div id="editBkClassesContainer" class="hidden p-3.5 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-2">
                     <div class="flex items-center justify-between">
                         <label class="block text-xs font-bold text-indigo-900 uppercase">Mengampu Kelas</label>
@@ -509,7 +509,7 @@
 
         const roleMap = { 1: 'Waka', 2: 'Guru', 3: 'Kesiswaan' };
 
-        // Hanya 4 Title Resmi: Wali Kelas, Guru BK Pengajar, Guru Normada, Guru Produktif
+        // Hanya 4 Title Resmi: Wali Kelas, Guru BK, Guru Normada, Guru Produktif
         function getAvailableTitles() {
             return [
                 { name: "Wali Kelas", role: "Kesiswaan" },
@@ -536,11 +536,13 @@
                 filteredTitles = allTitles.filter(t => t.role === 'Kesiswaan');
             }
 
+            let normalizeCur = (selectedTitle || '').replace(/\s+/g, '').toLowerCase();
+            if (normalizeCur === 'gurubkpengajar') normalizeCur = 'gurubk';
+
             filteredTitles.forEach(t => {
                 const opt = document.createElement('option');
                 opt.value = t.name;
                 opt.textContent = t.name;
-                const normalizeCur = (selectedTitle || '').replace(/\s+/g, '').toLowerCase();
                 const normalizeOpt = t.name.replace(/\s+/g, '').toLowerCase();
                 if (selectedTitle && (normalizeOpt === normalizeCur)) {
                     opt.selected = true;
@@ -565,8 +567,8 @@
                 if (excludeTeacherId && Number(t.id_user) === Number(excludeTeacherId)) return;
                 const roleNum = parseInt(t.id_role);
                 const titleClean = (t.title || '').toLowerCase().replace(/\s+/g, '');
-                const isBkPengajar = (roleNum === 3) && (titleClean === 'gurubkpengajar');
-                if (isBkPengajar && t.id_class) {
+                const isGuruBk = (roleNum === 3) && (titleClean === 'gurubk' || titleClean === 'gurubkpengajar');
+                if (isGuruBk && t.id_class) {
                     const rawIds = String(t.id_class).split(',').map(s => s.trim()).filter(Boolean);
                     rawIds.forEach(cid => {
                         occupiedMap.set(String(cid), t.fullname || t.username);
@@ -632,13 +634,17 @@
             const cleanTitle = (titleVal || '').replace(/\s+/g, '').toLowerCase();
             const waliContainer = isEdit ? editWalikelasContainer : addWalikelasContainer;
             const bkContainer = isEdit ? editBkClassesContainer : addBkClassesContainer;
+            const bkList = isEdit ? editBkClassesList : addBkClassesList;
 
             if (cleanTitle === 'walikelas') {
                 waliContainer.classList.remove('hidden');
                 bkContainer.classList.add('hidden');
-            } else if (cleanTitle === 'gurubkpengajar') {
+            } else if (cleanTitle === 'gurubk' || cleanTitle === 'gurubkpengajar') {
                 waliContainer.classList.add('hidden');
                 bkContainer.classList.remove('hidden');
+                if (bkList && bkList.children.length === 0) {
+                    createBkClassRow(bkList, '', isEdit ? editingTeacherId : null);
+                }
             } else {
                 waliContainer.classList.add('hidden');
                 bkContainer.classList.add('hidden');
@@ -871,7 +877,7 @@
                     matchesCat = (roleNum === 2) && (titleClean === 'guruproduktif');
                 } else if (currentCategory === 'Walikelas') {
                     matchesCat = (roleNum === 3) && (titleClean === 'walikelas');
-                } else if (currentCategory === 'Guru BK' || currentCategory === 'Guru BK Pengajar') {
+                } else if (currentCategory === 'Guru BK') {
                     matchesCat = (roleNum === 3) && (titleClean === 'gurubk' || titleClean === 'gurubkpengajar');
                 } else if (currentCategory === 'Waka') {
                     matchesCat = (roleNum === 1);
@@ -910,9 +916,14 @@
                         const c = t.school_class;
                         classColumnContent = `<span class="bg-amber-100 text-amber-800 font-semibold px-2.5 py-0.5 rounded-full text-xs">${c.kelas_nomor} ${c.nama_kelas} ${c.nomor_kelas || ''}</span>`;
                     }
-                } else if (titleClean === 'gurubkpengajar') {
-                    if (t.id_class) {
-                        const rawIds = String(t.id_class).split(',').map(s => s.trim()).filter(Boolean);
+                } else if (titleClean === 'gurubk' || titleClean === 'gurubkpengajar') {
+                    let rawIds = [];
+                    if (Array.isArray(t.counselor_classes) && t.counselor_classes.length > 0) {
+                        rawIds = t.counselor_classes.map(c => String(c.id_class || c));
+                    } else if (t.id_class) {
+                        rawIds = String(t.id_class).split(',').map(s => s.trim()).filter(Boolean);
+                    }
+                    if (rawIds.length > 0) {
                         const matchedClasses = schoolClassesList.filter(c => rawIds.includes(String(c.id_class)));
                         if (matchedClasses.length > 0) {
                             classColumnContent = `<div class="flex flex-wrap gap-1 justify-center max-w-[220px] mx-auto">` + matchedClasses.map(c => `
@@ -1178,7 +1189,7 @@
         editNipInput.addEventListener('input', (e) => {
             e.target.value = e.target.value.replace(/[^0-9]/g, '');
             const val = e.target.value.trim();
-            const isTaken = allTeachersData.some(t => t.id_user !== editingTeacherId && t.nip && t.nip === val);
+            const isTaken = allTeachersData.some(t => Number(t.id_user) !== Number(editingTeacherId) && t.nip && t.nip === val);
             if (val && isTaken) {
                 editNipError.textContent = 'NIP sudah terdaftar!';
                 editNipError.classList.remove('hidden');
@@ -1191,7 +1202,7 @@
         editUsernameInput.addEventListener('input', () => {
             document.getElementById('error_editUsername').classList.add('hidden');
             const val = editUsernameInput.value.trim().toLowerCase();
-            const isTaken = allSystemUsers.some(u => u.id_user !== editingTeacherId && (u.username || '').toLowerCase() === val) || allTeachersData.some(t => t.id_user !== editingTeacherId && (t.username || '').toLowerCase() === val);
+            const isTaken = allSystemUsers.some(u => Number(u.id_user) !== Number(editingTeacherId) && (u.username || '').toLowerCase() === val) || allTeachersData.some(t => Number(t.id_user) !== Number(editingTeacherId) && (t.username || '').toLowerCase() === val);
             if (val && isTaken) {
                 editUsernameError.textContent = 'Username sudah digunakan!';
                 editUsernameError.classList.remove('hidden');
@@ -1254,7 +1265,7 @@
                 if (!addTingkat.value) { document.getElementById('error_addTingkat').classList.remove('hidden'); hasEmpty = true; }
                 if (!addNamaKelas.value.trim()) { document.getElementById('error_addNamaKelas').classList.remove('hidden'); hasEmpty = true; }
                 if (!addNomorKelas.value) { document.getElementById('error_addNomorKelas').classList.remove('hidden'); hasEmpty = true; }
-            } else if (cleanTitle === 'gurubkpengajar') {
+            } else if (cleanTitle === 'gurubk' || cleanTitle === 'gurubkpengajar') {
                 const bkSelects = addBkClassesList.querySelectorAll('.bk-class-select');
                 const selectedIds = Array.from(bkSelects).map(s => s.value).filter(Boolean);
                 if (selectedIds.length === 0) {
@@ -1304,7 +1315,7 @@
                     return matchTingkat && matchNama && dbNomor === addNomorKelas.value;
                 });
                 if (matched) classId = matched.id_class;
-            } else if (cleanTitle === 'gurubkpengajar') {
+            } else if (cleanTitle === 'gurubk' || cleanTitle === 'gurubkpengajar') {
                 const bkSelects = addBkClassesList.querySelectorAll('.bk-class-select');
                 const selectedIds = Array.from(bkSelects).map(s => s.value).filter(Boolean);
                 classId = selectedIds.join(',');
@@ -1373,7 +1384,7 @@
                 if (!editTingkat.value) { document.getElementById('error_editTingkat').classList.remove('hidden'); hasEmpty = true; }
                 if (!editNamaKelas.value.trim()) { document.getElementById('error_editNamaKelas').classList.remove('hidden'); hasEmpty = true; }
                 if (!editNomorKelas.value) { document.getElementById('error_editNomorKelas').classList.remove('hidden'); hasEmpty = true; }
-            } else if (cleanTitle === 'gurubkpengajar') {
+            } else if (cleanTitle === 'gurubk' || cleanTitle === 'gurubkpengajar') {
                 const bkSelects = editBkClassesList.querySelectorAll('.bk-class-select');
                 const selectedIds = Array.from(bkSelects).map(s => s.value).filter(Boolean);
                 if (selectedIds.length === 0) {
@@ -1395,8 +1406,9 @@
                 return;
             }
 
-            const pwdValue = editPasswordInput.value;
-            if (pwdValue.length > 0 && window.validatePasswordRules && !window.validatePasswordRules(pwdValue)) {
+            const isPwdVisible = !document.getElementById('passwordContainer').classList.contains('hidden');
+            const pwdValue = isPwdVisible ? editPasswordInput.value.trim() : '';
+            if (isPwdVisible && pwdValue.length > 0 && window.validatePasswordRules && !window.validatePasswordRules(pwdValue)) {
                 document.getElementById('editPasswordValidationError').classList.remove('hidden');
                 return;
             }
@@ -1423,13 +1435,14 @@
                     return matchTingkat && matchNama && dbNomor === editNomorKelas.value;
                 });
                 if (matched) classId = matched.id_class;
-            } else if (cleanTitle === 'gurubkpengajar') {
+            } else if (cleanTitle === 'gurubk' || cleanTitle === 'gurubkpengajar') {
                 const bkSelects = editBkClassesList.querySelectorAll('.bk-class-select');
                 const selectedIds = Array.from(bkSelects).map(s => s.value).filter(Boolean);
                 classId = selectedIds.join(',');
             }
 
-            const pwdValue = editPasswordInput.value.trim();
+            const isPwdVisible = !document.getElementById('passwordContainer').classList.contains('hidden');
+            const pwdValue = isPwdVisible ? editPasswordInput.value.trim() : '';
             const payload = {
                 nip: document.getElementById('editNip').value.trim(),
                 title: editTitleSelect.value,
@@ -1560,7 +1573,7 @@
         });
 
         window.openEditModal = function(id) {
-            const t = allTeachersData.find(item => item.id_user === id);
+            const t = allTeachersData.find(item => Number(item.id_user) === Number(id));
             if (!t) return;
 
             lastActiveSearchValue = searchInput.value;
@@ -1599,13 +1612,20 @@
                     editNamaKelas.value = '';
                     editNomorKelas.innerHTML = '<option value="">Pilih</option>';
                 }
-            } else if (titleClean === 'gurubkpengajar') {
+            } else if (titleClean === 'gurubk' || titleClean === 'gurubkpengajar') {
                 editBkClassesList.innerHTML = '';
-                if (t.id_class) {
-                    const classIds = String(t.id_class).split(',').map(s => s.trim()).filter(Boolean);
+                let classIds = [];
+                if (Array.isArray(t.counselor_classes) && t.counselor_classes.length > 0) {
+                    classIds = t.counselor_classes.map(c => String(c.id_class)).filter(Boolean);
+                } else if (t.id_class) {
+                    classIds = String(t.id_class).split(',').map(s => s.trim()).filter(Boolean);
+                }
+                if (classIds.length > 0) {
                     classIds.forEach(cid => {
                         createBkClassRow(editBkClassesList, cid, editingTeacherId);
                     });
+                } else {
+                    createBkClassRow(editBkClassesList, '', editingTeacherId);
                 }
             }
 

@@ -1643,7 +1643,9 @@ function injectParentAndPasswordModals() {
             if (!res.ok) return false;
             const data = await res.json();
             if (data.exists && !data.already_linked) {
-                detectedExistingParent = { id: data.parent_id, fullname: data.fullname };
+                const resolvedId = data.parent_id || data.parent?.id_user || null;
+                const resolvedFullname = data.fullname || data.parent?.fullname || cleanName;
+                detectedExistingParent = { id: resolvedId, fullname: resolvedFullname };
                 parentExistsConfirmModal?.classList.remove('hidden');
                 return true;
             }
@@ -1680,8 +1682,12 @@ function injectParentAndPasswordModals() {
     document.getElementById('btnParentExistsYes')?.addEventListener('click', () => {
         parentExistsConfirmModal?.classList.add('hidden');
         createParentModal?.classList.add('hidden');
-        if (linkParentFullnameDisplay && detectedExistingParent) {
-            linkParentFullnameDisplay.value = detectedExistingParent.fullname;
+        if (linkParentFullnameDisplay) {
+            const fallbackName = parentFullnameInput?.value.trim() || '';
+            const dispName = (detectedExistingParent && detectedExistingParent.fullname && detectedExistingParent.fullname !== 'undefined')
+                ? detectedExistingParent.fullname
+                : fallbackName;
+            linkParentFullnameDisplay.value = dispName;
         }
         if (linkParentPasswordInput) {
             linkParentPasswordInput.value = '';
@@ -1833,6 +1839,10 @@ function injectParentAndPasswordModals() {
                     }
                 }
             } else if (pendingParentSaveMode === 'link') {
+                const resolvedFullname = (detectedExistingParent?.fullname && detectedExistingParent.fullname !== 'undefined')
+                    ? detectedExistingParent.fullname
+                    : (linkParentFullnameDisplay?.value && linkParentFullnameDisplay.value !== 'undefined' ? linkParentFullnameDisplay.value.trim() : (parentFullnameInput?.value.trim() || ''));
+
                 const res = await fetch(`${API_BASE_URL}/parent-account/link`, {
                     method: 'POST',
                     headers: {
@@ -1841,7 +1851,8 @@ function injectParentAndPasswordModals() {
                         'Accept': 'application/json'
                     },
                     body: JSON.stringify({
-                        parent_id: detectedExistingParent?.id,
+                        parent_id: detectedExistingParent?.id || null,
+                        fullname: resolvedFullname,
                         password: linkParentPasswordInput.value
                     })
                 });
