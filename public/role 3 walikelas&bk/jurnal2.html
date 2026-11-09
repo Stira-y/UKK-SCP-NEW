@@ -237,11 +237,25 @@
                     filledScheduleIds = [];
                 }
 
-                teacherSchedules = allSchedules.filter(s => 
-                    Number(s.id_guru) === Number(userData.id_user) && 
-                    s.day_of_week === todayName && 
-                    String(s.cycle_type) === String(systemActiveCycle)
-                );
+                const myFullName = (userData.fullname || '').trim().toLowerCase();
+                const myUserName = (userData.username || '').trim().toLowerCase();
+
+                teacherSchedules = allSchedules.filter(s => {
+                    const matchId = Number(s.id_guru) === Number(userData.id_user);
+                    let matchName = false;
+                    if (s.teacher) {
+                        const tFull = (s.teacher.fullname || '').trim().toLowerCase();
+                        const tUser = (s.teacher.username || '').trim().toLowerCase();
+                        if (myFullName && tFull && (myFullName === tFull || tFull.includes(myFullName) || myFullName.includes(tFull))) {
+                            matchName = true;
+                        } else if (myUserName && tUser && (myUserName === tUser)) {
+                            matchName = true;
+                        }
+                    }
+                    return (matchId || matchName) && 
+                           s.day_of_week === todayName && 
+                           String(s.cycle_type) === String(systemActiveCycle);
+                });
 
                 if (teacherSchedules.length === 0) {
                     selectSchedule.innerHTML = `<option value="" disabled selected>Tidak ada jadwal mengajar untuk Anda hari ini (${todayName} - Putaran ${systemActiveCycle}).</option>`;
@@ -538,6 +552,6 @@
             }
         });
     </script>
-    <script src="../js/global-layout.js?v=20261109_8.0"></script>
+    <script src="../js/global-layout.js?v=20261109_9.0"></script>
 </body>
 </html>

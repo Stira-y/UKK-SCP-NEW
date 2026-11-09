@@ -344,10 +344,23 @@
                 const jsonSched = await resSched.json();
                 const allScheds = jsonSched.data || [];
 
-                mySchedulesToday = allScheds.filter(s => 
-                    Number(s.id_guru) === currentUserId && 
-                    s.day_of_week === todayName
-                );
+                const myFullName = (userObj.fullname || '').trim().toLowerCase();
+                const myUserName = (userObj.username || '').trim().toLowerCase();
+
+                mySchedulesToday = allScheds.filter(s => {
+                    const matchId = Number(s.id_guru) === currentUserId;
+                    let matchName = false;
+                    if (s.teacher) {
+                        const tFull = (s.teacher.fullname || '').trim().toLowerCase();
+                        const tUser = (s.teacher.username || '').trim().toLowerCase();
+                        if (myFullName && tFull && (myFullName === tFull || tFull.includes(myFullName) || myFullName.includes(tFull))) {
+                            matchName = true;
+                        } else if (myUserName && tUser && (myUserName === tUser)) {
+                            matchName = true;
+                        }
+                    }
+                    return (matchId || matchName) && s.day_of_week === todayName;
+                });
             } catch (e) {}
 
             mySchedulesToday.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
@@ -734,6 +747,6 @@
             }
         });
     </script>
-    <script src="../js/global-layout.js?v=20261109_8.0"></script>
+    <script src="../js/global-layout.js?v=20261109_9.0"></script>
 </body>
 </html>

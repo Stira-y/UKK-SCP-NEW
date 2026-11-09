@@ -30,13 +30,12 @@ class AuthController extends Controller
         $loginInput = trim($request->username);
         $cleanInput = strtolower($loginInput);
 
-        // Cari user berdasarkan username, email, nis, ATAU nomor telepon
+        // Cari user berdasarkan username, email, atau nis (Nomor Telepon dinonaktifkan)
         $user = User::with(['role', 'schoolClass', 'counselorClasses'])
             ->where(function ($q) use ($cleanInput, $loginInput) {
                 $q->whereRaw('LOWER(TRIM(username)) = ?', [$cleanInput])
                   ->orWhereRaw("LOWER(TRIM(REPLACE(REPLACE(email, CHAR(13), ''), CHAR(10), '')))= ?", [$cleanInput])
-                  ->orWhere('nis', $loginInput)
-                  ->orWhere('no_telp', $loginInput);
+                  ->orWhere('nis', $loginInput);
             })
             ->orderByRaw("CASE WHEN LOWER(TRIM(COALESCE(title, ''))) = 'orang tua' THEN 1 ELSE 0 END ASC")
             ->first();
@@ -45,7 +44,7 @@ class AuthController extends Controller
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Username/Email/NIS/Nomor Telepon atau password salah'
+                'message' => 'Username/Email/NIS atau password salah'
             ], 401);
         }
 
