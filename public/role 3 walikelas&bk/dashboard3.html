@@ -349,39 +349,16 @@
             specialLeaveDateBadge.textContent = `${todayName}, ${todayStr}`;
 
             let activeCycle = '1';
-            let todayCalendarConfig = null;
-            let isPresensiMandiriToday = false;
-            let isHolidayToday = false;
-
-            try {
-                const resCal = await fetch(`${API_BASE}/calendar/today-config`, {
-                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
-                });
-                const jsonCal = await resCal.json();
-                todayCalendarConfig = jsonCal;
-                isHolidayToday = !!(jsonCal.is_holiday);
-                isPresensiMandiriToday = !!(jsonCal.presensi_mandiri && jsonCal.presensi_mandiri.is_scheduled);
-                if (jsonCal.active_cycle) {
-                    activeCycle = String(jsonCal.active_cycle);
-                    cycleBadge.textContent = `Putaran Aktif: ${activeCycle}`;
-                    localStorage.setItem('active_cycle', activeCycle);
-                }
-            } catch (e) {
-                console.warn('Gagal memuat config kalender:', e);
-            }
-
             try {
                 const resConfig = await fetch(`${API_BASE}/system-config/active-cycle`, {
                     headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
                 });
                 const jsonConfig = await resConfig.json();
-                if (!todayCalendarConfig || !todayCalendarConfig.active_cycle) {
-                    activeCycle = jsonConfig.data?.active_cycle ? String(jsonConfig.data.active_cycle) : '1';
-                    cycleBadge.textContent = `Putaran Aktif: ${activeCycle}`;
-                    localStorage.setItem('active_cycle', activeCycle);
-                }
+                activeCycle = jsonConfig.data?.active_cycle ? String(jsonConfig.data.active_cycle) : '1';
+                cycleBadge.textContent = `Putaran Aktif: ${activeCycle}`;
+                localStorage.setItem('active_cycle', activeCycle);
             } catch (e) {
-                if (!todayCalendarConfig) cycleBadge.textContent = 'Putaran Aktif: 1';
+                cycleBadge.textContent = 'Putaran Aktif: 1';
             }
             renderCycleBanner(activeCycle);
 
@@ -470,15 +447,11 @@
                     const room = s.room ? `${s.room.nama_room || ''} ${s.room.nomor_room ? '('+s.room.nomor_room+')' : ''}`.trim() : '-';
 
                     const startMinutes = timeStrToMinutes(s.start_time);
-                    const isLateMoreThan15Min = !isHolidayToday && !isPresensiMandiriToday && !isFilled && (currentTotalMinutes >= (startMinutes + 15));
+                    const isLateMoreThan15Min = !isFilled && (currentTotalMinutes >= (startMinutes + 15));
 
                     let statusBadge = '';
                     if (isFilled) {
                         statusBadge = `<span class="bg-emerald-100 text-emerald-700 font-bold px-2.5 py-1 rounded-full text-xs">Sudah Diisi</span>`;
-                    } else if (isPresensiMandiriToday) {
-                        statusBadge = `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold px-2.5 py-1 rounded-full text-xs">Presensi Mandiri</span>`;
-                    } else if (isHolidayToday) {
-                        statusBadge = `<span class="bg-slate-100 text-slate-500 font-semibold px-2.5 py-1 rounded-full text-xs">Libur</span>`;
                     } else if (isLateMoreThan15Min) {
                         statusBadge = `<span class="bg-red-100 text-red-700 border border-red-300 font-black px-2.5 py-1 rounded-full text-xs animate-pulse">Terlambat Mengisi</span>`;
                         lateJournalAlerts.push(`${s.mapel} di ${className}`);
@@ -497,36 +470,7 @@
                     `;
                 }).join('');
 
-                if (isPresensiMandiriToday) {
-                    lateJournalAlertBox.className = 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 rounded-2xl shadow-lg border border-indigo-400 transition-all';
-                    lateJournalAlertBox.innerHTML = `
-                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
-                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h4 class="font-bold text-sm md:text-base tracking-wide flex items-center gap-2">
-                                        <span>Presensi Mandiri Sedang Diaktifkan</span>
-                                        <span class="text-[10px] bg-white text-indigo-700 px-2 py-0.5 rounded-full font-black uppercase">Presensi Mandiri Siswa</span>
-                                    </h4>
-                                    <p class="text-xs text-indigo-100 mt-0.5 leading-relaxed">
-                                        Presensi mandiri siswa sedang diaktifkan untuk hari ini, sehingga pengisian jurnal KBM dinonaktifkan.
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="shrink-0 flex items-center space-x-2">
-                                <span class="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-white/30 backdrop-blur-xs flex items-center space-x-1.5">
-                                    <svg class="w-4 h-4 text-emerald-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                                    <span>Jurnal KBM Non-Aktif</span>
-                                </span>
-                            </div>
-                        </div>
-                    `;
-                    lateJournalAlertBox.classList.remove('hidden');
-                } else if (lateJournalAlerts.length > 0) {
+                if (lateJournalAlerts.length > 0) {
                     lateJournalAlertText.innerHTML = `Peringatan: Anda belum mengisi jurnal KBM lebih dari 15 menit sejak jadwal dimulai pada: <strong>${lateJournalAlerts.join(', ')}</strong>. Harap segera lengkapi jurnal mengajar Anda!`;
                     lateJournalAlertBox.classList.remove('hidden');
                 } else {
@@ -847,6 +791,6 @@
             }
         });
     </script>
-    <script src="../js/global-layout.js?v=20261110_2.0"></script>
+    <script src="../js/global-layout.js?v=20261110_4.0"></script>
 </body>
 </html>

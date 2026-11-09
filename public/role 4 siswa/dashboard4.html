@@ -90,12 +90,6 @@
                         </svg>
                         <span>Surat Izin</span>
                     </a>
-
-                    <a href="presensi-mandiri.html" class="flex items-center space-x-3 px-4 py-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium rounded-xl transition">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                        <span class="flex-1">Presensi Mandiri</span>
-                        
-                    </a>
                 </nav>
             </div>
             
@@ -520,12 +514,21 @@
             renderCycleBanner(activeCycle);
 
             // Periksa Izin Khusus yang diberikan guru hari ini untuk siswa ini
+            let hasVerifiedLeaveToday = false;
             try {
                 const resLeaves = await fetch(`${API_BASE_URL}/leave-requests?id_siswa=${studentData.id_user}`, {
                     headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
                 });
                 const jsonLeaves = await resLeaves.json();
                 const rawLeaves = jsonLeaves.data || jsonLeaves || [];
+
+                hasVerifiedLeaveToday = rawLeaves.some(l => {
+                    const statusApp = String(l.status_approval || '').toLowerCase().trim();
+                    if (statusApp !== 'disetujui' && statusApp !== 'di terima' && statusApp !== 'diterima') return false;
+                    const start = (l.start_date || '').substring(0, 10);
+                    const end = (l.end_date || l.start_date || '').substring(0, 10);
+                    return todayStr >= start && todayStr <= end;
+                });
 
                 const mySpecialLeaveToday = rawLeaves.find(l => {
                     const start = (l.start_date || '').substring(0, 10);
@@ -613,7 +616,7 @@
                 const nowLocal = new Date();
                 const todayDateStr = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`;
                 
-                const todayAtt = allAtt.find(att => Number(att.id_siswa) === Number(studentData.id_user) && String(att.date || '').substring(0, 10) === todayDateStr);
+                const todayAtts = allAtt.filter(att => Number(att.id_siswa) === Number(studentData.id_user) && String(att.date || '').substring(0, 10) === todayDateStr);
                 const todayLeave = rawLeaves.find(lv => {
                     const statusApp = String(lv.status_approval || '').toLowerCase().trim();
                     if (statusApp !== 'disetujui' && statusApp !== 'di terima' && statusApp !== 'diterima') return false;
@@ -624,22 +627,26 @@
 
                 let harianVal = '-';
                 let harianClass = 'text-slate-400 font-bold';
-                if (todayLeave) {
+                if (todayLeave || todayAtts.some(a => String(a.status || '').trim().toLowerCase() === 'izin')) {
                     harianVal = 'Izin';
                     harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700';
-                } else if (todayAtt) {
-                    const sLower = String(todayAtt.status || '').trim().toLowerCase();
-                    if (sLower === 'hadir') {
-                        harianVal = 'Hadir';
-                        harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700';
-                    } else if (sLower === 'izin' || sLower === 'sakit') {
-                        harianVal = todayAtt.status;
+                } else if (todayAtts.some(a => String(a.status || '').trim().toLowerCase() === 'hadir')) {
+                    harianVal = 'Hadir';
+                    harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700';
+                } else if (todayAtts.length > 0) {
+                    const chosenAtt = todayAtts[todayAtts.length - 1];
+                    const sLower = String(chosenAtt.status || '').trim().toLowerCase();
+                    if (sLower === 'sakit') {
+                        harianVal = 'Sakit';
                         harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700';
+                    } else if (sLower === 'terlambat') {
+                        harianVal = 'Terlambat';
+                        harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700';
                     } else if (sLower === 'alpa') {
                         harianVal = 'Alpa';
                         harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700';
                     } else {
-                        harianVal = todayAtt.status || '-';
+                        harianVal = chosenAtt.status || '-';
                         harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700';
                     }
                 }
@@ -696,12 +703,18 @@
             }
 
             // Status Harian
-            const hasHadirToday = myAttendancesToday.some(a => String(a.status).toLowerCase() === 'hadir');
+            const hasIzinToday = hasVerifiedLeaveToday || myAttendancesToday.some(a => String(a.status || '').trim().toLowerCase() === 'izin');
+            const hasHadirToday = myAttendancesToday.some(a => String(a.status || '').trim().toLowerCase() === 'hadir');
             const hasAnyAttendance = myAttendancesToday.length > 0;
 
-            if (hasHadirToday) {
+            if (hasIzinToday) {
+                dailyRecapBadge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300';
+                dailyRecapBadge.textContent = 'Izin';
+                dailyScoreBadge.className = 'text-xs font-extrabold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-300 shadow-xs';
+                dailyScoreBadge.textContent = '+0';
+            } else if (hasHadirToday) {
                 dailyRecapBadge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300';
-                dailyRecapBadge.textContent = 'Hadir Hari Ini';
+                dailyRecapBadge.textContent = 'Hadir';
                 dailyScoreBadge.className = 'text-xs font-extrabold text-emerald-700 bg-white px-2 py-0.5 rounded-md border border-emerald-300 shadow-xs';
                 dailyScoreBadge.textContent = '+1';
             } else if (hasAnyAttendance) {
@@ -734,7 +747,9 @@
                 const matchingAttendance = myAttendancesToday.find(a => a.journal && Number(a.journal.id_schedule) === Number(s.id_schedule));
 
                 let statusBadge = '';
-                if (matchingAttendance) {
+                if (hasVerifiedLeaveToday) {
+                    statusBadge = `<span class="bg-amber-100 text-amber-700 font-bold px-3 py-1 rounded-full text-xs">Izin (+0)</span>`;
+                } else if (matchingAttendance) {
                     const st = matchingAttendance.status;
                     if (st === 'Hadir') {
                         statusBadge = `<span class="bg-emerald-100 text-emerald-700 font-bold px-3 py-1 rounded-full text-xs">Hadir (+1)</span>`;

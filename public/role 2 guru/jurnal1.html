@@ -206,43 +206,6 @@
         });
 
         async function fetchTodayTeacherSchedules() {
-            // Cek status hari libur dari Kalender Pendidikan
-            try {
-                const kaldikRes = await fetch(`${API_BASE_URL}/calendar/today-config`, {
-                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                });
-                const kaldikJson = await kaldikRes.json();
-                if (kaldikJson && kaldikJson.is_journal_disabled) {
-                    const holidayMsg = kaldikJson.holiday_reason || 'Hari Libur / Tanggal Merah';
-                    const noticeBox = document.createElement('div');
-                    noticeBox.className = 'bg-rose-50 border border-rose-300 rounded-2xl p-4 text-rose-800 text-xs md:text-sm flex items-start space-x-3 shadow-sm mb-4';
-                    noticeBox.innerHTML = `
-                        <svg class="w-5 h-5 text-rose-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                        <div>
-                            <h4 class="font-bold">Pengisian Jurnal Dinonaktifkan</h4>
-                            <p class="mt-0.5">Hari ini (${kaldikJson.date}) berstatus <strong>${holidayMsg}</strong> berdasarkan Kalender Pendidikan. Form pengisian jurnal KBM dinonaktifkan.</p>
-                        </div>
-                    `;
-                    const container = document.querySelector('main .max-w-4xl') || document.querySelector('main');
-                    if (container && !document.getElementById('holidayNoticeBox')) {
-                        noticeBox.id = 'holidayNoticeBox';
-                        container.insertBefore(noticeBox, container.children[1]);
-                    }
-                    if (selectSchedule) {
-                        selectSchedule.disabled = true;
-                        selectSchedule.innerHTML = `<option value="">-- Hari Libur (${holidayMsg}) --</option>`;
-                    }
-                    if (topicDescription) topicDescription.disabled = true;
-                    if (btnUploadCamera) btnUploadCamera.disabled = true;
-                    if (btnNext) {
-                        btnNext.disabled = true;
-                        btnNext.classList.add('opacity-50', 'cursor-not-allowed');
-                        btnNext.textContent = 'Jurnal Dikunci (Hari Libur)';
-                    }
-                    return;
-                }
-            } catch (err) {}
-
             try {
                 try {
                     const configRes = await fetch(`${API_BASE_URL}/system-config/active-cycle`, {
@@ -601,6 +564,6 @@
             }
         });
     </script>
-    <script src="../js/global-layout.js?v=20261110_2.0"></script>
+    <script src="../js/global-layout.js?v=20261110_4.0"></script>
 </body>
 </html>

@@ -29,6 +29,24 @@ class AttendanceController extends Controller
 
         $attendances = $query->latest('date')->get();
 
+        // Sinkronisasi otomatis status Izin jika surat izin siswa sudah terverifikasi (Disetujui / Di Terima)
+        $approvedLeaves = LeaveRequest::whereRaw("LOWER(TRIM(COALESCE(status_approval, ''))) IN ('disetujui', 'di terima', 'diterima')")->get();
+        if ($approvedLeaves->isNotEmpty()) {
+            foreach ($attendances as $att) {
+                $attDate = substr((string) $att->date, 0, 10);
+                $hasLeave = $approvedLeaves->first(function ($lv) use ($att, $attDate) {
+                    if ((int) $lv->id_siswa !== (int) $att->id_siswa) return false;
+                    $sDate = substr((string) $lv->start_date, 0, 10);
+                    $eDate = substr((string) ($lv->end_date ?? $lv->start_date), 0, 10);
+                    return $attDate >= $sDate && $attDate <= $eDate;
+                });
+                if ($hasLeave && strtolower(trim($att->status ?? '')) !== 'izin') {
+                    $att->status = 'Izin';
+                    Attendance::where('id_attendance', $att->id_attendance)->update(['status' => 'Izin']);
+                }
+            }
+        }
+
         return response()->json([
             'status' => 'success',
             'data' => $attendances
@@ -94,9 +112,12 @@ class AttendanceController extends Controller
         }
 
         // Otomatis verifikasi sistem jika siswa memiliki surat izin yang telah Di Terima oleh Wali Kelas / BK
-        $approvedLeaveStudentIds = LeaveRequest::whereIn('status_approval', ['Disetujui', 'Di Terima', 'di terima', 'disetujui'])
+        $approvedLeaveStudentIds = LeaveRequest::whereRaw("LOWER(TRIM(COALESCE(status_approval, ''))) IN ('disetujui', 'di terima', 'diterima')")
             ->whereDate('start_date', '<=', $date)
-            ->whereDate('end_date', '>=', $date)
+            ->where(function ($q) use ($date) {
+                $q->whereDate('end_date', '>=', $date)
+                  ->orWhereNull('end_date');
+            })
             ->pluck('id_siswa')
             ->map(fn($id) => (int) $id)
             ->flip();
@@ -143,14 +164,18 @@ class AttendanceController extends Controller
             ->where('id_class', $classId)
             ->where(function ($q) {
                 $q->whereNull('title')
-                  ->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
+                  ->orWhereRaw("LOWER(TRIM(title)) NOT IN ('orang tua', 'dikeluarkan', 'alumni', 'lulus', 'pensiun')");
             })
-            ->orderBy('fullname', 'asc')
+            ->orderByRaw('CAST(nis AS UNSIGNED) ASC')
+            ->orderBy('nis', 'asc')
             ->get();
 
-        $approvedLeaves = LeaveRequest::whereIn('status_approval', ['Disetujui', 'Di Terima', 'di terima', 'disetujui'])
+        $approvedLeaves = LeaveRequest::whereRaw("LOWER(TRIM(COALESCE(status_approval, ''))) IN ('disetujui', 'di terima', 'diterima')")
             ->whereDate('start_date', '<=', $date)
-            ->whereDate('end_date', '>=', $date)
+            ->where(function ($q) use ($date) {
+                $q->whereDate('end_date', '>=', $date)
+                  ->orWhereNull('end_date');
+            })
             ->get()
             ->keyBy('id_siswa');
 

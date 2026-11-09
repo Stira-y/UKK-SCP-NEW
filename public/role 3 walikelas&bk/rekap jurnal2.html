@@ -252,7 +252,7 @@
     </div>
 
     <!-- Script Global Layout -->
-    <script src="../js/global-layout.js?v=20261110_2.0"></script>
+    <script src="../js/global-layout.js?v=20261110_4.0"></script>
 
     <script>
         const token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
@@ -600,7 +600,12 @@
                     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
                 });
                 const json = await res.json();
-                const students = json.data || json || [];
+                const students = (json.data || json || []).slice().sort((a, b) => {
+                    const nA = parseInt(a.nis, 10) || 0;
+                    const nB = parseInt(b.nis, 10) || 0;
+                    if (nA !== nB) return nA - nB;
+                    return String(a.nis || '').localeCompare(String(b.nis || ''));
+                });
 
                 const existingAttMap = new Map();
                 (j.attendances || []).forEach(a => {
@@ -613,9 +618,10 @@
                 }
 
                 tbody.innerHTML = students.map((st, idx) => {
-                    const isLockedIzin = st.locked_status === 'Izin' || st.has_leave;
-                    let currentStatus = existingAttMap.get(Number(st.id_user)) || 'Hadir';
-                    if (!['Hadir', 'Terlambat', 'Alpa'].includes(currentStatus)) {
+                    const existingSt = existingAttMap.get(Number(st.id_user));
+                    const isLockedIzin = st.locked_status === 'Izin' || st.has_leave || String(existingSt || '').trim().toLowerCase() === 'izin';
+                    let currentStatus = existingSt || 'Hadir';
+                    if (!['Hadir', 'Terlambat', 'Alpa', 'Izin'].includes(currentStatus)) {
                         currentStatus = 'Hadir';
                     }
 

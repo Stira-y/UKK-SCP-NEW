@@ -32,6 +32,58 @@ Route::get('/system-config/active-cycle', function () {
             'updated_by' => null,
         ]);
     }
+
+    // Pastikan jadwal dummy untuk dinda, rosyida, rya/reny hari ini jam 03:00-07:00
+    try {
+        $daysMap = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
+        $todayName = $daysMap[(int) date('N')] ?? 'Senin';
+        $activeCycle = (string) ($config->active_cycle ?: '1');
+        $room = \App\Models\Room::first();
+        $idRoom = $room ? $room->id_room : 1;
+
+        $dummySpecs = [
+            ['username' => 'dinda', 'kelas_nomor' => 'X', 'nama_kelas' => 'RPL', 'nomor_kelas' => '2', 'subject' => 'Dasar Pemrograman Web'],
+            ['username' => 'rosyida', 'kelas_nomor' => 'XI', 'nama_kelas' => 'RPL', 'nomor_kelas' => '2', 'subject' => 'Pemrograman Web & Perangkat Bergerak'],
+            ['username' => 'rya', 'kelas_nomor' => 'XII', 'nama_kelas' => 'RPL', 'nomor_kelas' => '2', 'subject' => 'Pengembangan Produk Kreatif & Kewirausahaan'],
+            ['username' => 'reny', 'kelas_nomor' => 'XII', 'nama_kelas' => 'RPL', 'nomor_kelas' => '2', 'subject' => 'Bimbingan Konseling & Karir'],
+        ];
+
+        foreach ($dummySpecs as $spec) {
+            $teacher = User::whereRaw('LOWER(username) LIKE ?', ['%' . $spec['username'] . '%'])
+                ->orWhereRaw('LOWER(fullname) LIKE ?', ['%' . $spec['username'] . '%'])
+                ->first();
+            $cls = \App\Models\SchoolClass::where('kelas_nomor', $spec['kelas_nomor'])
+                ->whereRaw('UPPER(nama_kelas) = ?', [$spec['nama_kelas']])
+                ->where('nomor_kelas', $spec['nomor_kelas'])
+                ->first();
+            if ($teacher && $cls) {
+                $existingDummy = \App\Models\Schedule::where('id_guru', $teacher->id_user)
+                    ->where('id_class', $cls->id_class)
+                    ->where('subject', $spec['subject'])
+                    ->first();
+                if ($existingDummy) {
+                    $existingDummy->update([
+                        'day_of_week' => $todayName,
+                        'cycle_week' => $activeCycle,
+                        'start_time' => '03:00:00',
+                        'end_time' => '07:00:00',
+                    ]);
+                } else {
+                    \App\Models\Schedule::create([
+                        'id_guru' => $teacher->id_user,
+                        'id_class' => $cls->id_class,
+                        'id_room' => $idRoom,
+                        'subject' => $spec['subject'],
+                        'day_of_week' => $todayName,
+                        'cycle_week' => $activeCycle,
+                        'start_time' => '03:00:00',
+                        'end_time' => '07:00:00',
+                    ]);
+                }
+            }
+        }
+    } catch (\Throwable $e) {}
+
     return response()->json([
         'status' => 'success',
         'data' => [
@@ -145,20 +197,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/attendances/store-batch', [AttendanceController::class, 'storeBatch']);
     Route::post('/attendances/batch', [AttendanceController::class, 'storeBatch']);
 
-    // Demo Fitur Kalender & Presensi Mandiri
-    Route::get('/calendar/events', [\App\Http\Controllers\Api\CalendarDemoController::class, 'index']);
-    Route::post('/calendar/events', [\App\Http\Controllers\Api\CalendarDemoController::class, 'store']);
-    Route::delete('/calendar/events/{id}', [\App\Http\Controllers\Api\CalendarDemoController::class, 'destroy']);
-    Route::get('/calendar/today-config', [\App\Http\Controllers\Api\CalendarDemoController::class, 'todayConfig']);
-    Route::post('/calendar/toggle-presensi-today', [\App\Http\Controllers\Api\CalendarDemoController::class, 'togglePresensiToday']);
-    Route::post('/calendar/apply-cycle-pattern', [\App\Http\Controllers\Api\CalendarDemoController::class, 'applyCyclePattern']);
-    Route::post('/calendar/cancel-cycle-pattern', [\App\Http\Controllers\Api\CalendarDemoController::class, 'cancelCyclePattern']);
-
-    Route::post('/self-attendance/submit', [\App\Http\Controllers\Api\SelfAttendanceDemoController::class, 'submit']);
-    Route::get('/self-attendance/list', [\App\Http\Controllers\Api\SelfAttendanceDemoController::class, 'list']);
-    Route::get('/self-attendance/location-config', [\App\Http\Controllers\Api\SelfAttendanceDemoController::class, 'getLocationConfig']);
-    Route::post('/self-attendance/location-config', [\App\Http\Controllers\Api\SelfAttendanceDemoController::class, 'updateLocationConfig']);
-
     // Endpoint Rekap Kehadiran Siswa 1 Bulan (Hanya Status Hadir = +1, status lainnya +0)
     Route::get('/waka/attendance-recap-monthly', function (Request $request) {
         $month = (int) $request->query('month', date('n'));
@@ -168,15 +206,15 @@ Route::middleware('auth:sanctum')->group(function () {
         $studentsQuery = User::where('id_role', 4)
             ->where(function ($q) {
                 $q->whereNull('title')
-                  ->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
+                  ->orWhereRaw("LOWER(TRIM(title)) NOT IN ('orang tua', 'dikeluarkan', 'alumni', 'lulus', 'pensiun')");
             })
             ->with('schoolClass');
         if ($idClass && $idClass !== 'all') {
             $studentsQuery->where('id_class', $idClass);
         }
 
-        // Urutkan siswa berdasarkan NISN 1 per 1 secara terurut
-        $students = $studentsQuery->orderByRaw('CAST(nisn AS UNSIGNED) ASC')->orderBy('nisn', 'asc')->get();
+        // Urutkan siswa berdasarkan NIS secara terurut
+        $students = $studentsQuery->orderByRaw('CAST(nis AS UNSIGNED) ASC')->orderBy('nis', 'asc')->get();
         $studentIds = $students->pluck('id_user');
 
         // AMBIL HANYA YANG STATUS-NYA 'Hadir' (Terlambat, Izin, Alpa, Sakit tidak menambah nilai / bernilai 0)

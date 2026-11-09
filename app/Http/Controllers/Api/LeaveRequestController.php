@@ -75,6 +75,13 @@ class LeaveRequestController extends Controller
 
         $leaveRequest = LeaveRequest::create($validated);
 
+        if (in_array(strtolower(trim($leaveRequest->status_approval ?? '')), ['disetujui', 'di terima', 'diterima'])) {
+            \App\Models\Attendance::where('id_siswa', $leaveRequest->id_siswa)
+                ->whereDate('date', '>=', substr((string)$leaveRequest->start_date, 0, 10))
+                ->whereDate('date', '<=', substr((string)($leaveRequest->end_date ?? $leaveRequest->start_date), 0, 10))
+                ->update(['status' => 'Izin']);
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Pengajuan izin berhasil dibuat',
@@ -211,6 +218,14 @@ class LeaveRequestController extends Controller
             }
         } else {
             $leaveRequest->update($validated);
+        }
+
+        // Jika status izin sudah disetujui / diterima, otomatis perbarui seluruh presensi pada rentang tanggal tersebut menjadi Izin
+        if (in_array(strtolower(trim($leaveRequest->status_approval ?? '')), ['disetujui', 'di terima', 'diterima'])) {
+            \App\Models\Attendance::where('id_siswa', $leaveRequest->id_siswa)
+                ->whereDate('date', '>=', substr((string)$leaveRequest->start_date, 0, 10))
+                ->whereDate('date', '<=', substr((string)($leaveRequest->end_date ?? $leaveRequest->start_date), 0, 10))
+                ->update(['status' => 'Izin']);
         }
 
         return response()->json([

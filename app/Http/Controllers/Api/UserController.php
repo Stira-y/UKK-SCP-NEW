@@ -896,6 +896,15 @@ class UserController extends Controller
 
         $user->update($validated);
 
+        // Sinkronisasi email ke akun orang tua jika yang diubah adalah akun siswa
+        if (!empty($validated['email']) && (int) $user->id_role === 4 && strtolower(trim($user->title ?? '')) !== 'orang tua') {
+            $newStudentEmail = strtolower(trim($validated['email']));
+            foreach ($user->parents()->get() as $parentAccount) {
+                $parentAccount->email = $newStudentEmail;
+                $parentAccount->save();
+            }
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Data user berhasil diperbarui',
@@ -958,7 +967,7 @@ class UserController extends Controller
 
             $collision = User::where('email', $newEmail)
                 ->where('id_user', '!=', $targetUserId)
-                ->whereNotIn(DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
+                ->whereNotIn(DB::raw('LOWER(TRIM(COALESCE(title, "")))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua'])
                 ->exists();
 
             if ($collision) {
@@ -1135,6 +1144,15 @@ class UserController extends Controller
 
         unset($data['nis'], $data['nisn']);
         $student->update($data);
+
+        // Sinkronisasi email ke akun orang tua jika siswa mengganti email (termasuk jika orang tua mengampu >1 siswa)
+        if ($hasEmailChange && !empty($student->email) && strtolower(trim($student->title ?? '')) !== 'orang tua') {
+            $newStudentEmail = strtolower(trim($student->email));
+            foreach ($student->parents()->get() as $parentAccount) {
+                $parentAccount->email = $newStudentEmail;
+                $parentAccount->save();
+            }
+        }
 
         return response()->json([
             'status' => 'success',
@@ -1381,10 +1399,10 @@ class UserController extends Controller
                 $archivedUser->save();
             });
 
-        // Cek apakah ada akun aktif lain (bukan akun sendiri) yang sedang memakai email ini
+        // Cek apakah ada akun aktif lain (bukan akun sendiri atau akun orang tua) yang sedang memakai email ini
         $activeCollision = User::where('email', $newEmail)
             ->where('id_user', '!=', $user->id_user)
-            ->whereNotIn(DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
+            ->whereNotIn(DB::raw('LOWER(TRIM(COALESCE(title, "")))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua'])
             ->exists();
 
         if ($activeCollision) {
@@ -1475,12 +1493,21 @@ class UserController extends Controller
 
         $user->email = $newEmail;
         $user->save();
+
+        // Sinkronisasi email ke akun orang tua jika siswa mengganti email (termasuk jika orang tua mengampu 2 siswa)
+        if ((int) $user->id_role === 4 && strtolower(trim($user->title ?? '')) !== 'orang tua') {
+            foreach ($user->parents()->get() as $parentAccount) {
+                $parentAccount->email = $newEmail;
+                $parentAccount->save();
+            }
+        }
+
         Cache::forget($cacheKey);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Email telah diperbarui.',
-            'data' => $user
+            'data' => $user->load(['role', 'schoolClass', 'parents', 'linkedStudents.schoolClass'])
         ], 200);
     }
 

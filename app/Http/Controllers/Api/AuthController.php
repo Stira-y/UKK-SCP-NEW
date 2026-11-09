@@ -215,11 +215,20 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $user->email = $user->pending_email;
+        $newEmail = strtolower(trim($user->pending_email));
+        $user->email = $newEmail;
         $user->pending_email = null;
         $user->otp = null;
         $user->otp_expired_at = null;
         $user->save();
+
+        // Sinkronisasi email ke akun orang tua jika siswa mengganti email
+        if ((int) $user->id_role === 4 && strtolower(trim($user->title ?? '')) !== 'orang tua') {
+            foreach ($user->parents()->get() as $parentAccount) {
+                $parentAccount->email = $newEmail;
+                $parentAccount->save();
+            }
+        }
 
         return response()->json([
             'status' => 'success',

@@ -138,12 +138,10 @@ function initUniversalGlobalLayout() {
         if (role === 1) {
             panelTitle = 'Panel Waka / Admin';
             const isKelolaJurnalActive = currentPath.includes('kelola jurnal.html');
-            const isKalenderActive = currentPath.includes('kalender.html');
             const isJadwalActive = currentPath.includes('kelola jadwal.html');
             const isRekapActive = currentPath.includes('rekap kehadiran siswa.html');
-            const dashboardActive = !isKelolaUserPage && !isJadwalActive && !isKelolaJurnalActive && !isRekapActive && !isKalenderActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
+            const dashboardActive = !isKelolaUserPage && !isJadwalActive && !isKelolaJurnalActive && !isRekapActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
             const kelolaJurnalActive = isKelolaJurnalActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
-            const kalenderActive = isKalenderActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
             const jadwalActive = isJadwalActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
             const rekapActive = isRekapActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
             
@@ -162,11 +160,8 @@ function initUniversalGlobalLayout() {
                 <a href="../role 1 waka/dashboard1.html" class="flex items-center space-x-3 px-4 py-3 ${dashboardActive} rounded-xl transition">
                     <span>Dashboard</span>
                 </a>
-                <a href="../role 1 waka/kalender.html" class="flex items-center space-x-3 px-4 py-3 ${kalenderActive} rounded-xl transition">
-                    <span>Kalender Akademik</span>
-                </a>
                 <a href="../role 1 waka/kelola jurnal.html" class="flex items-center space-x-3 px-4 py-3 ${kelolaJurnalActive} rounded-xl transition">
-                    <span>Kelola Jurnal & Presensi</span>
+                    <span>Kelola Jurnal</span>
                 </a>
                 <a href="../role 1 waka/kelola jadwal.html" class="flex items-center space-x-3 px-4 py-3 ${jadwalActive} rounded-xl transition">
                     <span>Kelola Jadwal</span>
@@ -289,16 +284,13 @@ function initUniversalGlobalLayout() {
         } else if (role === 4) {
             panelTitle = 'Panel Siswa';
             const isDashboardActive = currentPath.includes('dashboard4.html');
-            const isPresensiActive = currentPath.includes('presensi-mandiri.html');
             const isSuratIzinActive = currentPath.includes('suratizin.html');
 
             const dashClass = isDashboardActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
-            const presensiClass = isPresensiActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
             const izinClass = isSuratIzinActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
 
             menuHTML = `
                 <a href="../role 4 siswa/dashboard4.html" class="flex items-center space-x-3 px-4 py-3 ${dashClass} rounded-xl transition"><span>Dashboard</span></a>
-                <a href="../role 4 siswa/presensi-mandiri.html" class="flex items-center space-x-3 px-4 py-3 ${presensiClass} rounded-xl transition"><span>Presensi Mandiri</span></a>
                 <a href="../role 4 siswa/suratizin.html" class="flex items-center space-x-3 px-4 py-3 ${izinClass} rounded-xl transition"><span>Surat Izin</span></a>
             `;
         }
@@ -1337,13 +1329,8 @@ function initUniversalGlobalLayout() {
     });
 }
 
-window.initUniversalGlobalLayout = initUniversalGlobalLayout;
-
 if (document.readyState === 'loading') {
     document.addEventListener("DOMContentLoaded", initUniversalGlobalLayout);
 } else {
     initUniversalGlobalLayout();
 }
-
-setTimeout(initUniversalGlobalLayout, 50);
-setTimeout(initUniversalGlobalLayout, 250);
