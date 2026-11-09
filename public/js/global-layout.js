@@ -13,6 +13,48 @@ var API_BASE_URL = isLocalhost
 window.API_BASE_URL = API_BASE_URL;
 
 document.addEventListener("DOMContentLoaded", function() {
+    // 0. Auto-Login & Validasi Batas Sesi 30 Hari
+    const loginTimestamp = localStorage.getItem('login_timestamp');
+    if (loginTimestamp) {
+        const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+        if (Date.now() - Number(loginTimestamp) > THIRTY_DAYS_MS) {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_data');
+            localStorage.removeItem('login_timestamp');
+            alert('Sesi masuk Anda telah kedaluwarsa (30 hari). Silakan masuk kembali.');
+            window.location.href = '../login/login.html';
+            return;
+        }
+    }
+
+    // 0.1 PWA Dynamic Meta & Service Worker Registration
+    if (!document.querySelector('link[rel="manifest"]')) {
+        const linkManifest = document.createElement('link');
+        linkManifest.rel = 'manifest';
+        linkManifest.href = '/manifest.json';
+        document.head.appendChild(linkManifest);
+
+        const metaTheme = document.createElement('meta');
+        metaTheme.name = 'theme-color';
+        metaTheme.content = '#4f46e5';
+        document.head.appendChild(metaTheme);
+
+        const linkIcon = document.createElement('link');
+        linkIcon.rel = 'icon';
+        linkIcon.type = 'image/png';
+        linkIcon.href = '/icons/icon-192.png';
+        document.head.appendChild(linkIcon);
+
+        const linkApple = document.createElement('link');
+        linkApple.rel = 'apple-touch-icon';
+        linkApple.href = '/icons/icon-192.png';
+        document.head.appendChild(linkApple);
+    }
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+    }
+
     const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
     const userData = JSON.parse(localStorage.getItem('user_data') || sessionStorage.getItem('user_data') || '{}');
     const role = Number(userData.id_role); // 1: Waka, 2: Guru, 3: Walikelas/BK/Kesiswaan, 4: Siswa
@@ -80,7 +122,13 @@ document.addEventListener("DOMContentLoaded", function() {
                     </div>
                     <h1 id="navTitle" class="hidden lg:block text-base md:text-lg font-bold border-l border-indigo-400/40 pl-4">SCP Sekolah - Panel</h1>
                 </div>
-                <button id="btnLogout" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition">Keluar</button>
+                <div class="flex items-center space-x-2">
+                    <button id="btnPwaInstall" type="button" class="hidden bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm flex items-center space-x-1.5" title="Pasang aplikasi di perangkat">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        <span class="hidden sm:inline">Install App</span>
+                    </button>
+                    <button id="btnLogout" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition">Keluar</button>
+                </div>
             </nav>
         `;
     }
@@ -1237,8 +1285,34 @@ document.addEventListener("DOMContentLoaded", function() {
             if (confirm('Apakah Anda yakin ingin keluar dari akun ini?')) {
                 localStorage.removeItem('auth_token');
                 localStorage.removeItem('user_data');
+                localStorage.removeItem('login_timestamp');
                 window.location.href = '../login/login.html';
             }
         });
     }
+
+    // PWA: Listener Prompt Tombol Install App
+    let deferredPwaPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPwaPrompt = e;
+        const btnPwa = document.getElementById('btnPwaInstall');
+        if (btnPwa) {
+            btnPwa.classList.remove('hidden');
+            btnPwa.onclick = async () => {
+                btnPwa.classList.add('hidden');
+                if (deferredPwaPrompt) {
+                    deferredPwaPrompt.prompt();
+                    await deferredPwaPrompt.userChoice;
+                    deferredPwaPrompt = null;
+                }
+            };
+        }
+    });
+
+    window.addEventListener('appinstalled', () => {
+        const btnPwa = document.getElementById('btnPwaInstall');
+        if (btnPwa) btnPwa.classList.add('hidden');
+        deferredPwaPrompt = null;
+    });
 });

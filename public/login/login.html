@@ -4,13 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Masuk - Sistem SCP Sekolah</title>
+    <!-- PWA & Mobile Web App Meta -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="icon" type="image/png" href="/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SCP Sekolah">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
     <div class="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 space-y-6">
         <div class="text-center">
+            <img src="../icons/logo-smkn1bantul.png" alt="Logo SMKN 1 Bantul" class="w-20 h-20 mx-auto mb-3 object-contain drop-shadow-md">
             <h1 class="text-2xl font-bold text-gray-900">Sistem SCP Sekolah</h1>
-            <p class="text-sm text-gray-500 mt-1">Silakan masuk menggunakan akun Anda</p>
+            <p class="text-sm text-gray-500 mt-1">SMK Negeri 1 Bantul</p>
         </div>
 
         <div id="alertBox" class="hidden p-4 rounded-xl text-sm font-medium transition-all"></div>
@@ -74,6 +83,52 @@
 
     <!-- Script JavaScript -->
     <script>
+        // PWA: Registrasi Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+            });
+        }
+
+        // Auto-Login: Mengingat Sesi Akun di Perangkat Selama 30 Hari
+        (function checkExistingSession() {
+            const existingToken = localStorage.getItem('auth_token');
+            const existingUserStr = localStorage.getItem('user_data');
+            const loginTimestamp = localStorage.getItem('login_timestamp');
+
+            if (existingToken && existingUserStr) {
+                let isExpired = false;
+                if (loginTimestamp) {
+                    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+                    if (Date.now() - Number(loginTimestamp) > THIRTY_DAYS_MS) {
+                        isExpired = true;
+                    }
+                }
+
+                if (isExpired) {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user_data');
+                    localStorage.removeItem('login_timestamp');
+                } else {
+                    try {
+                        const user = JSON.parse(existingUserStr);
+                        const roleId = Number(user.id_role);
+                        if (roleId === 1) {
+                            window.location.replace('../role 1 waka/dashboard1.html');
+                        } else if (roleId === 2) {
+                            window.location.replace('../role 2 guru/dashboard2.html');
+                        } else if (roleId === 3) {
+                            window.location.replace('../role 3 walikelas&bk/dashboard3.html');
+                        } else if (roleId === 4) {
+                            window.location.replace('../role 4 siswa/dashboard4.html');
+                        }
+                    } catch (e) {
+                        // ignore error
+                    }
+                }
+            }
+        })();
+
         // Deteksi URL API secara dinamis (Laragon vs Hosting)
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         const API_BASE_URL = isLocalhost 
@@ -253,6 +308,7 @@
                     recordLoginSuccess();
                     localStorage.setItem('auth_token', result.data.token);
                     localStorage.setItem('user_data', JSON.stringify(result.data.user));
+                    localStorage.setItem('login_timestamp', String(Date.now()));
 
                     showAlert('Login berhasil! Mengalihkan...', true);
 

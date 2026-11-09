@@ -1,0 +1,31 @@
+{
+  "name": "SCP Sekolah - SMKN 1 Bantul",
+  "short_name": "SCP SMKN 1",
+  "description": "Sistem Informasi Manajemen KBM, Jurnal, dan Presensi SMKN 1 Bantul",
+  "start_url": "/login/login.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#4f46e5",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/logo-smkn1bantul.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
