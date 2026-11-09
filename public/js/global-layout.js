@@ -1337,8 +1337,13 @@ function initUniversalGlobalLayout() {
     });
 }
 
+window.initUniversalGlobalLayout = initUniversalGlobalLayout;
+
 if (document.readyState === 'loading') {
     document.addEventListener("DOMContentLoaded", initUniversalGlobalLayout);
 } else {
     initUniversalGlobalLayout();
 }
+
+setTimeout(initUniversalGlobalLayout, 50);
+setTimeout(initUniversalGlobalLayout, 250);

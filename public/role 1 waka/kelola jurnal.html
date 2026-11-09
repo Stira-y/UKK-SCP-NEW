@@ -335,7 +335,15 @@
         let currentTingkat = 'all';
         let activeCycle = '1';
         let monitoringData = [];
+        let presensiDataList = [];
 
+        // Tab Navigation Elements
+        const tabBtnKbm = document.getElementById('tabBtnKbm');
+        const tabBtnPresensi = document.getElementById('tabBtnPresensi');
+        const sectionKbm = document.getElementById('sectionKbm');
+        const sectionPresensi = document.getElementById('sectionPresensi');
+
+        // Monitoring Elements
         const monitoringTableBody = document.getElementById('monitoringTableBody');
         const cycleStatusText = document.getElementById('cycleStatusText');
         const btnRefreshData = document.getElementById('btnRefreshData');
@@ -351,9 +359,50 @@
         const btnCloseDetailModal = document.getElementById('btnCloseDetailModal');
         const btnOkDetailModal = document.getElementById('btnOkDetailModal');
 
+        // Presensi Mandiri Elements
+        const filterPresensiDate = document.getElementById('filterPresensiDate');
+        const filterPresensiStatus = document.getElementById('filterPresensiStatus');
+        const btnReloadPresensi = document.getElementById('btnReloadPresensi');
+        const presensiTableBody = document.getElementById('presensiTableBody');
+
+        const statPresensiTotal = document.getElementById('statPresensiTotal');
+        const statPresensiHadir = document.getElementById('statPresensiHadir');
+        const statPresensiAlpa = document.getElementById('statPresensiAlpa');
+
+        const photoPreviewModal = document.getElementById('photoPreviewModal');
+        const photoPreviewImg = document.getElementById('photoPreviewImg');
+        const photoPreviewTitle = document.getElementById('photoPreviewTitle');
+        const photoPreviewMeta = document.getElementById('photoPreviewMeta');
+        const btnClosePhotoPreview = document.getElementById('btnClosePhotoPreview');
+        const btnOkPhotoPreview = document.getElementById('btnOkPhotoPreview');
+
+        if (filterPresensiDate) {
+            filterPresensiDate.value = new Date().toISOString().split('T')[0];
+        }
+
+        function switchToKbmTab() {
+            if (tabBtnKbm) tabBtnKbm.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-indigo-600 text-white shadow-sm transition';
+            if (tabBtnPresensi) tabBtnPresensi.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition flex items-center space-x-2';
+            if (sectionKbm) sectionKbm.classList.remove('hidden');
+            if (sectionPresensi) sectionPresensi.classList.add('hidden');
+        }
+
+        function switchToPresensiTab() {
+            if (tabBtnPresensi) tabBtnPresensi.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-indigo-600 text-white shadow-sm transition flex items-center space-x-2';
+            if (tabBtnKbm) tabBtnKbm.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition';
+            if (sectionPresensi) sectionPresensi.classList.remove('hidden');
+            if (sectionKbm) sectionKbm.classList.add('hidden');
+            fetchSelfAttendanceData();
+        }
+
+        if (tabBtnKbm) tabBtnKbm.addEventListener('click', switchToKbmTab);
+        if (tabBtnPresensi) tabBtnPresensi.addEventListener('click', switchToPresensiTab);
+
         setInterval(() => {
-            const now = new Date();
-            currentTimeClock.textContent = now.toTimeString().split(' ')[0];
+            if (currentTimeClock) {
+                const now = new Date();
+                currentTimeClock.textContent = now.toTimeString().split(' ')[0];
+            }
         }, 1000);
 
         document.querySelectorAll('.filter-tingkat-btn').forEach(btn => {
@@ -365,12 +414,17 @@
             });
         });
 
-        btnRefreshData.addEventListener('click', async () => {
-            await fetchSystemActiveCycle();
-            await fetchMonitoringData();
-        });
+        if (btnRefreshData) {
+            btnRefreshData.addEventListener('click', async () => {
+                await fetchSystemActiveCycle();
+                await fetchMonitoringData();
+            });
+        }
 
         async function initPage() {
+            if (typeof window.initUniversalGlobalLayout === 'function') {
+                window.initUniversalGlobalLayout();
+            }
             switchToKbmTab();
             await fetchSystemActiveCycle();
             await fetchMonitoringData();
@@ -492,54 +546,7 @@
         btnCloseDetailModal.addEventListener('click', () => detailJournalModal.classList.add('hidden'));
         btnOkDetailModal.addEventListener('click', () => detailJournalModal.classList.add('hidden'));
     
-        // --- LOGIKA TAB JURNAL KBM VS PRESENSI MANDIRI ---
-        const tabBtnKbm = document.getElementById('tabBtnKbm');
-        const tabBtnPresensi = document.getElementById('tabBtnPresensi');
-        const sectionKbm = document.getElementById('sectionKbm');
-        const sectionPresensi = document.getElementById('sectionPresensi');
-
-        const filterPresensiDate = document.getElementById('filterPresensiDate');
-        const filterPresensiStatus = document.getElementById('filterPresensiStatus');
-        const btnReloadPresensi = document.getElementById('btnReloadPresensi');
-        const presensiTableBody = document.getElementById('presensiTableBody');
-
-        const statPresensiTotal = document.getElementById('statPresensiTotal');
-        const statPresensiHadir = document.getElementById('statPresensiHadir');
-        const statPresensiAlpa = document.getElementById('statPresensiAlpa');
-
-        const photoPreviewModal = document.getElementById('photoPreviewModal');
-        const photoPreviewImg = document.getElementById('photoPreviewImg');
-        const photoPreviewTitle = document.getElementById('photoPreviewTitle');
-        const photoPreviewMeta = document.getElementById('photoPreviewMeta');
-        const btnClosePhotoPreview = document.getElementById('btnClosePhotoPreview');
-        const btnOkPhotoPreview = document.getElementById('btnOkPhotoPreview');
-
-        if (filterPresensiDate) {
-            filterPresensiDate.value = new Date().toISOString().split('T')[0];
-        }
-
-        let presensiDataList = [];
-
-        function switchToKbmTab() {
-            tabBtnKbm.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-indigo-600 text-white shadow-sm transition';
-            tabBtnPresensi.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition flex items-center space-x-2';
-            sectionKbm.classList.remove('hidden');
-            sectionPresensi.classList.add('hidden');
-        }
-
-        function switchToPresensiTab() {
-            tabBtnPresensi.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-indigo-600 text-white shadow-sm transition flex items-center space-x-2';
-            tabBtnKbm.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition';
-            sectionPresensi.classList.remove('hidden');
-            sectionKbm.classList.add('hidden');
-            fetchSelfAttendanceData();
-        }
-
-        tabBtnKbm.addEventListener('click', switchToKbmTab);
-        tabBtnPresensi.addEventListener('click', switchToPresensiTab);
-
-        // Pastikan default pertama kali buka selalu Jurnal KBM
-        switchToKbmTab();
+        // --- LISTENER TAB JURNAL KBM VS PRESENSI MANDIRI ---
 
         if (btnReloadPresensi) {
             btnReloadPresensi.addEventListener('click', fetchSelfAttendanceData);
@@ -909,6 +916,6 @@
         fetchLocationConfig();
 
     </script>
-    <script src="../js/global-layout.js?v=20261109_23.0"></script>
+    <script src="../js/global-layout.js?v=20261110_2.0"></script>
 </body>
 </html>

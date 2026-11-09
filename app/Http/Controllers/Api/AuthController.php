@@ -150,13 +150,43 @@ class AuthController extends Controller
     // 3. Proses awal ganti email (Kirim OTP ke email lama/aktif)
     public function changeEmail(Request $request)
     {
-        $request->validate(['email' => 'required|email|unique:users,email']);
+        $request->validate(['email' => 'required|email']);
         $user = $request->user();
+        $newEmail = strtolower(trim($request->email));
+
+        // Lepaskan email dari akun yang sudah diarsipkan/dikeluarkan/pensiun/alumni
+        \App\Models\User::where('email', $newEmail)
+            ->where('id_user', '!=', $user->id_user)
+            ->where(function ($q) {
+                $q->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
+                  ->orWhere(function($sub) {
+                      $sub->where('id_role', 4)->whereNull('id_class')->where(function($p) {
+                          $p->whereNull('title')->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
+                      });
+                  });
+            })
+            ->get()
+            ->each(function($archivedUser) {
+                $archivedUser->email = 'archived_' . $archivedUser->id_user . '_' . time() . '_' . $archivedUser->email;
+                $archivedUser->save();
+            });
+
+        $activeCollision = \App\Models\User::where('email', $newEmail)
+            ->where('id_user', '!=', $user->id_user)
+            ->whereNotIn(\Illuminate\Support\Facades\DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
+            ->exists();
+
+        if ($activeCollision) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Email ini sudah digunakan oleh akun lain.'
+            ], 422);
+        }
 
         $otp = rand(100000, 999999);
         $user->otp = $otp;
         $user->otp_expired_at = now()->addMinutes(5);
-        $user->pending_email = $request->email;
+        $user->pending_email = $newEmail;
         $user->save();
 
         try {

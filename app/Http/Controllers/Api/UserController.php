@@ -106,6 +106,9 @@ class UserController extends Controller
         $student = User::where('id_role', 4)->findOrFail($id);
         $student->id_class = null;
         $student->title = 'dikeluarkan';
+        if ($student->email && !str_starts_with($student->email, 'archived_')) {
+            $student->email = 'archived_' . $student->id_user . '_' . time() . '_' . $student->email;
+        }
         $student->save();
 
         return response()->json([
@@ -119,6 +122,9 @@ class UserController extends Controller
         $teacher = User::whereIn('id_role', [1, 2, 3])->findOrFail($id);
         $teacher->id_class = null;
         $teacher->title = 'Pensiun';
+        if ($teacher->email && !str_starts_with($teacher->email, 'archived_')) {
+            $teacher->email = 'archived_' . $teacher->id_user . '_' . time() . '_' . $teacher->email;
+        }
         $teacher->save();
 
         return response()->json([
@@ -931,16 +937,34 @@ class UserController extends Controller
         $targetUserId = $request->input('current_user_id', 'general');
 
         if ($type === 'new_email' && $request->filled('new_email')) {
-            $validator = Validator::make($request->all(), [
-                'new_email' => 'required|email|unique:users,email,' . $targetUserId . ',id_user',
-            ], [
-                'new_email.unique' => 'Email ini sudah terdaftar/digunakan oleh akun lain.'
-            ]);
+            $newEmail = strtolower(trim($request->input('new_email')));
 
-            if ($validator->fails()) {
+            // Lepaskan email dari akun yang sudah diarsipkan/dikeluarkan/pensiun/alumni
+            User::where('email', $newEmail)
+                ->where('id_user', '!=', $targetUserId)
+                ->where(function ($q) {
+                    $q->whereIn(DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
+                      ->orWhere(function($sub) {
+                          $sub->where('id_role', 4)->whereNull('id_class')->where(function($p) {
+                              $p->whereNull('title')->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
+                          });
+                      });
+                })
+                ->get()
+                ->each(function($archivedUser) {
+                    $archivedUser->email = 'archived_' . $archivedUser->id_user . '_' . time() . '_' . $archivedUser->email;
+                    $archivedUser->save();
+                });
+
+            $collision = User::where('email', $newEmail)
+                ->where('id_user', '!=', $targetUserId)
+                ->whereNotIn(DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
+                ->exists();
+
+            if ($collision) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => $validator->errors()->first()
+                    'message' => 'Email ini sudah terdaftar/digunakan oleh akun lain.'
                 ], 422);
             }
         }
@@ -1318,12 +1342,52 @@ class UserController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'email' => 'required|string|email:rfc,dns|max:255|unique:users,email'
+            'email' => 'required|string|email|max:255'
         ], [
-            'email.unique' => 'Email ini sudah digunakan oleh akun lain.'
+            'email.required' => 'Email harus diisi.',
+            'email.email' => 'Silahkan masukkan format email (@...) yang benar.'
         ]);
 
         if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+
+        $newEmail = strtolower(trim($request->email));
+
+        if ($newEmail === strtolower(trim($user->email))) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Email baru tidak boleh sama dengan email saat ini.'
+            ], 422);
+        }
+
+        // Lepaskan email dari akun yang sudah dihapus/dikeluarkan/pensiun/alumni agar bisa digunakan kembali
+        User::where('email', $newEmail)
+            ->where('id_user', '!=', $user->id_user)
+            ->where(function ($q) {
+                $q->whereIn(DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
+                  ->orWhere(function($sub) {
+                      $sub->where('id_role', 4)->whereNull('id_class')->where(function($p) {
+                          $p->whereNull('title')->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
+                      });
+                  });
+            })
+            ->get()
+            ->each(function($archivedUser) {
+                $archivedUser->email = 'archived_' . $archivedUser->id_user . '_' . time() . '_' . $archivedUser->email;
+                $archivedUser->save();
+            });
+
+        // Cek apakah ada akun aktif lain (bukan akun sendiri) yang sedang memakai email ini
+        $activeCollision = User::where('email', $newEmail)
+            ->where('id_user', '!=', $user->id_user)
+            ->whereNotIn(DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
+            ->exists();
+
+        if ($activeCollision) {
             return response()->json([
                 'status' => 'already_taken',
                 'message' => 'Email ini sudah digunakan oleh akun lain.'
@@ -1334,7 +1398,7 @@ class UserController extends Controller
         $cacheKey = 'change_email_otp_' . $user->id_user;
 
         Cache::put($cacheKey, [
-            'new_email' => $request->email,
+            'new_email' => $newEmail,
             'code' => (string) $otp,
             'expires_at' => now()->addMinutes(5)->timestamp
         ], now()->addMinutes(5));
@@ -1342,7 +1406,7 @@ class UserController extends Controller
         try {
             Mail::raw(
                 "Halo {$user->fullname},\n\n" .
-                "Anda meminta perubahan email ke: {$request->email}.\n" .
+                "Anda meminta perubahan email ke: {$newEmail}.\n" .
                 "Kode OTP Anda adalah: {$otp}",
                 function ($message) use ($user) {
                     $message->to($user->email)
@@ -1390,7 +1454,26 @@ class UserController extends Controller
             ], 422);
         }
 
-        $user->email = $cachedData['new_email'];
+        $newEmail = strtolower(trim($cachedData['new_email']));
+
+        // Lepaskan jika masih ada akun arsip yang bentrok dengan email ini sebelum disimpan
+        User::where('email', $newEmail)
+            ->where('id_user', '!=', $user->id_user)
+            ->where(function ($q) {
+                $q->whereIn(DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
+                  ->orWhere(function($sub) {
+                      $sub->where('id_role', 4)->whereNull('id_class')->where(function($p) {
+                          $p->whereNull('title')->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
+                      });
+                  });
+            })
+            ->get()
+            ->each(function($archivedUser) {
+                $archivedUser->email = 'archived_' . $archivedUser->id_user . '_' . time() . '_' . $archivedUser->email;
+                $archivedUser->save();
+            });
+
+        $user->email = $newEmail;
         $user->save();
         Cache::forget($cacheKey);
 
