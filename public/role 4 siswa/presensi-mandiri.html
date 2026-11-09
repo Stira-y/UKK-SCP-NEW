@@ -141,11 +141,19 @@
                         </div>
                     </div>
 
-                    <!-- Tombol Kontrol Kamera -->
-                    <div class="flex flex-wrap items-center justify-center gap-3">
+                    <!-- Tombol Kontrol Kamera & Fitur Switch / Mirror (Item 15) -->
+                    <div class="flex flex-wrap items-center justify-center gap-2.5">
                         <button type="button" id="btnSnapPhoto" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs md:text-sm font-bold transition flex items-center space-x-2 shadow-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             <span>Ambil Foto Langsung</span>
+                        </button>
+                        <button type="button" id="btnSwitchCamera" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-2xs" title="Ganti Kamera Depan/Belakang">
+                            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            <span>Ganti Kamera</span>
+                        </button>
+                        <button type="button" id="btnMirrorCamera" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-2xs" title="Mirror Kamera">
+                            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                            <span id="textMirrorStatus">Mirror</span>
                         </button>
                         <button type="button" id="btnRetakePhoto" class="hidden px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
                             Foto Ulang
@@ -316,26 +324,63 @@
             );
         }
 
-        // 3. Menyiapkan Live Camera
-        async function startCamera() {
-            cameraLoadingPlaceholder.classList.remove('hidden');
-            try {
-                cameraMediaStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-                    audio: false
-                });
-                cameraVideo.srcObject = cameraMediaStream;
-                cameraLoadingPlaceholder.classList.add('hidden');
-            } catch (err) {
-                console.warn('Kamera web tidak dapat diakses langsung:', err);
-                cameraLoadingPlaceholder.innerHTML = `
-                    <svg class="w-8 h-8 text-amber-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                    <span class="text-xs">Kamera live browser diblokir. Gunakan tombol kamera HP di bawah.</span>
-                `;
+        let currentFacingMode = 'user';
+        let isMirrored = true;
+
+        const btnSwitchCamera = document.getElementById('btnSwitchCamera');
+        const btnMirrorCamera = document.getElementById('btnMirrorCamera');
+        const textMirrorStatus = document.getElementById('textMirrorStatus');
+
+        function applyMirrorStyle() {
+            cameraVideo.style.transform = isMirrored ? 'scaleX(-1)' : 'scaleX(1)';
+            if (textMirrorStatus) {
+                textMirrorStatus.textContent = isMirrored ? 'Mirror: On' : 'Mirror: Off';
             }
         }
 
-        // Ambil Snapshot dari Video
+        if (btnSwitchCamera) {
+            btnSwitchCamera.addEventListener('click', async () => {
+                currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+                isMirrored = (currentFacingMode === 'user');
+                await startCamera();
+            });
+        }
+
+        if (btnMirrorCamera) {
+            btnMirrorCamera.addEventListener('click', () => {
+                isMirrored = !isMirrored;
+                applyMirrorStyle();
+            });
+        }
+
+        // 3. Menyiapkan Live Camera
+        async function startCamera() {
+            cameraLoadingPlaceholder.classList.remove('hidden');
+            if (cameraMediaStream) {
+                cameraMediaStream.getTracks().forEach(t => t.stop());
+                cameraMediaStream = null;
+            }
+            try {
+                cameraMediaStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentFacingMode, width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false
+                });
+                cameraVideo.srcObject = cameraMediaStream;
+                applyMirrorStyle();
+                cameraLoadingPlaceholder.classList.add('hidden');
+            } catch (err) {
+                try {
+                    cameraMediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    cameraVideo.srcObject = cameraMediaStream;
+                    applyMirrorStyle();
+                    cameraLoadingPlaceholder.classList.add('hidden');
+                } catch (e2) {
+                    cameraLoadingPlaceholder.innerHTML = `<span class="text-xs">Kamera live browser diblokir. Gunakan tombol kamera HP di bawah.</span>`;
+                }
+            }
+        }
+
+        // Ambil Snapshot dari Video (mendukung mirror transform)
         btnSnapPhoto.addEventListener('click', () => {
             if (!cameraMediaStream) {
                 nativeCameraInput.click();
@@ -344,7 +389,14 @@
             photoCanvas.width = cameraVideo.videoWidth || 640;
             photoCanvas.height = cameraVideo.videoHeight || 480;
             const ctx = photoCanvas.getContext('2d');
+
+            ctx.save();
+            if (isMirrored) {
+                ctx.translate(photoCanvas.width, 0);
+                ctx.scale(-1, 1);
+            }
             ctx.drawImage(cameraVideo, 0, 0, photoCanvas.width, photoCanvas.height);
+            ctx.restore();
 
             capturedPhotoBase64 = photoCanvas.toDataURL('image/jpeg', 0.85);
             photoPreview.src = capturedPhotoBase64;
@@ -352,6 +404,8 @@
             cameraVideo.classList.add('hidden');
 
             btnSnapPhoto.classList.add('hidden');
+            if (btnSwitchCamera) btnSwitchCamera.classList.add('hidden');
+            if (btnMirrorCamera) btnMirrorCamera.classList.add('hidden');
             btnRetakePhoto.classList.remove('hidden');
 
             validateReadyToSubmit();
@@ -363,6 +417,8 @@
             photoPreview.classList.add('hidden');
             cameraVideo.classList.remove('hidden');
             btnSnapPhoto.classList.remove('hidden');
+            if (btnSwitchCamera) btnSwitchCamera.classList.remove('hidden');
+            if (btnMirrorCamera) btnMirrorCamera.classList.remove('hidden');
             btnRetakePhoto.classList.add('hidden');
             validateReadyToSubmit();
         });

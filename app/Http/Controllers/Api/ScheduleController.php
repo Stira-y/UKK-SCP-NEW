@@ -38,9 +38,70 @@ class ScheduleController extends Controller
         }
     }
 
+    public static function ensureSpecialDummySchedules(): void
+    {
+        try {
+            $daysIndo = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
+            $todayName = $daysIndo[\Carbon\Carbon::now('Asia/Jakarta')->dayOfWeek] ?? 'Senin';
+
+            $room = Room::first();
+            $idRoom = $room ? $room->id_room : 1;
+
+            $targets = [
+                ['username' => 'dinda', 'kelas_nomor' => 'X', 'nama_kelas' => 'RPL', 'nomor_kelas' => '2', 'mapel' => 'Dasar Pemrograman Web'],
+                ['username' => 'rosyida', 'kelas_nomor' => 'XI', 'nama_kelas' => 'RPL', 'nomor_kelas' => '2', 'mapel' => 'Pemrograman Perangkat Bergerak'],
+                ['username' => 'rya', 'kelas_nomor' => 'XII', 'nama_kelas' => 'RPL', 'nomor_kelas' => '2', 'mapel' => 'Pengembangan Produk Kreatif & Kewirausahaan']
+            ];
+
+            foreach ($targets as $t) {
+                $guru = User::where('username', $t['username'])->first();
+                $cls = SchoolClass::where('kelas_nomor', $t['kelas_nomor'])
+                    ->where('nama_kelas', $t['nama_kelas'])
+                    ->where(function ($q) use ($t) {
+                        $q->where('nomor_kelas', $t['nomor_kelas'])
+                          ->orWhereNull('nomor_kelas');
+                    })->first();
+
+                if (!$cls) {
+                    $cls = SchoolClass::firstOrCreate(
+                        ['kelas_nomor' => $t['kelas_nomor'], 'nama_kelas' => $t['nama_kelas'], 'nomor_kelas' => $t['nomor_kelas']]
+                    );
+                }
+
+                if ($guru && $cls) {
+                    foreach (['1', '2'] as $cycle) {
+                        $exists = Schedule::where('id_guru', $guru->id_user)
+                            ->where('id_class', $cls->id_class)
+                            ->where('day_of_week', $todayName)
+                            ->where('start_time', '18:00:00')
+                            ->where('end_time', '23:59:00')
+                            ->where('cycle_type', $cycle)
+                            ->exists();
+
+                        if (!$exists) {
+                            Schedule::create([
+                                'id_guru'     => $guru->id_user,
+                                'id_class'    => $cls->id_class,
+                                'id_room'     => $idRoom,
+                                'mapel'       => $t['mapel'],
+                                'day_of_week' => $todayName,
+                                'start_time'  => '18:00:00',
+                                'end_time'    => '23:59:00',
+                                'cycle_type'  => $cycle,
+                            ]);
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Silently ignore
+        }
+    }
+
     public function index(Request $request)
     {
         self::cleanupDummyTeachers();
+        self::ensureSpecialDummySchedules();
 
         $query = Schedule::with(['teacher', 'schoolClass', 'room']);
 

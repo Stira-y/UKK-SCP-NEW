@@ -268,57 +268,121 @@ class CalendarDemoController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'date'  => 'required|date_format:Y-m-d',
             'title' => 'required|string|max:255',
         ]);
 
         $events = $this->readEvents();
-        $date = $request->input('date');
-
-        $isHoliday = (bool) $request->input('is_holiday', false);
-        $category = $request->input('category', $isHoliday ? 'libur' : 'ujian');
-
-        $newEvent = [
-            'id'               => 'cal_' . time() . '_' . rand(100, 999),
-            'date'             => $date,
-            'title'            => $request->input('title'),
-            'category'         => $category,
-            'description'      => $request->input('description', ''),
-            'is_holiday'       => $isHoliday,
-            'cycle_type'       => $request->input('cycle_type', '1'),
-            'target_tingkat'   => $request->input('target_tingkat', 'all'),
-            'target_rombel'    => $request->input('target_rombel', 'all'),
-            'presensi_mandiri' => [
-                'active'     => (bool) $request->input('presensi_mandiri_active', false),
-                'start_time' => $request->input('presensi_mandiri_start', '06:30'),
-                'end_time'   => $request->input('presensi_mandiri_end', '07:30'),
-            ],
-            'created_at'       => Carbon::now()->toDateTimeString()
-        ];
-
-        // Gantikan jika ada event di tanggal yang sama, atau tambahkan
-        $found = false;
-        foreach ($events as $k => $item) {
-            if (isset($item['date']) && $item['date'] === $date) {
-                $newEvent['id'] = $item['id'];
-                $events[$k] = $newEvent;
-                $found = true;
-                break;
+        $dates = $request->input('dates');
+        if (!is_array($dates) || empty($dates)) {
+            $singleDate = $request->input('date');
+            if (!$singleDate) {
+                return response()->json(['status' => 'error', 'message' => 'Tanggal wajib dipilih.'], 422);
             }
+            $dates = [$singleDate];
         }
-        if (!$found) {
-            $events[] = $newEvent;
+
+        $color = $request->input('color', 'biru');
+        $isHoliday = ($color === 'merah') || (bool) $request->input('is_holiday', false);
+        $cycleType = $request->input('cycle_type', '1');
+        $presensiActive = (bool) $request->input('presensi_mandiri_active', false);
+        $presensiStart = $request->input('presensi_mandiri_start', '06:30');
+        $presensiEnd = $request->input('presensi_mandiri_end', '08:00');
+        $description = $request->input('description', '');
+
+        $savedEvents = [];
+        $todayStr = Carbon::now('Asia/Jakarta')->toDateString();
+
+        foreach ($dates as $date) {
+            $newEvent = [
+                'id'               => 'cal_' . time() . '_' . rand(100, 999),
+                'date'             => $date,
+                'title'            => $request->input('title'),
+                'color'            => $color,
+                'description'      => $description,
+                'is_holiday'       => $isHoliday,
+                'cycle_type'       => $cycleType,
+                'presensi_mandiri' => [
+                    'active'     => $presensiActive,
+                    'start_time' => $presensiStart,
+                    'end_time'   => $presensiEnd,
+                ],
+                'created_at'       => Carbon::now()->toDateTimeString()
+            ];
+
+            $found = false;
+            foreach ($events as $k => $item) {
+                if (isset($item['date']) && $item['date'] === $date) {
+                    $newEvent['id'] = $item['id'];
+                    $events[$k] = $newEvent;
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) {
+                $events[] = $newEvent;
+            }
+
+            if ($date === $todayStr && !empty($cycleType)) {
+                try {
+                    $config = SystemConfiguration::first();
+                    if ($config) {
+                        $config->active_cycle = (string) $cycleType;
+                        $config->save();
+                    }
+                } catch (\Throwable $e) {}
+            }
+
+            $savedEvents[] = $newEvent;
         }
 
         $this->saveEvents($events);
 
-        // Jika hari ini tanggalnya sama dengan event dan ada cycle_type, sinkronkan ke SystemConfiguration
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Agenda kalender berhasil disimpan (' . count($savedEvents) . ' tanggal).',
+            'data'    => $savedEvents[0] ?? null
+        ], 200);
+    }
+
+    public function applyCyclePattern(Request $request)
+    {
+        $events = $this->readEvents();
+        $startDateStr = $request->input('start_date', '2026-07-01');
+        $endDateStr = $request->input('end_date', '2027-06-30');
+
+        $start = Carbon::parse($startDateStr)->startOfWeek();
+        $end = Carbon::parse($endDateStr)->endOfWeek();
+
+        // 2 minggu Putaran 1, 2 minggu Putaran 2, berulang
+        $curr = $start->copy();
+        $weekIndex = 0;
+
+        $cycleMap = [];
+        while ($curr->lte($end)) {
+            $cycle = (intdiv($weekIndex, 2) % 2 === 0) ? '1' : '2';
+            $cycleMap[$curr->toDateString()] = $cycle;
+            $curr->addDay();
+            if ($curr->dayOfWeek === 1) { // Setiap hari Senin
+                $weekIndex++;
+            }
+        }
+
+        foreach ($events as $k => $e) {
+            $d = $e['date'] ?? null;
+            if ($d && isset($cycleMap[$d])) {
+                $events[$k]['cycle_type'] = $cycleMap[$d];
+            }
+        }
+
+        $this->saveEvents($events);
+
+        // Update active_cycle jika hari ini ada di cycleMap
         $todayStr = Carbon::now('Asia/Jakarta')->toDateString();
-        if ($date === $todayStr && !empty($newEvent['cycle_type'])) {
+        if (isset($cycleMap[$todayStr])) {
             try {
                 $config = SystemConfiguration::first();
                 if ($config) {
-                    $config->active_cycle = (string) $newEvent['cycle_type'];
+                    $config->active_cycle = (string) $cycleMap[$todayStr];
                     $config->save();
                 }
             } catch (\Throwable $e) {}
@@ -326,8 +390,8 @@ class CalendarDemoController extends Controller
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'Agenda kalender berhasil disimpan.',
-            'data'    => $newEvent
+            'message' => 'Pola putaran otomatis 2 minggu Putaran 1 & 2 minggu Putaran 2 berhasil diterapkan!',
+            'active_cycle_today' => $cycleMap[$todayStr] ?? '1'
         ], 200);
     }
 
@@ -361,8 +425,21 @@ class CalendarDemoController extends Controller
             }
         }
 
-        $isWeekend = ($dayOfWeek === 0 || $dayOfWeek === 6);
-        $isHoliday = $isWeekend || ($todayEvent && !empty($todayEvent['is_holiday']));
+        $isSunday = ($dayOfWeek === 0);
+        $isSaturday = ($dayOfWeek === 6);
+        $isWeekend = ($isSunday || $isSaturday);
+
+        $hasHolidayEvent = $todayEvent && (!empty($todayEvent['is_holiday']) || ($todayEvent['color'] ?? '') === 'merah');
+        $isHoliday = $isWeekend || $hasHolidayEvent;
+
+        $holidayReason = null;
+        if ($hasHolidayEvent) {
+            $holidayReason = $todayEvent['title'] ?? 'Tanggal Merah (Kalender Indonesia)';
+        } elseif ($isSunday) {
+            $holidayReason = 'Hari Libur Akhir Pekan (Minggu)';
+        } elseif ($isSaturday) {
+            $holidayReason = 'Hari Libur Akhir Pekan (Sabtu)';
+        }
 
         $activeCycle = '1';
         try {
@@ -374,28 +451,37 @@ class CalendarDemoController extends Controller
             $activeCycle = (string) $todayEvent['cycle_type'];
         }
 
+        $presensiScheduled = $todayEvent && !empty($todayEvent['presensi_mandiri']['active']);
         $presensiActive = false;
         $presensiStart = '06:30';
-        $presensiEnd = '07:30';
+        $presensiEnd = '08:00';
 
-        if ($todayEvent && isset($todayEvent['presensi_mandiri']) && !empty($todayEvent['presensi_mandiri']['active'])) {
+        if ($presensiScheduled) {
             $presensiStart = $todayEvent['presensi_mandiri']['start_time'] ?? '06:30';
-            $presensiEnd = $todayEvent['presensi_mandiri']['end_time'] ?? '07:30';
+            $presensiEnd = $todayEvent['presensi_mandiri']['end_time'] ?? '08:00';
             $currentTime = $now->format('H:i');
             if ($currentTime >= $presensiStart && $currentTime <= $presensiEnd) {
                 $presensiActive = true;
             }
         }
 
+        // Aturan 7 & 14:
+        // - Hari Sabtu, Minggu, atau Tanggal Merah -> input jurnal otomatis non-aktif
+        // - Saat presensi mandiri diaktifkan hari ini -> input jurnal otomatis non-aktif
+        $isJournalDisabled = $isHoliday || $presensiScheduled;
+        if ($presensiScheduled && !$isHoliday) {
+            $holidayReason = 'Presensi Mandiri Siswa Sedang Diaktifkan Hari Ini';
+        }
+
         return response()->json([
             'status'               => 'success',
             'date'                 => $todayStr,
             'is_holiday'           => $isHoliday,
-            'holiday_reason'       => $isHoliday ? ($todayEvent['title'] ?? ($isWeekend ? 'Hari Libur Akhir Pekan' : 'Hari Libur')) : null,
-            'is_journal_disabled'  => $isHoliday,
+            'holiday_reason'       => $holidayReason,
+            'is_journal_disabled'  => $isJournalDisabled,
             'active_cycle'         => $activeCycle,
             'presensi_mandiri'     => [
-                'is_scheduled'     => $todayEvent && !empty($todayEvent['presensi_mandiri']['active']),
+                'is_scheduled'     => $presensiScheduled,
                 'is_active_now'    => $presensiActive,
                 'start_time'       => $presensiStart,
                 'end_time'         => $presensiEnd

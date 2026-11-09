@@ -413,20 +413,26 @@
 
         let presensiDataList = [];
 
-        tabBtnKbm.addEventListener('click', () => {
+        function switchToKbmTab() {
             tabBtnKbm.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-indigo-600 text-white shadow-sm transition';
             tabBtnPresensi.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition flex items-center space-x-2';
             sectionKbm.classList.remove('hidden');
             sectionPresensi.classList.add('hidden');
-        });
+        }
 
-        tabBtnPresensi.addEventListener('click', () => {
+        function switchToPresensiTab() {
             tabBtnPresensi.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-indigo-600 text-white shadow-sm transition flex items-center space-x-2';
             tabBtnKbm.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition';
             sectionPresensi.classList.remove('hidden');
             sectionKbm.classList.add('hidden');
             fetchSelfAttendanceData();
-        });
+        }
+
+        tabBtnKbm.addEventListener('click', switchToKbmTab);
+        tabBtnPresensi.addEventListener('click', switchToPresensiTab);
+
+        // Pastikan default pertama kali buka selalu Jurnal KBM
+        switchToKbmTab();
 
         if (btnReloadPresensi) {
             btnReloadPresensi.addEventListener('click', fetchSelfAttendanceData);
@@ -531,7 +537,7 @@
         if (btnOkPhotoPreview) btnOkPhotoPreview.addEventListener('click', () => photoPreviewModal.classList.add('hidden'));
 
     </script>
-    <script src="../js/global-layout.js?v=20261109_13.0"></script>
+    <script src="../js/global-layout.js?v=20261109_21.0"></script>
 
     <!-- MODAL PREVIEW FOTO PRESENSI MANDIRI -->
     <div id="photoPreviewModal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4">

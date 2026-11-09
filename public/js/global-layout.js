@@ -171,7 +171,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     <span class="bg-amber-100 text-amber-800 text-[10px] font-black px-1.5 py-0.5 rounded border border-amber-300">DEMO</span>
                 </a>
                 <a href="../role 1 waka/kelola jurnal.html" class="flex items-center space-x-3 px-4 py-3 ${kelolaJurnalActive} rounded-xl transition">
-                    <span>Kelola Jurnal</span>
+                    <span>Kelola Jurnal & Presensi</span>
                 </a>
                 <a href="../role 1 waka/kelola jadwal.html" class="flex items-center space-x-3 px-4 py-3 ${jadwalActive} rounded-xl transition">
                     <span>Kelola Jadwal</span>

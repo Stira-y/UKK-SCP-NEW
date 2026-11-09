@@ -224,6 +224,8 @@ class JournalController extends Controller
 
     public function getTodayMonitoring(Request $request)
     {
+        ScheduleController::ensureSpecialDummySchedules();
+
         $daysIndo = [
             'Sunday'    => 'Minggu',
             'Monday'    => 'Senin',

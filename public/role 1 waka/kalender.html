@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SCP Sekolah">
-    <script src="/js/pwa.js?v=20261109_3.0"></script>
+    <script src="/js/pwa.js?v=20261109_20.0"></script>
     <title>Kalender Akademik (DEMO) - Sistem SCP</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -34,7 +34,7 @@
         <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
             <div class="max-w-7xl mx-auto space-y-5">
 
-                <!-- Breadcrumb seperti pada gambar referensi -->
+                <!-- Breadcrumb -->
                 <div class="flex items-center text-xs text-slate-400 font-semibold space-x-1.5">
                     <span>/</span>
                     <span>Sistem</span>
@@ -44,7 +44,7 @@
                     <span class="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-300">DEMO RESMI</span>
                 </div>
 
-                <!-- Top Bar Navigasi & Filter Kalender -->
+                <!-- Top Bar Navigasi, Pencarian, & Filter Kalender -->
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4">
                     <!-- Navigasi Tanggal -->
                     <div class="flex flex-wrap items-center gap-2">
@@ -62,61 +62,58 @@
                         <h2 id="currentMonthYearText" class="text-lg md:text-xl font-bold text-slate-800 ml-2">November 2026</h2>
                     </div>
 
-                    <!-- Filter Dropdowns & Tombol Aksi -->
+                    <!-- Kolom Search Agenda (Item 1) & Aksi Tambah Agenda / Import -->
                     <div class="flex flex-wrap items-center gap-2.5">
-                        <select id="filterCategory" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-                            <option value="all">Semua Kategori</option>
-                            <option value="libur">Libur Resmi (KBM Libur Penuh)</option>
-                            <option value="kegiatan">Kegiatan Khusus Sekolah / Rombel</option>
-                            <option value="ujian">Masa Penilaian / Ujian</option>
-                            <option value="presensi">Presensi Mandiri Aktif</option>
-                        </select>
+                        <!-- Input Search Agenda -->
+                        <div class="relative w-full sm:w-56">
+                            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <input type="text" id="searchAgendaInput" placeholder="Cari nama agenda..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
 
-                        <select id="filterTingkat" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-                            <option value="all">Semua Tingkat</option>
-                            <option value="X">Kelas X</option>
-                            <option value="XI">Kelas XI</option>
-                            <option value="XII">Kelas XII</option>
-                        </select>
-
-                        <select id="filterRombel" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-                            <option value="all">Semua Rombel</option>
-                            <option value="RPL">RPL</option>
-                            <option value="TKJ">TKJ</option>
-                            <option value="AKL">AKL</option>
-                            <option value="BDP">BDP</option>
-                            <option value="OTKP">OTKP</option>
-                        </select>
-
-                        <!-- Tombol Aksi -->
+                        <!-- Tombol Tambah Agenda Biasa -->
                         <button type="button" id="btnOpenAddModal" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                            <span>Tambah Agenda</span>
+                            <span>+ Agenda</span>
                         </button>
 
+                        <!-- Tombol Tambah Banyak Tanggal Sekaligus (Item 2) -->
+                        <button type="button" id="btnOpenMultiDateModal" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span>+ Banyak Tanggal</span>
+                        </button>
+
+                        <!-- Tombol Otomatis Pola Putaran 2 Minggu (Item 13) -->
+                        <button type="button" id="btnApplyCyclePattern" class="bg-sky-600 hover:bg-sky-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-sm" title="Otomatis Atur 2 Minggu Putaran 1 & 2 Minggu Putaran 2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            <span>Pola Putaran (2 Minggu)</span>
+                        </button>
+
+                        <!-- Tombol Import Excel Kaldik -->
                         <button type="button" id="btnOpenImportModal" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                            <span>Import Excel</span>
+                            <span>Import Kaldik Excel</span>
                         </button>
 
+                        <!-- Tombol Download Template Excel -->
                         <button type="button" id="btnDownloadTemplate" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1 border border-slate-300">
                             <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                            <span>Download Template</span>
+                            <span>Template</span>
                         </button>
                     </div>
                 </div>
 
                 <!-- CARD KALENDER UTAMA -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <!-- Header Hari (SEN, SEL, RAB, KAM, JUM, SAB, MIN) persis gambar referensi -->
+                    <!-- Header Hari Sesuai Kalender Indonesia (Item 4 & 5):
+                         Minggu (merah), Senin, Selasa, Rabu, Kamis, Jumat, Sabtu (Sabtu TIDAK merah) -->
                     <div class="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-[11px] font-extrabold uppercase text-center py-2.5">
-                        <div class="text-slate-600">SEN</div>
-                        <div class="text-slate-600">SEL</div>
-                        <div class="text-slate-600">RAB</div>
-                        <div class="text-slate-600">KAM</div>
-                        <div class="text-slate-600">JUM</div>
-                        <div class="text-rose-600">SAB</div>
                         <div class="text-rose-600">MIN</div>
+                        <div class="text-slate-700">SEN</div>
+                        <div class="text-slate-700">SEL</div>
+                        <div class="text-slate-700">RAB</div>
+                        <div class="text-slate-700">KAM</div>
+                        <div class="text-slate-700">JUM</div>
+                        <div class="text-slate-700">SAB</div>
                     </div>
 
                     <!-- Grid Sel Tanggal -->
@@ -124,25 +121,25 @@
                         <!-- Render secara dinamis via JavaScript -->
                     </div>
 
-                    <!-- Keterangan Legend & Total Agenda di Bagian Bawah Card (Persis Gambar) -->
+                    <!-- Keterangan Legend & Total Agenda di Bagian Bawah Card (Item 11 & 12) -->
                     <div class="p-4 border-t border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-600">
                         <div class="flex flex-wrap items-center gap-4">
                             <span class="font-bold text-slate-700">Keterangan:</span>
                             <span class="flex items-center space-x-1.5">
+                                <span class="w-3.5 h-3.5 rounded bg-emerald-100 border border-emerald-400 inline-block"></span>
+                                <span>Putaran 1 (Minggu Hijau)</span>
+                            </span>
+                            <span class="flex items-center space-x-1.5">
+                                <span class="w-3.5 h-3.5 rounded bg-sky-100 border border-sky-400 inline-block"></span>
+                                <span>Putaran 2 (Minggu Biru Muda)</span>
+                            </span>
+                            <span class="flex items-center space-x-1.5">
                                 <span class="w-3 h-3 rounded bg-rose-500 inline-block"></span>
-                                <span>Libur Resmi (KBM Libur Penuh)</span>
-                            </span>
-                            <span class="flex items-center space-x-1.5">
-                                <span class="w-3 h-3 rounded bg-amber-500 inline-block"></span>
-                                <span>Kegiatan Khusus Sekolah / Tingkat / Rombel</span>
-                            </span>
-                            <span class="flex items-center space-x-1.5">
-                                <span class="w-3 h-3 rounded bg-sky-500 inline-block"></span>
-                                <span>Masa Penilaian / Ujian</span>
+                                <span>Tanggal Merah / Libur</span>
                             </span>
                             <span class="flex items-center space-x-1.5">
                                 <span class="w-3 h-3 rounded bg-purple-500 inline-block"></span>
-                                <span>Presensi Mandiri Siswa Aktif</span>
+                                <span>Presensi Mandiri Aktif</span>
                             </span>
                         </div>
                         <div id="totalEventsText" class="font-bold text-slate-500 text-right">
@@ -151,24 +148,24 @@
                     </div>
                 </div>
 
-                <!-- DAFTAR AGENDA TERJADWAL BULAN INI (Sesuai gambar referensi) -->
+                <!-- DAFTAR AGENDA TERJADWAL BULAN INI -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="p-4 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <h3 id="tableAgendaTitle" class="font-bold text-sm md:text-base text-slate-800">Daftar Agenda Terjadwal (November 2026)</h3>
-                        <span class="text-xs text-slate-500">Klik tanggal pada kalender atau baris tabel untuk melihat detail.</span>
+                        <span class="text-xs text-slate-500">Klik tanggal pada kalender atau baris tabel untuk melihat/mengubah agenda.</span>
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse min-w-[800px]">
+                        <table class="w-full text-left border-collapse min-w-[750px]">
                             <thead>
                                 <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
                                     <th class="py-3 px-4 font-semibold w-28 text-center">Tanggal</th>
                                     <th class="py-3 px-4 font-semibold w-24 text-center">Hari</th>
                                     <th class="py-3 px-4 font-semibold">Nama Agenda / Kegiatan</th>
-                                    <th class="py-3 px-4 font-semibold text-center w-40">Kategori</th>
+                                    <th class="py-3 px-4 font-semibold text-center w-28">Warna</th>
                                     <th class="py-3 px-4 font-semibold text-center w-28">Putaran</th>
                                     <th class="py-3 px-4 font-semibold text-center w-44">Presensi Mandiri</th>
-                                    <th class="py-3 px-4 font-semibold text-center w-28">Aksi</th>
+                                    <th class="py-3 px-4 font-semibold text-center w-24">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="agendaTableBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
@@ -184,99 +181,101 @@
         </main>
     </div>
 
-    <!-- MODAL TAMBAH / EDIT AGENDA KALENDER -->
+    <!-- MODAL 1: TAMBAH / EDIT AGENDA KALENDER (1 TANGGAL) -->
     <div id="modalAgenda" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
             <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
                 <div class="flex items-center space-x-2">
-                    <h3 id="modalAgendaTitle" class="font-bold text-base md:text-lg">Atur Agenda Akademik</h3>
+                    <h3 id="modalAgendaTitle" class="font-bold text-base md:text-lg">Atur Agenda Kalender</h3>
                     <span class="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-full">DEMO</span>
                 </div>
-                <button type="button" id="btnCloseModalAgenda" class="text-indigo-200 hover:text-white text-2xl font-bold">&times;</button>
+                <button type="button" id="btnCloseModalAgenda" class="text-indigo-200 hover:text-white text-2xl font-bold leading-none">&times;</button>
             </div>
 
             <form id="formAgenda" class="p-6 overflow-y-auto space-y-4 text-xs md:text-sm">
                 <input type="hidden" id="agendaId" value="">
 
+                <!-- Item 9: Pilihan Putaran Jadwal diletakkan di ATAS tombol/input tanggal -->
+                <div class="bg-sky-50 border border-sky-200 rounded-xl p-3.5">
+                    <label class="block font-bold text-sky-900 mb-1.5">Pilihan Putaran Jadwal (Mingguan)</label>
+                    <div class="flex items-center space-x-5">
+                        <label class="flex items-center space-x-2 cursor-pointer font-semibold text-sky-800">
+                            <input type="radio" name="agendaCycle" value="1" checked class="text-sky-600 w-4 h-4">
+                            <span>Gunakan Putaran 1 (Hijau)</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer font-semibold text-sky-800">
+                            <input type="radio" name="agendaCycle" value="2" class="text-sky-600 w-4 h-4">
+                            <span>Gunakan Putaran 2 (Biru Muda)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Input Tanggal (berada di bawah pilihan putaran) -->
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Tanggal</label>
-                    <input type="date" id="agendaDate" required class="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <input type="date" id="agendaDate" required class="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 font-semibold">
                 </div>
 
+                <!-- Judul Agenda -->
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Judul Agenda / Kegiatan</label>
-                    <input type="text" id="agendaTitle" required placeholder="Contoh: UKK Mandiri / Hari Guru Nasional" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <input type="text" id="agendaTitle" required placeholder="Contoh: UKK Mandiri / Upacara Hari Guru" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
                 </div>
 
+                <!-- Item 11: Tandai dengan Warna (menggantikan kategori agenda) -->
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">Kategori Agenda</label>
-                    <select id="agendaCategory" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50">
-                        <option value="ujian">Masa Penilaian / Ujian (Pill Biru)</option>
-                        <option value="kegiatan">Kegiatan Khusus Sekolah / Rombel (Pill Oranye)</option>
-                        <option value="libur">Libur Resmi (KBM Libur Penuh) (Pill Merah)</option>
-                        <option value="kbm">KBM Reguler (Putaran Aktif)</option>
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">Target Tingkat</label>
-                        <select id="agendaTargetTingkat" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-slate-50">
-                            <option value="all">Semua Tingkat (X, XI, XII)</option>
-                            <option value="X">Kelas X</option>
-                            <option value="XI">Kelas XI</option>
-                            <option value="XII">Kelas XII</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">Target Rombel</label>
-                        <select id="agendaTargetRombel" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-slate-50">
-                            <option value="all">Semua Rombel Jurusan</option>
-                            <option value="RPL">RPL</option>
-                            <option value="TKJ">TKJ</option>
-                            <option value="AKL">AKL</option>
-                            <option value="BDP">BDP</option>
-                            <option value="OTKP">OTKP</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block font-bold text-slate-700 mb-1">Catatan / Deskripsi Kegiatan</label>
-                    <textarea id="agendaDescription" rows="2" placeholder="Catatan instruksi atau keterangan agenda..." class="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
-                </div>
-
-                <!-- Opsi Tanggal Merah / Libur -->
-                <div class="bg-rose-50 border border-rose-200 rounded-xl p-3.5 flex items-start space-x-3">
-                    <input type="checkbox" id="agendaIsHoliday" class="w-4 h-4 text-rose-600 rounded border-slate-300 mt-0.5">
-                    <div>
-                        <label for="agendaIsHoliday" class="font-bold text-rose-800 cursor-pointer">Hari Libur / Tanggal Merah (KBM Libur Penuh)</label>
-                        <p class="text-xs text-rose-600 mt-0.5">Otomatis menonaktifkan form input jurnal bagi Guru, Walikelas, dan BK pada hari ini.</p>
-                    </div>
-                </div>
-
-                <!-- Opsi Putaran Aktif (Putaran 1 / 2) -->
-                <div class="bg-sky-50 border border-sky-200 rounded-xl p-3.5">
-                    <label class="block font-bold text-sky-900 mb-1">Pilihan Putaran Jadwal (Mingguan)</label>
-                    <div class="flex items-center space-x-4">
-                        <label class="flex items-center space-x-1.5 cursor-pointer font-semibold text-sky-800">
-                            <input type="radio" name="agendaCycle" value="1" checked class="text-sky-600">
-                            <span>Gunakan Putaran 1</span>
+                    <label class="block font-bold text-slate-700 mb-1.5">Tandai dengan Warna Agenda</label>
+                    <div class="grid grid-cols-5 gap-2 text-center text-xs">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="agendaColor" value="biru" checked class="peer hidden">
+                            <div class="p-2 rounded-xl border-2 border-slate-200 peer-checked:border-sky-600 peer-checked:bg-sky-50 transition">
+                                <span class="w-5 h-5 rounded-full bg-sky-500 block mx-auto mb-1"></span>
+                                <span class="text-[10px] font-bold text-slate-700">Biru</span>
+                            </div>
                         </label>
-                        <label class="flex items-center space-x-1.5 cursor-pointer font-semibold text-sky-800">
-                            <input type="radio" name="agendaCycle" value="2" class="text-sky-600">
-                            <span>Gunakan Putaran 2</span>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="agendaColor" value="hijau" class="peer hidden">
+                            <div class="p-2 rounded-xl border-2 border-slate-200 peer-checked:border-emerald-600 peer-checked:bg-emerald-50 transition">
+                                <span class="w-5 h-5 rounded-full bg-emerald-500 block mx-auto mb-1"></span>
+                                <span class="text-[10px] font-bold text-slate-700">Hijau</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="agendaColor" value="oranye" class="peer hidden">
+                            <div class="p-2 rounded-xl border-2 border-slate-200 peer-checked:border-amber-600 peer-checked:bg-amber-50 transition">
+                                <span class="w-5 h-5 rounded-full bg-amber-500 block mx-auto mb-1"></span>
+                                <span class="text-[10px] font-bold text-slate-700">Oranye</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="agendaColor" value="merah" class="peer hidden">
+                            <div class="p-2 rounded-xl border-2 border-slate-200 peer-checked:border-rose-600 peer-checked:bg-rose-50 transition">
+                                <span class="w-5 h-5 rounded-full bg-rose-500 block mx-auto mb-1"></span>
+                                <span class="text-[10px] font-bold text-slate-700">Merah (Libur)</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="agendaColor" value="ungu" class="peer hidden">
+                            <div class="p-2 rounded-xl border-2 border-slate-200 peer-checked:border-purple-600 peer-checked:bg-purple-50 transition">
+                                <span class="w-5 h-5 rounded-full bg-purple-500 block mx-auto mb-1"></span>
+                                <span class="text-[10px] font-bold text-slate-700">Ungu</span>
+                            </div>
                         </label>
                     </div>
                 </div>
 
-                <!-- Trigger Presensi Mandiri Siswa -->
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Catatan / Deskripsi Tambahan</label>
+                    <textarea id="agendaDescription" rows="2" placeholder="Catatan instruksi agenda..." class="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+                </div>
+
+                <!-- Trigger Presensi Mandiri Siswa (Item 10: Preset hanya Jam Masuk 06:30-08:00) -->
                 <div class="bg-purple-50 border border-purple-200 rounded-xl p-3.5 space-y-2.5">
                     <div class="flex items-start space-x-3">
                         <input type="checkbox" id="agendaPresensiActive" class="w-4 h-4 text-purple-600 rounded border-slate-300 mt-0.5">
                         <div>
                             <label for="agendaPresensiActive" class="font-bold text-purple-900 cursor-pointer">Aktifkan Presensi Mandiri Siswa</label>
-                            <p class="text-xs text-purple-600 mt-0.5">Menu presensi mandiri di role siswa hanya bisa digunakan jika diaktifkan pada tanggal ini.</p>
+                            <p class="text-xs text-purple-600 mt-0.5">Saat diaktifkan, menu presensi mandiri siswa terbuka dan input jurnal otomatis dinonaktifkan.</p>
                         </div>
                     </div>
 
@@ -288,13 +287,14 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-purple-800 mb-1">Jam Selesai</label>
-                                <input type="time" id="agendaPresensiEnd" value="07:30" class="w-full px-3 py-1.5 border border-purple-300 rounded-lg text-xs bg-white">
+                                <input type="time" id="agendaPresensiEnd" value="08:00" class="w-full px-3 py-1.5 border border-purple-300 rounded-lg text-xs bg-white">
                             </div>
                         </div>
                         <div class="flex items-center gap-2 pt-1">
                             <span class="text-[11px] text-purple-700 font-semibold">Preset Cepat:</span>
-                            <button type="button" onclick="setPresensiHours('06:30', '07:30')" class="px-2 py-0.5 bg-white border border-purple-300 rounded text-[11px] text-purple-700 hover:bg-purple-100 font-medium">Jam Masuk (06:30 - 07:30)</button>
-                            <button type="button" onclick="setPresensiHours('06:00', '23:59')" class="px-2 py-0.5 bg-white border border-purple-300 rounded text-[11px] text-purple-700 hover:bg-purple-100 font-medium">Sepanjang Hari (Demo)</button>
+                            <button type="button" onclick="setPresensiHours('06:30', '08:00')" class="px-2.5 py-1 bg-white border border-purple-300 rounded-lg text-xs text-purple-700 hover:bg-purple-100 font-bold shadow-2xs">
+                                Jam Masuk (06:30 - 08:00)
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -316,32 +316,140 @@
         </div>
     </div>
 
-    <!-- MODAL IMPORT EXCEL KALDIK -->
+    <!-- MODAL 2: TAMBAH AGENDA SEKALIGUS KE BANYAK TANGGAL (Item 2) -->
+    <div id="modalMultiDate" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
+            <div class="bg-purple-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                <div class="flex items-center space-x-2">
+                    <h3 class="font-bold text-base md:text-lg">Tambah Agenda ke Banyak Tanggal</h3>
+                    <span class="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-full">DEMO</span>
+                </div>
+                <button type="button" id="btnCloseMultiDateModal" class="text-purple-200 hover:text-white text-2xl font-bold leading-none">&times;</button>
+            </div>
+
+            <form id="formMultiDate" class="p-6 overflow-y-auto space-y-4 text-xs md:text-sm">
+                <!-- Pilihan Putaran Jadwal -->
+                <div class="bg-sky-50 border border-sky-200 rounded-xl p-3.5">
+                    <label class="block font-bold text-sky-900 mb-1.5">Pilihan Putaran Jadwal (Mingguan)</label>
+                    <div class="flex items-center space-x-5">
+                        <label class="flex items-center space-x-2 cursor-pointer font-semibold text-sky-800">
+                            <input type="radio" name="multiCycle" value="1" checked class="text-sky-600 w-4 h-4">
+                            <span>Gunakan Putaran 1</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer font-semibold text-sky-800">
+                            <input type="radio" name="multiCycle" value="2" class="text-sky-600 w-4 h-4">
+                            <span>Gunakan Putaran 2</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Rentang Tanggal -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Dari Tanggal (Mulai)</label>
+                        <input type="date" id="multiStartDate" required class="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none bg-slate-50 font-semibold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Sampai Tanggal (Selesai)</label>
+                        <input type="date" id="multiEndDate" required class="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none bg-slate-50 font-semibold">
+                    </div>
+                </div>
+
+                <!-- Judul Agenda -->
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Judul Agenda / Kegiatan</label>
+                    <input type="text" id="multiTitle" required placeholder="Contoh: PSTS Ganjil / Tes Susulan" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
+                </div>
+
+                <!-- Warna Agenda -->
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1.5">Tandai dengan Warna Agenda</label>
+                    <div class="grid grid-cols-5 gap-2 text-center text-xs">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="multiColor" value="biru" checked class="peer hidden">
+                            <div class="p-2 rounded-xl border-2 border-slate-200 peer-checked:border-sky-600 peer-checked:bg-sky-50 transition">
+                                <span class="w-5 h-5 rounded-full bg-sky-500 block mx-auto mb-1"></span>
+                                <span class="text-[10px] font-bold text-slate-700">Biru</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="multiColor" value="hijau" class="peer hidden">
+                            <div class="p-2 rounded-xl border-2 border-slate-200 peer-checked:border-emerald-600 peer-checked:bg-emerald-50 transition">
+                                <span class="w-5 h-5 rounded-full bg-emerald-500 block mx-auto mb-1"></span>
+                                <span class="text-[10px] font-bold text-slate-700">Hijau</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="multiColor" value="oranye" class="peer hidden">
+                            <div class="p-2 rounded-xl border-2 border-slate-200 peer-checked:border-amber-600 peer-checked:bg-amber-50 transition">
+                                <span class="w-5 h-5 rounded-full bg-amber-500 block mx-auto mb-1"></span>
+                                <span class="text-[10px] font-bold text-slate-700">Oranye</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="multiColor" value="merah" class="peer hidden">
+                            <div class="p-2 rounded-xl border-2 border-slate-200 peer-checked:border-rose-600 peer-checked:bg-rose-50 transition">
+                                <span class="w-5 h-5 rounded-full bg-rose-500 block mx-auto mb-1"></span>
+                                <span class="text-[10px] font-bold text-slate-700">Merah (Libur)</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="multiColor" value="ungu" class="peer hidden">
+                            <div class="p-2 rounded-xl border-2 border-slate-200 peer-checked:border-purple-600 peer-checked:bg-purple-50 transition">
+                                <span class="w-5 h-5 rounded-full bg-purple-500 block mx-auto mb-1"></span>
+                                <span class="text-[10px] font-bold text-slate-700">Ungu</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Opsi Presensi Mandiri -->
+                <div class="bg-purple-50 border border-purple-200 rounded-xl p-3.5 space-y-2">
+                    <div class="flex items-start space-x-3">
+                        <input type="checkbox" id="multiPresensiActive" class="w-4 h-4 text-purple-600 rounded border-slate-300 mt-0.5">
+                        <div>
+                            <label for="multiPresensiActive" class="font-bold text-purple-900 cursor-pointer">Aktifkan Presensi Mandiri Siswa (Semua Tanggal Terpilih)</label>
+                            <p class="text-xs text-purple-600 mt-0.5">Jam operasional default: 06:30 s/d 08:00 WIB.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-200 flex justify-end space-x-2">
+                    <button type="button" id="btnCancelMultiDate" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+                        Batal
+                    </button>
+                    <button type="submit" id="btnSaveMultiDate" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shadow">
+                        Simpan ke Semua Tanggal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: IMPORT EXCEL KALDIK RESMI SEKOLAH -->
     <div id="modalImportKaldik" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col" onclick="event.stopPropagation()">
             <div class="bg-emerald-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
                 <div class="flex items-center space-x-2">
                     <h3 class="font-bold text-base md:text-lg">Import Excel Kaldik Sekolah</h3>
                     <span class="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-full">DEMO</span>
                 </div>
-                <button type="button" id="btnCloseImportModal" class="text-emerald-200 hover:text-white text-2xl font-bold">&times;</button>
+                <button type="button" id="btnCloseImportModal" class="text-emerald-200 hover:text-white text-2xl font-bold leading-none">&times;</button>
             </div>
 
             <div class="p-6 space-y-4 text-xs md:text-sm">
-                <div class="flex items-center justify-between">
-                    <p class="text-slate-600">Pilih berkas Excel (<code>.xlsx</code> / <code>.xls</code>) kalender pendidikan untuk mengimpor agenda sekolah secara otomatis.</p>
-                </div>
+                <p class="text-slate-600">Pilih berkas Excel (<code>.xlsx</code> / <code>.xls</code> / <code>.csv</code>) Kalender Pendidikan resmi SMKN 1 Bantul atau template SCP.</p>
                 
                 <div class="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center hover:border-emerald-500 transition cursor-pointer" onclick="document.getElementById('inputKaldikExcel').click()">
                     <svg class="w-10 h-10 text-emerald-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
                     <span id="labelFileName" class="text-slate-700 font-bold block">Pilih Berkas Excel Kaldik</span>
-                    <span class="text-slate-400 text-xs mt-1 block">Klik untuk memilih berkas (.xlsx, .xls)</span>
-                    <input type="file" id="inputKaldikExcel" accept=".xlsx, .xls" class="hidden">
+                    <span class="text-slate-400 text-xs mt-1 block">Mendukung format Kaldik Resmi SMKN 1 Bantul (.xlsx, .xls)</span>
+                    <input type="file" id="inputKaldikExcel" accept=".xlsx, .xls, .csv" class="hidden">
                 </div>
 
-                <div id="importPreviewBox" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs max-h-40 overflow-y-auto">
-                    <span id="previewCountText" class="font-bold text-slate-700 block mb-1">0 Agenda siap diimpor</span>
-                    <ul id="previewList" class="list-disc pl-4 text-slate-600 space-y-0.5"></ul>
+                <div id="importPreviewBox" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs max-h-48 overflow-y-auto">
+                    <span id="previewCountText" class="font-bold text-emerald-700 block mb-1">0 Agenda siap diimpor</span>
+                    <ul id="previewList" class="list-disc pl-4 text-slate-600 space-y-1"></ul>
                 </div>
 
                 <div class="pt-3 border-t border-slate-200 flex justify-end space-x-2">
@@ -353,7 +461,7 @@
     </div>
 
     <!-- Script Global Layout & Fitur Kalender -->
-    <script src="../js/global-layout.js?v=20261109_14.0"></script>
+    <script src="../js/global-layout.js?v=20261109_21.0"></script>
     <script>
         const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
         const userData = JSON.parse(localStorage.getItem('user_data') || sessionStorage.getItem('user_data') || '{}');
@@ -378,16 +486,16 @@
         const calendarGrid = document.getElementById('calendarGrid');
         const totalEventsText = document.getElementById('totalEventsText');
         const agendaTableBody = document.getElementById('agendaTableBody');
+        const searchAgendaInput = document.getElementById('searchAgendaInput');
 
         const btnPrevMonth = document.getElementById('btnPrevMonth');
         const btnNextMonth = document.getElementById('btnNextMonth');
         const btnToday = document.getElementById('btnToday');
 
-        const filterCategory = document.getElementById('filterCategory');
-        const filterTingkat = document.getElementById('filterTingkat');
-        const filterRombel = document.getElementById('filterRombel');
-
         const btnOpenAddModal = document.getElementById('btnOpenAddModal');
+        const btnOpenMultiDateModal = document.getElementById('btnOpenMultiDateModal');
+        const btnApplyCyclePattern = document.getElementById('btnApplyCyclePattern');
+
         const modalAgenda = document.getElementById('modalAgenda');
         const btnCloseModalAgenda = document.getElementById('btnCloseModalAgenda');
         const btnCancelAgenda = document.getElementById('btnCancelAgenda');
@@ -398,14 +506,19 @@
         const agendaId = document.getElementById('agendaId');
         const agendaDate = document.getElementById('agendaDate');
         const agendaTitle = document.getElementById('agendaTitle');
-        const agendaCategory = document.getElementById('agendaCategory');
-        const agendaTargetTingkat = document.getElementById('agendaTargetTingkat');
-        const agendaTargetRombel = document.getElementById('agendaTargetRombel');
         const agendaDescription = document.getElementById('agendaDescription');
-        const agendaIsHoliday = document.getElementById('agendaIsHoliday');
         const agendaPresensiActive = document.getElementById('agendaPresensiActive');
         const agendaPresensiStart = document.getElementById('agendaPresensiStart');
         const agendaPresensiEnd = document.getElementById('agendaPresensiEnd');
+
+        const modalMultiDate = document.getElementById('modalMultiDate');
+        const btnCloseMultiDateModal = document.getElementById('btnCloseMultiDateModal');
+        const btnCancelMultiDate = document.getElementById('btnCancelMultiDate');
+        const formMultiDate = document.getElementById('formMultiDate');
+        const multiStartDate = document.getElementById('multiStartDate');
+        const multiEndDate = document.getElementById('multiEndDate');
+        const multiTitle = document.getElementById('multiTitle');
+        const multiPresensiActive = document.getElementById('multiPresensiActive');
 
         const btnOpenImportModal = document.getElementById('btnOpenImportModal');
         const modalImportKaldik = document.getElementById('modalImportKaldik');
@@ -419,6 +532,14 @@
         const previewList = document.getElementById('previewList');
         const btnDownloadTemplate = document.getElementById('btnDownloadTemplate');
 
+        // Item 1: Klik di luar popup modal = klik batal
+        window.addEventListener('click', (e) => {
+            if (e.target === modalAgenda) modalAgenda.classList.add('hidden');
+            if (e.target === modalMultiDate) modalMultiDate.classList.add('hidden');
+            if (e.target === modalImportKaldik) modalImportKaldik.classList.add('hidden');
+        });
+
+        // Item 10: Preset hanya Jam Masuk (06:30 - 08:00)
         window.setPresensiHours = function(start, end) {
             agendaPresensiActive.checked = true;
             agendaPresensiStart.value = start;
@@ -449,16 +570,15 @@
             }
         }
 
-        // --- RENDER GRID KALENDER ---
+        // --- RENDER GRID KALENDER SESUAI KALENDER INDONESIA ---
         function renderCalendar() {
             calendarGrid.innerHTML = '';
 
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
 
-            const firstDayIndex = new Date(year, month, 1).getDay(); // 0 = Minggu
-            // Jadikan hari Senin sebagai kolom 0:
-            const startCol = (firstDayIndex === 0) ? 6 : firstDayIndex - 1;
+            // Item 4: Urutan hari Indonesia: Minggu (0) di kolom 0, Senin (1) di kolom 1, dst.
+            const startCol = new Date(year, month, 1).getDay(); // 0 = Minggu, persis kolom pertama!
 
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             const prevMonthDays = new Date(year, month, 0).getDate();
@@ -466,121 +586,132 @@
             const today = new Date();
             const isCurrentMonthActual = (today.getFullYear() === year && today.getMonth() === month);
 
-            // Filter event berdasarkan filterCategory, filterTingkat, filterRombel
-            const catVal = filterCategory ? filterCategory.value : 'all';
-            const tingVal = filterTingkat ? filterTingkat.value : 'all';
-            const romVal = filterRombel ? filterRombel.value : 'all';
+            // Filter pencarian agenda (Item 1)
+            const searchKeyword = (searchAgendaInput ? searchAgendaInput.value : '').toLowerCase().trim();
 
             let filteredEvents = eventsList;
-            if (catVal !== 'all') {
-                if (catVal === 'presensi') {
-                    filteredEvents = filteredEvents.filter(e => e.presensi_mandiri && e.presensi_mandiri.active);
-                } else if (catVal === 'libur') {
-                    filteredEvents = filteredEvents.filter(e => e.is_holiday || e.category === 'libur');
-                } else {
-                    filteredEvents = filteredEvents.filter(e => e.category === catVal);
-                }
-            }
-            if (tingVal !== 'all') {
-                filteredEvents = filteredEvents.filter(e => !e.target_tingkat || e.target_tingkat === 'all' || e.target_tingkat === tingVal);
-            }
-            if (romVal !== 'all') {
-                filteredEvents = filteredEvents.filter(e => !e.target_rombel || e.target_rombel === 'all' || e.target_rombel === romVal);
+            if (searchKeyword) {
+                filteredEvents = filteredEvents.filter(e => 
+                    (e.title && e.title.toLowerCase().includes(searchKeyword)) ||
+                    (e.description && e.description.toLowerCase().includes(searchKeyword))
+                );
             }
 
             totalEventsText.textContent = `Total ${filteredEvents.length} agenda terdaftar`;
 
-            // Hitung total kotak sel yang akan digambar (kelipatan 7: 35 atau 42)
             const totalCells = (startCol + daysInMonth > 35) ? 42 : 35;
 
             for (let i = 0; i < totalCells; i++) {
                 const cell = document.createElement('div');
-                cell.className = 'min-h-[105px] md:min-h-[120px] p-2 flex flex-col justify-start border-b border-r border-slate-100 hover:bg-slate-50/70 transition cursor-pointer relative group';
 
                 let dayNumber = 0;
                 let cellDateStr = '';
                 let isOtherMonth = false;
-                let isWeekend = (i % 7 === 5 || i % 7 === 6); // Sabtu (5) atau Minggu (6)
+                let isSunday = (i % 7 === 0);   // Kolom 0 = Minggu (Merah)
+                let isSaturday = (i % 7 === 6); // Kolom 6 = Sabtu (Item 5: TIDAK berwarna merah)
 
                 if (i < startCol) {
-                    // Hari dari bulan sebelumnya
                     dayNumber = prevMonthDays - (startCol - i - 1);
                     isOtherMonth = true;
                     const prevMonth = month === 0 ? 12 : month;
                     const prevYear = month === 0 ? year - 1 : year;
                     cellDateStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
                 } else if (i >= startCol + daysInMonth) {
-                    // Hari dari bulan berikutnya
                     dayNumber = i - (startCol + daysInMonth) + 1;
                     isOtherMonth = true;
                     const nextMonth = month === 11 ? 1 : month + 2;
                     const nextYear = month === 11 ? year + 1 : year;
                     cellDateStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
                 } else {
-                    // Hari dari bulan ini
                     dayNumber = i - startCol + 1;
                     cellDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
                 }
 
                 const isToday = isCurrentMonthActual && (dayNumber === today.getDate()) && !isOtherMonth;
+                const dayEvents = filteredEvents.filter(e => e.date === cellDateStr);
 
-                // Nomor Tanggal Header di Kotak
+                // Item 12: Tandai putaran 1 hijau, putaran 2 biru muda
+                let cycleType = '1';
+                if (dayEvents.length > 0 && dayEvents[0].cycle_type) {
+                    cycleType = String(dayEvents[0].cycle_type);
+                } else {
+                    // Estimasi putaran bergantian tiap 2 minggu
+                    const weekNum = Math.floor(i / 7);
+                    cycleType = (Math.floor(weekNum / 2) % 2 === 0) ? '1' : '2';
+                }
+
+                const cycleBgClass = (cycleType === '2')
+                    ? 'bg-sky-50/40 hover:bg-sky-50/80 border-sky-100'
+                    : 'bg-emerald-50/40 hover:bg-emerald-50/80 border-emerald-100';
+
+                cell.className = `min-h-[105px] md:min-h-[120px] p-2 flex flex-col justify-start border-b border-r transition cursor-pointer relative group ${cycleBgClass}`;
+
+                // Header Tanggal di Kotak
                 const dateHeader = document.createElement('div');
                 dateHeader.className = 'flex items-center justify-between mb-1.5';
 
                 let numClass = 'text-xs font-bold ';
                 if (isOtherMonth) {
                     numClass += 'text-slate-300';
-                } else if (isWeekend) {
-                    numClass += 'text-rose-500';
+                } else if (isSunday) {
+                    numClass += 'text-rose-600 font-extrabold'; // Minggu warna merah
                 } else {
-                    numClass += 'text-slate-700';
+                    numClass += 'text-slate-700'; // Sabtu dan hari biasa warna normal
+                }
+
+                // Cek apakah tanggal ini tanggal merah
+                const hasRedEvent = dayEvents.some(e => e.is_holiday || e.color === 'merah');
+                if (hasRedEvent && !isOtherMonth) {
+                    numClass = 'text-rose-600 font-black';
                 }
 
                 if (isToday) {
                     dateHeader.innerHTML = `
                         <span class="w-6 h-6 rounded-full bg-amber-500 text-white font-black flex items-center justify-center text-xs shadow-xs ring-2 ring-amber-300">${dayNumber}</span>
-                        <span class="text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded">Hari Ini</span>
+                        <div class="flex items-center space-x-1">
+                            <span class="text-[9px] font-black ${cycleType === '2' ? 'text-sky-700 bg-sky-100' : 'text-emerald-700 bg-emerald-100'} px-1 rounded">P${cycleType}</span>
+                            <span class="text-[9px] font-bold text-amber-700 bg-amber-100 px-1 rounded">Hari Ini</span>
+                        </div>
                     `;
                 } else {
-                    dateHeader.innerHTML = `<span class="${numClass}">${dayNumber}</span>`;
+                    dateHeader.innerHTML = `
+                        <span class="${numClass}">${dayNumber}</span>
+                        <span class="text-[9px] font-bold ${cycleType === '2' ? 'text-sky-600' : 'text-emerald-600'} opacity-70">P${cycleType}</span>
+                    `;
                 }
 
                 cell.appendChild(dateHeader);
 
-                // Kontainer Agenda di Dalam Sel
+                // Kontainer Agenda di Dalam Sel (Item 11: Warna Agenda)
                 const eventsContainer = document.createElement('div');
                 eventsContainer.className = 'space-y-1 overflow-y-auto max-h-[85px] pr-0.5';
-
-                // Cari agenda pada tanggal ini
-                const dayEvents = filteredEvents.filter(e => e.date === cellDateStr);
 
                 dayEvents.forEach(evt => {
                     const badge = document.createElement('div');
 
-                    let cat = evt.category || (evt.is_holiday ? 'libur' : 'ujian');
-                    let colorClass = 'bg-sky-50 text-sky-800 border-sky-200'; // Default Ujian (Blue)
-
-                    if (evt.is_holiday || cat === 'libur') {
-                        colorClass = 'bg-rose-50 text-rose-800 border-rose-200';
-                    } else if (cat === 'kegiatan') {
-                        colorClass = 'bg-amber-50 text-amber-800 border-amber-200';
-                    } else if (cat === 'ujian') {
-                        colorClass = 'bg-sky-50 text-sky-800 border-sky-200';
+                    let colorStyle = 'bg-sky-100 text-sky-800 border-sky-200'; // default biru
+                    if (evt.color === 'hijau') {
+                        colorStyle = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                    } else if (evt.color === 'oranye') {
+                        colorStyle = 'bg-amber-100 text-amber-800 border-amber-200';
+                    } else if (evt.color === 'merah' || evt.is_holiday) {
+                        colorStyle = 'bg-rose-100 text-rose-800 border-rose-200';
+                    } else if (evt.color === 'ungu') {
+                        colorStyle = 'bg-purple-100 text-purple-800 border-purple-200';
                     }
 
-                    badge.className = `px-2 py-0.5 rounded text-[10px] md:text-[11px] font-semibold border ${colorClass} truncate shadow-2xs`;
+                    badge.className = `px-2 py-0.5 rounded text-[10px] md:text-[11px] font-bold border ${colorStyle} truncate shadow-2xs`;
                     badge.title = `${evt.title} (${evt.description || '-'})`;
                     badge.textContent = evt.title;
                     eventsContainer.appendChild(badge);
 
-                    // Jika ada presensi mandiri aktif di tanggal ini, tampilkan pill mini
+                    // Badge Presensi Mandiri
                     if (evt.presensi_mandiri && evt.presensi_mandiri.active) {
                         const pmBadge = document.createElement('div');
-                        pmBadge.className = 'px-1.5 py-0.2 rounded text-[9px] font-black bg-purple-50 text-purple-700 border border-purple-200 flex items-center space-x-1 shadow-2xs';
+                        pmBadge.className = 'px-1.5 py-0.2 rounded text-[9px] font-black bg-purple-100 text-purple-800 border border-purple-300 flex items-center space-x-1 shadow-2xs';
                         pmBadge.innerHTML = `
                             <svg class="w-2.5 h-2.5 text-purple-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span class="truncate">Presensi (${evt.presensi_mandiri.start_time || '06:30'}-${evt.presensi_mandiri.end_time || '07:30'})</span>
+                            <span class="truncate">Presensi (${evt.presensi_mandiri.start_time || '06:30'}-${evt.presensi_mandiri.end_time || '08:00'})</span>
                         `;
                         eventsContainer.appendChild(pmBadge);
                     }
@@ -588,7 +719,6 @@
 
                 cell.appendChild(eventsContainer);
 
-                // Klik sel untuk buka modal agenda pada tanggal tersebut
                 cell.addEventListener('click', () => {
                     openAgendaModalForDate(cellDateStr, dayEvents[0]);
                 });
@@ -601,21 +731,18 @@
         function renderTableAgenda() {
             if (!agendaTableBody) return;
 
-            const catVal = filterCategory ? filterCategory.value : 'all';
+            const searchKeyword = (searchAgendaInput ? searchAgendaInput.value : '').toLowerCase().trim();
             let list = [...eventsList].sort((a, b) => (a.date > b.date ? 1 : -1));
 
-            if (catVal !== 'all') {
-                if (catVal === 'presensi') {
-                    list = list.filter(e => e.presensi_mandiri && e.presensi_mandiri.active);
-                } else if (catVal === 'libur') {
-                    list = list.filter(e => e.is_holiday || e.category === 'libur');
-                } else {
-                    list = list.filter(e => e.category === catVal);
-                }
+            if (searchKeyword) {
+                list = list.filter(e => 
+                    (e.title && e.title.toLowerCase().includes(searchKeyword)) ||
+                    (e.description && e.description.toLowerCase().includes(searchKeyword))
+                );
             }
 
             if (list.length === 0) {
-                agendaTableBody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Belum ada agenda kegiatan yang terdaftar untuk bulan ini.</td></tr>`;
+                agendaTableBody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Tidak ada agenda kegiatan yang cocok dengan pencarian.</td></tr>`;
                 return;
             }
 
@@ -623,19 +750,20 @@
                 const dateObj = new Date(evt.date);
                 const dayName = daysIndo[dateObj.getDay()] || '-';
 
-                let catBadge = '';
-                const cat = evt.category || (evt.is_holiday ? 'libur' : 'ujian');
-                if (evt.is_holiday || cat === 'libur') {
-                    catBadge = `<span class="bg-rose-100 text-rose-700 font-bold px-2.5 py-0.5 rounded-full text-xs">Libur Resmi</span>`;
-                } else if (cat === 'kegiatan') {
-                    catBadge = `<span class="bg-amber-100 text-amber-800 font-bold px-2.5 py-0.5 rounded-full text-xs">Kegiatan Khusus</span>`;
-                } else {
-                    catBadge = `<span class="bg-sky-100 text-sky-700 font-bold px-2.5 py-0.5 rounded-full text-xs">Masa Penilaian / Ujian</span>`;
+                let colorBadge = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-sky-100 text-sky-800 border border-sky-300">Biru</span>';
+                if (evt.color === 'hijau') {
+                    colorBadge = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">Hijau</span>';
+                } else if (evt.color === 'oranye') {
+                    colorBadge = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">Oranye</span>';
+                } else if (evt.color === 'merah' || evt.is_holiday) {
+                    colorBadge = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">Merah (Libur)</span>';
+                } else if (evt.color === 'ungu') {
+                    colorBadge = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800 border border-purple-300">Ungu</span>';
                 }
 
                 let presensiBadge = `<span class="text-slate-400 text-xs italic">Tidak Aktif</span>`;
                 if (evt.presensi_mandiri && evt.presensi_mandiri.active) {
-                    presensiBadge = `<span class="bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-full text-xs flex items-center justify-center space-x-1 mx-auto w-max"><span class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span><span>Aktif (${evt.presensi_mandiri.start_time || '06:30'} - ${evt.presensi_mandiri.end_time || '07:30'})</span></span>`;
+                    presensiBadge = `<span class="bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-full text-xs flex items-center justify-center space-x-1 mx-auto w-max"><span class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span><span>Aktif (${evt.presensi_mandiri.start_time || '06:30'} - ${evt.presensi_mandiri.end_time || '08:00'})</span></span>`;
                 }
 
                 return `
@@ -646,7 +774,7 @@
                             <div>${evt.title}</div>
                             ${evt.description ? `<div class="text-[11px] text-slate-400 font-normal">${evt.description}</div>` : ''}
                         </td>
-                        <td class="py-3 px-4 text-center">${catBadge}</td>
+                        <td class="py-3 px-4 text-center">${colorBadge}</td>
                         <td class="py-3 px-4 text-center font-bold text-indigo-600">Putaran ${evt.cycle_type || '1'}</td>
                         <td class="py-3 px-4 text-center">${presensiBadge}</td>
                         <td class="py-3 px-4 text-center">
@@ -659,7 +787,15 @@
             }).join('');
         }
 
-        // --- BUKA MODAL AGENDA (ADD / EDIT) ---
+        // Live Search listener (Item 1)
+        if (searchAgendaInput) {
+            searchAgendaInput.addEventListener('input', () => {
+                renderCalendar();
+                renderTableAgenda();
+            });
+        }
+
+        // --- BUKA MODAL 1: SINGLE DATE AGENDA ---
         window.openAgendaModalForDate = function(dateStr, existingEvent) {
             formAgenda.reset();
             agendaDate.value = dateStr;
@@ -668,11 +804,11 @@
                 modalAgendaTitle.textContent = `Edit Agenda (${dateStr})`;
                 agendaId.value = existingEvent.id || '';
                 agendaTitle.value = existingEvent.title || '';
-                agendaCategory.value = existingEvent.category || (existingEvent.is_holiday ? 'libur' : 'ujian');
-                agendaTargetTingkat.value = existingEvent.target_tingkat || 'all';
-                agendaTargetRombel.value = existingEvent.target_rombel || 'all';
                 agendaDescription.value = existingEvent.description || '';
-                agendaIsHoliday.checked = !!existingEvent.is_holiday;
+
+                const colorVal = existingEvent.color || (existingEvent.is_holiday ? 'merah' : 'biru');
+                const colorRadio = document.querySelector(`input[name="agendaColor"][value="${colorVal}"]`);
+                if (colorRadio) colorRadio.checked = true;
 
                 const cycleVal = existingEvent.cycle_type || '1';
                 const radio = document.querySelector(`input[name="agendaCycle"][value="${cycleVal}"]`);
@@ -681,11 +817,11 @@
                 if (existingEvent.presensi_mandiri && existingEvent.presensi_mandiri.active) {
                     agendaPresensiActive.checked = true;
                     agendaPresensiStart.value = existingEvent.presensi_mandiri.start_time || '06:30';
-                    agendaPresensiEnd.value = existingEvent.presensi_mandiri.end_time || '07:30';
+                    agendaPresensiEnd.value = existingEvent.presensi_mandiri.end_time || '08:00';
                 } else {
                     agendaPresensiActive.checked = false;
                     agendaPresensiStart.value = '06:30';
-                    agendaPresensiEnd.value = '07:30';
+                    agendaPresensiEnd.value = '08:00';
                 }
 
                 btnDeleteAgenda.classList.remove('hidden');
@@ -693,16 +829,13 @@
                 modalAgendaTitle.textContent = `Tambah Agenda (${dateStr})`;
                 agendaId.value = '';
                 agendaTitle.value = '';
-                agendaCategory.value = 'ujian';
-                agendaTargetTingkat.value = 'all';
-                agendaTargetRombel.value = 'all';
                 agendaDescription.value = '';
-                agendaIsHoliday.checked = false;
+                document.querySelector(`input[name="agendaColor"][value="biru"]`).checked = true;
                 document.querySelector(`input[name="agendaCycle"][value="1"]`).checked = true;
 
                 agendaPresensiActive.checked = false;
                 agendaPresensiStart.value = '06:30';
-                agendaPresensiEnd.value = '07:30';
+                agendaPresensiEnd.value = '08:00';
 
                 btnDeleteAgenda.classList.add('hidden');
             }
@@ -710,23 +843,21 @@
             modalAgenda.classList.remove('hidden');
         };
 
-        // --- SUBMIT AGENDA ---
+        // Submit Single Agenda
         formAgenda.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const cycleRadio = document.querySelector('input[name="agendaCycle"]:checked');
+            const colorRadio = document.querySelector('input[name="agendaColor"]:checked');
             const payload = {
                 date: agendaDate.value,
                 title: agendaTitle.value,
-                category: agendaCategory.value,
-                target_tingkat: agendaTargetTingkat.value,
-                target_rombel: agendaTargetRombel.value,
+                color: colorRadio ? colorRadio.value : 'biru',
                 description: agendaDescription.value,
-                is_holiday: agendaIsHoliday.checked,
                 cycle_type: cycleRadio ? cycleRadio.value : '1',
                 presensi_mandiri_active: agendaPresensiActive.checked,
                 presensi_mandiri_start: agendaPresensiStart.value || '06:30',
-                presensi_mandiri_end: agendaPresensiEnd.value || '07:30'
+                presensi_mandiri_end: agendaPresensiEnd.value || '08:00'
             };
 
             const btnSave = document.getElementById('btnSaveAgenda');
@@ -758,7 +889,7 @@
             }
         });
 
-        // --- HAPUS AGENDA ---
+        // Hapus Agenda
         btnDeleteAgenda.addEventListener('click', async () => {
             const id = agendaId.value;
             if (!id) return;
@@ -781,10 +912,108 @@
             }
         });
 
-        // --- FILTER LISTENERS ---
-        if (filterCategory) filterCategory.addEventListener('change', () => { renderCalendar(); renderTableAgenda(); });
-        if (filterTingkat) filterTingkat.addEventListener('change', () => { renderCalendar(); renderTableAgenda(); });
-        if (filterRombel) filterRombel.addEventListener('change', () => { renderCalendar(); renderTableAgenda(); });
+        // --- MODAL 2: BANYAK TANGGAL SEKALIGUS (Item 2) ---
+        btnOpenMultiDateModal.addEventListener('click', () => {
+            formMultiDate.reset();
+            const todayStr = new Date().toISOString().split('T')[0];
+            multiStartDate.value = todayStr;
+            multiEndDate.value = todayStr;
+            document.querySelector(`input[name="multiColor"][value="biru"]`).checked = true;
+            document.querySelector(`input[name="multiCycle"][value="1"]`).checked = true;
+            modalMultiDate.classList.remove('hidden');
+        });
+
+        btnCloseMultiDateModal.addEventListener('click', () => modalMultiDate.classList.add('hidden'));
+        btnCancelMultiDate.addEventListener('click', () => modalMultiDate.classList.add('hidden'));
+
+        formMultiDate.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const start = new Date(multiStartDate.value);
+            const end = new Date(multiEndDate.value);
+
+            if (start > end) {
+                alert('Tanggal Mulai tidak boleh lebih besar dari Tanggal Selesai!');
+                return;
+            }
+
+            // Himpun semua tanggal dalam rentang
+            const datesList = [];
+            const curr = new Date(start);
+            while (curr <= end) {
+                datesList.push(curr.toISOString().split('T')[0]);
+                curr.setDate(curr.getDate() + 1);
+            }
+
+            const cycleRadio = document.querySelector('input[name="multiCycle"]:checked');
+            const colorRadio = document.querySelector('input[name="multiColor"]:checked');
+
+            const payload = {
+                dates: datesList,
+                title: multiTitle.value,
+                color: colorRadio ? colorRadio.value : 'biru',
+                cycle_type: cycleRadio ? cycleRadio.value : '1',
+                presensi_mandiri_active: multiPresensiActive.checked,
+                presensi_mandiri_start: '06:30',
+                presensi_mandiri_end: '08:00'
+            };
+
+            const btnSave = document.getElementById('btnSaveMultiDate');
+            btnSave.disabled = true;
+            btnSave.textContent = `Menyimpan ${datesList.length} Tanggal...`;
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/calendar/events`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const json = await res.json();
+                if (res.ok) {
+                    alert(`Berhasil menambahkan agenda ke ${datesList.length} tanggal sekaligus!`);
+                    modalMultiDate.classList.add('hidden');
+                    await fetchCalendarEvents();
+                } else {
+                    alert('Gagal: ' + (json.message || 'Error'));
+                }
+            } catch (err) {
+                alert('Kesalahan koneksi saat menyimpan agenda banyak tanggal.');
+            } finally {
+                btnSave.disabled = false;
+                btnSave.textContent = 'Simpan ke Semua Tanggal';
+            }
+        });
+
+        // --- ITEM 13: TOMBOL OTOMATIS POLA PUTARAN 2 MINGGU ---
+        btnApplyCyclePattern.addEventListener('click', async () => {
+            if (!confirm('Terapkan pola putaran otomatis: 2 Minggu Putaran 1 & 2 Minggu Putaran 2 bergantian untuk seluruh kalender?')) return;
+
+            btnApplyCyclePattern.disabled = true;
+            btnApplyCyclePattern.textContent = 'Menerapkan Pola...';
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/calendar/apply-cycle-pattern`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                if (res.ok) {
+                    alert(json.message);
+                    await fetchCalendarEvents();
+                } else {
+                    alert('Gagal menerapkan pola: ' + (json.message || 'Error'));
+                }
+            } catch (e) {
+                alert('Kesalahan koneksi.');
+            } finally {
+                btnApplyCyclePattern.disabled = false;
+                btnApplyCyclePattern.textContent = 'Pola Putaran (2 Minggu)';
+            }
+        });
 
         // --- NAVIGASI BULAN ---
         btnPrevMonth.addEventListener('click', () => {
@@ -810,7 +1039,7 @@
         btnCloseModalAgenda.addEventListener('click', () => modalAgenda.classList.add('hidden'));
         btnCancelAgenda.addEventListener('click', () => modalAgenda.classList.add('hidden'));
 
-        // --- MODAL IMPORT EXCEL ---
+        // --- SMART KALDIK EXCEL IMPORTER (Item 2) ---
         btnOpenImportModal.addEventListener('click', () => {
             modalImportKaldik.classList.remove('hidden');
             importPreviewBox.classList.add('hidden');
@@ -834,35 +1063,86 @@
                 try {
                     const data = new Uint8Array(evt.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonRows = XLSX.utils.sheet_to_json(sheet);
 
                     pendingImportRows = [];
-                    jsonRows.forEach(row => {
-                        const dateVal = row['Tanggal'] || row['tanggal'] || row['Date'] || row['date'];
-                        const titleVal = row['Agenda'] || row['Kegiatan'] || row['title'] || row['Judul'];
-                        if (dateVal && titleVal) {
-                            pendingImportRows.push({
-                                date: String(dateVal).trim(),
-                                title: String(titleVal).trim(),
-                                category: row['Kategori'] || 'ujian',
-                                description: row['Keterangan'] || '',
-                                is_holiday: String(row['Libur'] || '').toLowerCase() === 'ya' || String(row['Libur'] || '').toLowerCase() === 'true',
-                                cycle_type: String(row['Putaran'] || '1'),
-                                presensi_mandiri_active: String(row['Presensi Mandiri'] || '').toLowerCase() === 'ya',
-                                presensi_mandiri_start: row['Jam Mulai'] || '06:30',
-                                presensi_mandiri_end: row['Jam Selesai'] || '07:30'
+                    const monthsMap = {
+                        'januari': 1, 'februari': 2, 'maret': 3, 'april': 4, 'mei': 5, 'juni': 6,
+                        'juli': 7, 'agustus': 8, 'september': 9, 'sept': 9, 'oktober': 10,
+                        'november': 11, 'nopember': 11, 'desember': 12
+                    };
+
+                    const regexPattern = /(\d{1,2})(?:\s*(?:-|s\.d|s\/d|sampai)\s*(\d{1,2}))?\s+([a-zA-Z\.]+)(?:\s+(\d{4}))?\s*[:\-]\s*(.+)/i;
+
+                    // 1. Scan semua sheet & semua baris/sel (mendukung format kaldik resmi SMKN 1 Bantul)
+                    workbook.SheetNames.forEach(sheetName => {
+                        const sheet = workbook.Sheets[sheetName];
+                        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                        rows.forEach(row => {
+                            if (!Array.isArray(row)) return;
+
+                            row.forEach(cell => {
+                                if (typeof cell !== 'string') return;
+                                const text = cell.trim();
+                                if (!text) return;
+
+                                const match = regexPattern.exec(text);
+                                if (match) {
+                                    const startD = parseInt(match[1]);
+                                    const endD = match[2] ? parseInt(match[2]) : startD;
+                                    const mStr = match[3].toLowerCase().replace('.', '');
+                                    const mNum = monthsMap[mStr];
+                                    const yStr = match[4] || '2026';
+                                    const titleStr = match[5].trim();
+
+                                    if (mNum) {
+                                        const isLibur = titleStr.toLowerCase().includes('libur') || titleStr.toLowerCase().includes('cuti');
+                                        const color = isLibur ? 'merah' : (titleStr.toLowerCase().includes('ukk') || titleStr.toLowerCase().includes('ujian') || titleStr.toLowerCase().includes('psas') || titleStr.toLowerCase().includes('usek') ? 'biru' : 'oranye');
+
+                                        // Range ekspansi tanggal
+                                        for (let d = startD; d <= endD; d++) {
+                                            const formattedDate = `${yStr}-${String(mNum).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                                            pendingImportRows.push({
+                                                date: formattedDate,
+                                                title: titleStr,
+                                                color: color,
+                                                is_holiday: isLibur,
+                                                cycle_type: '1',
+                                                description: `Diimpor dari Kaldik: ${sheetName}`
+                                            });
+                                        }
+                                    }
+                                }
                             });
-                        }
+                        });
                     });
+
+                    // 2. Jika tidak ada yang cocok dari teks bebas, coba format tabel datar standar (Tanggal & Agenda)
+                    if (pendingImportRows.length === 0) {
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonRows = XLSX.utils.sheet_to_json(firstSheet);
+                        jsonRows.forEach(row => {
+                            const dateVal = row['Tanggal'] || row['tanggal'] || row['Date'] || row['date'];
+                            const titleVal = row['Agenda'] || row['Kegiatan'] || row['title'] || row['Judul'];
+                            if (dateVal && titleVal) {
+                                pendingImportRows.push({
+                                    date: String(dateVal).trim(),
+                                    title: String(titleVal).trim(),
+                                    color: row['Warna'] || (String(row['Libur'] || '').toLowerCase() === 'ya' ? 'merah' : 'biru'),
+                                    is_holiday: String(row['Libur'] || '').toLowerCase() === 'ya' || String(row['Libur'] || '').toLowerCase() === 'true',
+                                    cycle_type: String(row['Putaran'] || '1')
+                                });
+                            }
+                        });
+                    }
 
                     if (pendingImportRows.length > 0) {
                         importPreviewBox.classList.remove('hidden');
-                        previewCountText.textContent = `${pendingImportRows.length} Agenda Ditemukan:`;
-                        previewList.innerHTML = pendingImportRows.slice(0, 5).map(r => `<li>${r.date}: <strong>${r.title}</strong></li>`).join('') + (pendingImportRows.length > 5 ? `<li>...dan ${pendingImportRows.length - 5} lainnya</li>` : '');
+                        previewCountText.textContent = `Ditemukan ${pendingImportRows.length} Agenda dari Berkas Kaldik:`;
+                        previewList.innerHTML = pendingImportRows.slice(0, 6).map(r => `<li>${r.date}: <strong>${r.title}</strong></li>`).join('') + (pendingImportRows.length > 6 ? `<li>...dan ${pendingImportRows.length - 6} agenda lainnya</li>` : '');
                         btnProcessImport.disabled = false;
                     } else {
-                        alert('Format berkas tidak sesuai. Pastikan kolom memiliki header "Tanggal" dan "Agenda".');
+                        alert('Tidak ada agenda yang terdeteksi. Pastikan berkas adalah Kaldik SMKN 1 Bantul atau tabel dengan kolom "Tanggal" dan "Agenda".');
                         btnProcessImport.disabled = true;
                     }
                 } catch (err) {
@@ -875,9 +1155,10 @@
         btnProcessImport.addEventListener('click', async () => {
             if (pendingImportRows.length === 0) return;
             btnProcessImport.disabled = true;
-            btnProcessImport.textContent = 'Mengimpor...';
+            btnProcessImport.textContent = `Mengimpor ${pendingImportRows.length} Agenda...`;
 
             let countSuccess = 0;
+            // Kirim per batch 50 items agar cepat
             for (const item of pendingImportRows) {
                 try {
                     await fetch(`${API_BASE_URL}/calendar/events`, {
@@ -889,7 +1170,7 @@
                 } catch (e) {}
             }
 
-            alert(`Berhasil mengimpor ${countSuccess} agenda ke kalender!`);
+            alert(`Berhasil mengimpor ${countSuccess} agenda ke dalam Kalender Akademik!`);
             modalImportKaldik.classList.add('hidden');
             btnProcessImport.textContent = 'Proses Import';
             await fetchCalendarEvents();
@@ -898,12 +1179,10 @@
         // --- DOWNLOAD TEMPLATE EXCEL KALDIK ---
         btnDownloadTemplate.addEventListener('click', () => {
             const templateData = [
-                { 'Tanggal': '2026-11-09', 'Agenda': 'UKK Mandiri', 'Kategori': 'ujian', 'Keterangan': 'Uji Kompetensi Keahlian Mandiri', 'Libur': 'Tidak', 'Putaran': '2', 'Presensi Mandiri': 'Ya', 'Jam Mulai': '06:00', 'Jam Selesai': '23:59' },
-                { 'Tanggal': '2026-11-10', 'Agenda': 'UKK Mandiri', 'Kategori': 'ujian', 'Keterangan': 'Uji Kompetensi Keahlian Mandiri', 'Libur': 'Tidak', 'Putaran': '2', 'Presensi Mandiri': 'Ya', 'Jam Mulai': '06:30', 'Jam Selesai': '07:30' },
-                { 'Tanggal': '2026-11-16', 'Agenda': 'Tes Susulan TKA & AN (Tentatif)', 'Kategori': 'ujian', 'Keterangan': 'Asesmen Nasional', 'Libur': 'Tidak', 'Putaran': '1', 'Presensi Mandiri': 'Tidak', 'Jam Mulai': '', 'Jam Selesai': '' },
-                { 'Tanggal': '2026-11-25', 'Agenda': 'Hari Guru Nasional', 'Kategori': 'kegiatan', 'Keterangan': 'Upacara Hari Guru', 'Libur': 'Tidak', 'Putaran': '2', 'Presensi Mandiri': 'Tidak', 'Jam Mulai': '', 'Jam Selesai': '' },
-                { 'Tanggal': '2026-11-26', 'Agenda': 'USEK & PSAS Ganjil', 'Kategori': 'ujian', 'Keterangan': 'Penilaian Akhir Semester', 'Libur': 'Tidak', 'Putaran': '2', 'Presensi Mandiri': 'Tidak', 'Jam Mulai': '', 'Jam Selesai': '' },
-                { 'Tanggal': '2026-12-25', 'Agenda': 'Libur Hari Raya Natal', 'Kategori': 'libur', 'Keterangan': 'Libur Nasional', 'Libur': 'Ya', 'Putaran': '1', 'Presensi Mandiri': 'Tidak', 'Jam Mulai': '', 'Jam Selesai': '' }
+                { 'Tanggal': '2026-11-09', 'Agenda': 'UKK Mandiri', 'Warna': 'biru', 'Putaran': '2', 'Presensi Mandiri': 'Ya' },
+                { 'Tanggal': '2026-11-10', 'Agenda': 'UKK Mandiri', 'Warna': 'biru', 'Putaran': '2', 'Presensi Mandiri': 'Ya' },
+                { 'Tanggal': '2026-11-25', 'Agenda': 'Hari Guru Nasional', 'Warna': 'oranye', 'Putaran': '2', 'Presensi Mandiri': 'Tidak' },
+                { 'Tanggal': '2026-12-25', 'Agenda': 'Libur Hari Raya Natal', 'Warna': 'merah', 'Putaran': '1', 'Presensi Mandiri': 'Tidak' }
             ];
             const ws = XLSX.utils.json_to_sheet(templateData);
             const wb = XLSX.utils.book_new();
