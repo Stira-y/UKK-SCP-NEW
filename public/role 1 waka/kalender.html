@@ -62,7 +62,21 @@
                         <h2 id="currentMonthYearText" class="text-lg md:text-xl font-bold text-slate-800 ml-2">November 2026</h2>
                     </div>
 
-                    <!-- Kolom Search Agenda (Item 1) & Aksi Tambah Agenda / Import -->
+                    <!-- BANNER MODE PILIH BANYAK TANGGAL -->
+                <div id="multiSelectBanner" class="hidden bg-purple-50 border border-purple-200 text-purple-900 px-4 py-2.5 rounded-xl flex items-center justify-between text-xs transition-all shadow-xs">
+                    <div class="flex items-center space-x-2.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-purple-600 animate-pulse"></span>
+                        <span class="font-bold">Mode Pilih Banyak Tanggal Aktif:</span>
+                        <span class="text-purple-700 hidden sm:inline">Klik tanggal satu per satu atau seret kursor untuk memilih beberapa tanggal sekaligus.</span>
+                        <span id="selectedCountBadge" class="bg-purple-600 text-white font-bold px-2 py-0.5 rounded-full text-[11px]">0 dipilih</span>
+                    </div>
+                    <div class="flex items-center space-x-2 shrink-0">
+                        <button type="button" id="btnClearSelection" class="text-purple-700 hover:text-purple-900 underline font-semibold text-xs px-2 py-1">Bersihkan</button>
+                        <button type="button" id="btnExitMultiSelect" class="px-3 py-1 bg-purple-200 hover:bg-purple-300 text-purple-900 rounded-lg font-bold text-xs transition">Tutup Mode</button>
+                    </div>
+                </div>
+
+                <!-- Kolom Search Agenda (Item 1) & Aksi Tambah Agenda / Import -->
                     <div class="flex flex-wrap items-center gap-2.5">
                         <!-- Input Search Agenda -->
                         <div class="relative w-full sm:w-56">
@@ -71,21 +85,21 @@
                         </div>
 
                         <!-- Tombol Tambah Agenda Biasa -->
-                        <button type="button" id="btnOpenAddModal" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                        <button type="button" id="btnOpenAddModal" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm" title="Tambah Agenda Kegiatan">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                            <span>+ Agenda</span>
+                            <span id="btnOpenAddModalText">Agenda</span>
                         </button>
 
-                        <!-- Tombol Tambah Banyak Tanggal Sekaligus (Item 2) -->
-                        <button type="button" id="btnOpenMultiDateModal" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-sm">
+                        <!-- Tombol Pilih Banyak Tanggal (Seret / Klik 1 per 1) -->
+                        <button type="button" id="btnOpenMultiDateModal" class="bg-purple-600 hover:bg-purple-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm" title="Pilih Beberapa Tanggal">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            <span>+ Banyak Tanggal</span>
+                            <span id="btnMultiSelectText">Pilih Banyak Tanggal</span>
                         </button>
 
-                        <!-- Tombol Otomatis Pola Putaran 2 Minggu (Item 13) -->
-                        <button type="button" id="btnApplyCyclePattern" class="bg-sky-600 hover:bg-sky-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-sm" title="Otomatis Atur 2 Minggu Putaran 1 & 2 Minggu Putaran 2">
+                        <!-- Tombol Otomatis Pola Putaran 2 Minggu (Toggle / Batalkan) -->
+                        <button type="button" id="btnApplyCyclePattern" class="bg-sky-600 hover:bg-sky-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm" title="Otomatis Atur 2 Minggu Putaran 1 & 2 Minggu Putaran 2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                            <span>Pola Putaran (2 Minggu)</span>
+                            <span id="btnCyclePatternText">Pola Putaran (2 Minggu)</span>
                         </button>
 
                         <!-- Tombol Import Excel Kaldik -->
@@ -343,6 +357,18 @@
                     </div>
                 </div>
 
+                <!-- Kontainer Daftar Tanggal Terpilih (Hasil Drag / Klik) -->
+                <div id="multiSelectedDatesBadgeContainer" class="hidden p-3 bg-purple-50 border border-purple-200 rounded-xl space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-xs text-purple-900 flex items-center space-x-1">
+                            <svg class="w-3.5 h-3.5 text-purple-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>Tanggal Terpilih:</span>
+                        </span>
+                        <span id="multiDateCountText" class="text-[11px] font-bold text-purple-700 bg-purple-200/70 px-2 py-0.5 rounded-full">0 tanggal</span>
+                    </div>
+                    <div id="multiSelectedDatesPillList" class="flex flex-wrap gap-1 max-h-24 overflow-y-auto"></div>
+                </div>
+
                 <!-- Rentang Tanggal -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -461,8 +487,8 @@
     </div>
 
     <!-- Script Global Layout & Fitur Kalender -->
-    <script src="../js/global-layout.js?v=20261109_21.0"></script>
-    <script>
+    <script src="../js/global-layout.js?v=20261109_22.0"></script>
+        <script>
         const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
         const userData = JSON.parse(localStorage.getItem('user_data') || sessionStorage.getItem('user_data') || '{}');
 
@@ -473,6 +499,13 @@
 
         let currentDate = new Date();
         let eventsList = [];
+        let isPatternActive = false;
+        let cycleMap = {};
+
+        // State untuk Multi-Date Selection (Seret & Klik 1-per-1)
+        let isMultiSelectActive = false;
+        let isDragging = false;
+        const selectedDatesSet = new Set();
 
         const monthNamesIndo = [
             'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -493,8 +526,16 @@
         const btnToday = document.getElementById('btnToday');
 
         const btnOpenAddModal = document.getElementById('btnOpenAddModal');
+        const btnOpenAddModalText = document.getElementById('btnOpenAddModalText');
         const btnOpenMultiDateModal = document.getElementById('btnOpenMultiDateModal');
+        const btnMultiSelectText = document.getElementById('btnMultiSelectText');
         const btnApplyCyclePattern = document.getElementById('btnApplyCyclePattern');
+        const btnCyclePatternText = document.getElementById('btnCyclePatternText');
+
+        const multiSelectBanner = document.getElementById('multiSelectBanner');
+        const selectedCountBadge = document.getElementById('selectedCountBadge');
+        const btnClearSelection = document.getElementById('btnClearSelection');
+        const btnExitMultiSelect = document.getElementById('btnExitMultiSelect');
 
         const modalAgenda = document.getElementById('modalAgenda');
         const btnCloseModalAgenda = document.getElementById('btnCloseModalAgenda');
@@ -519,6 +560,10 @@
         const multiEndDate = document.getElementById('multiEndDate');
         const multiTitle = document.getElementById('multiTitle');
         const multiPresensiActive = document.getElementById('multiPresensiActive');
+
+        const multiSelectedDatesBadgeContainer = document.getElementById('multiSelectedDatesBadgeContainer');
+        const multiDateCountText = document.getElementById('multiDateCountText');
+        const multiSelectedDatesPillList = document.getElementById('multiSelectedDatesPillList');
 
         const btnOpenImportModal = document.getElementById('btnOpenImportModal');
         const modalImportKaldik = document.getElementById('modalImportKaldik');
@@ -546,7 +591,7 @@
             agendaPresensiEnd.value = end;
         };
 
-        // --- FETCH EVENTS DARI BACKEND ---
+        // --- FETCH EVENTS & CONFIG POLA DARI BACKEND ---
         async function fetchCalendarEvents() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth() + 1;
@@ -560,6 +605,10 @@
                 });
                 const json = await res.json();
                 eventsList = json.data || [];
+                isPatternActive = !!json.is_pattern_active;
+                cycleMap = json.cycle_map || {};
+
+                updateCyclePatternButtonUI();
                 renderCalendar();
                 renderTableAgenda();
             } catch (err) {
@@ -569,6 +618,49 @@
                 renderTableAgenda();
             }
         }
+
+        // Tampilan Tombol Pola Putaran (Aktif vs Batalkan)
+        function updateCyclePatternButtonUI() {
+            if (!btnApplyCyclePattern || !btnCyclePatternText) return;
+            if (isPatternActive) {
+                btnApplyCyclePattern.className = 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm';
+                btnCyclePatternText.textContent = 'Batalkan Pola Putaran';
+                btnApplyCyclePattern.title = 'Klik untuk membatalkan pola putaran otomatis 2 mingguan';
+            } else {
+                btnApplyCyclePattern.className = 'bg-sky-600 hover:bg-sky-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm';
+                btnCyclePatternText.textContent = 'Pola Putaran (2 Minggu)';
+                btnApplyCyclePattern.title = 'Otomatis Atur 2 Minggu Putaran 1 & 2 Minggu Putaran 2';
+            }
+        }
+
+        // Update Indikator & Tombol saat Multi-Date Selection Aktif
+        function updateMultiSelectUI() {
+            if (!btnMultiSelectText) return;
+
+            if (selectedDatesSet.size > 0) {
+                btnMultiSelectText.textContent = `Edit (${selectedDatesSet.size} Tanggal)`;
+                btnOpenMultiDateModal.className = 'bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md ring-2 ring-indigo-300';
+                if (btnOpenAddModalText) btnOpenAddModalText.textContent = `Tambah Agenda (${selectedDatesSet.size})`;
+                if (multiSelectBanner) multiSelectBanner.classList.remove('hidden');
+                if (selectedCountBadge) selectedCountBadge.textContent = `${selectedDatesSet.size} dipilih`;
+            } else if (isMultiSelectActive) {
+                btnMultiSelectText.textContent = 'Mode Pilih Aktif (Pilih Tanggal)';
+                btnOpenMultiDateModal.className = 'bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md';
+                if (btnOpenAddModalText) btnOpenAddModalText.textContent = 'Agenda';
+                if (multiSelectBanner) multiSelectBanner.classList.remove('hidden');
+                if (selectedCountBadge) selectedCountBadge.textContent = '0 dipilih';
+            } else {
+                btnMultiSelectText.textContent = 'Pilih Banyak Tanggal';
+                btnOpenMultiDateModal.className = 'bg-purple-600 hover:bg-purple-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm';
+                if (btnOpenAddModalText) btnOpenAddModalText.textContent = 'Agenda';
+                if (multiSelectBanner) multiSelectBanner.classList.add('hidden');
+            }
+        }
+
+        // Global mouseup untuk menghentikan drag selection
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
 
         // --- RENDER GRID KALENDER SESUAI KALENDER INDONESIA ---
         function renderCalendar() {
@@ -603,6 +695,7 @@
 
             for (let i = 0; i < totalCells; i++) {
                 const cell = document.createElement('div');
+                cell.style.userSelect = 'none';
 
                 let dayNumber = 0;
                 let cellDateStr = '';
@@ -630,21 +723,30 @@
                 const isToday = isCurrentMonthActual && (dayNumber === today.getDate()) && !isOtherMonth;
                 const dayEvents = filteredEvents.filter(e => e.date === cellDateStr);
 
-                // Item 12: Tandai putaran 1 hijau, putaran 2 biru muda
-                let cycleType = '1';
-                if (dayEvents.length > 0 && dayEvents[0].cycle_type) {
-                    cycleType = String(dayEvents[0].cycle_type);
-                } else {
-                    // Estimasi putaran bergantian tiap 2 minggu
-                    const weekNum = Math.floor(i / 7);
-                    cycleType = (Math.floor(weekNum / 2) % 2 === 0) ? '1' : '2';
+                // Menentukan Putaran: Dari pola aktif atau event
+                let cellCycle = null;
+                if (isPatternActive && cycleMap[cellDateStr]) {
+                    cellCycle = cycleMap[cellDateStr];
+                } else if (dayEvents.length > 0 && dayEvents[0].cycle_type) {
+                    cellCycle = String(dayEvents[0].cycle_type);
                 }
 
-                const cycleBgClass = (cycleType === '2')
-                    ? 'bg-sky-50/40 hover:bg-sky-50/80 border-sky-100'
-                    : 'bg-emerald-50/40 hover:bg-emerald-50/80 border-emerald-100';
+                // Warna Putaran (Border & Background Kolom Transparan - Tanpa Text P1/P2)
+                let cycleBoxClass = 'border-slate-200/90 bg-white hover:bg-slate-50';
+                if (cellCycle === '1') {
+                    // Putaran 1: border hijau transparan, kolom hijau lembut transparan
+                    cycleBoxClass = 'border-2 border-emerald-400/60 bg-emerald-500/10 hover:bg-emerald-500/15';
+                } else if (cellCycle === '2') {
+                    // Putaran 2: border biru muda transparan, kolom biru lembut transparan
+                    cycleBoxClass = 'border-2 border-sky-400/60 bg-sky-500/10 hover:bg-sky-500/15';
+                }
 
-                cell.className = `min-h-[105px] md:min-h-[120px] p-2 flex flex-col justify-start border-b border-r transition cursor-pointer relative group ${cycleBgClass}`;
+                const isSelected = selectedDatesSet.has(cellDateStr);
+                if (isSelected) {
+                    cycleBoxClass = 'border-2 border-indigo-600 ring-2 ring-indigo-500 bg-indigo-100/75 shadow-sm';
+                }
+
+                cell.className = `min-h-[105px] md:min-h-[120px] p-2 flex flex-col justify-start border-b border-r transition cursor-pointer relative group ${cycleBoxClass}`;
 
                 // Header Tanggal di Kotak
                 const dateHeader = document.createElement('div');
@@ -665,18 +767,22 @@
                     numClass = 'text-rose-600 font-black';
                 }
 
+                const checkmarkBadge = isSelected
+                    ? `<span class="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black shadow-2xs">✓</span>`
+                    : '';
+
                 if (isToday) {
                     dateHeader.innerHTML = `
                         <span class="w-6 h-6 rounded-full bg-amber-500 text-white font-black flex items-center justify-center text-xs shadow-xs ring-2 ring-amber-300">${dayNumber}</span>
                         <div class="flex items-center space-x-1">
-                            <span class="text-[9px] font-black ${cycleType === '2' ? 'text-sky-700 bg-sky-100' : 'text-emerald-700 bg-emerald-100'} px-1 rounded">P${cycleType}</span>
+                            ${checkmarkBadge}
                             <span class="text-[9px] font-bold text-amber-700 bg-amber-100 px-1 rounded">Hari Ini</span>
                         </div>
                     `;
                 } else {
                     dateHeader.innerHTML = `
                         <span class="${numClass}">${dayNumber}</span>
-                        <span class="text-[9px] font-bold ${cycleType === '2' ? 'text-sky-600' : 'text-emerald-600'} opacity-70">P${cycleType}</span>
+                        ${checkmarkBadge}
                     `;
                 }
 
@@ -719,12 +825,43 @@
 
                 cell.appendChild(eventsContainer);
 
+                // --- INTERAKSI SELEKSI (DRAG KURSOR & KLIK 1-PER-1) ---
+                cell.addEventListener('mousedown', (e) => {
+                    if (e.button !== 0) return; // Hanya klik kiri
+                    if (isMultiSelectActive) {
+                        isDragging = true;
+                        toggleCellDateSelection(cellDateStr);
+                    }
+                });
+
+                cell.addEventListener('mouseenter', () => {
+                    if (isDragging && isMultiSelectActive) {
+                        selectedDatesSet.add(cellDateStr);
+                        updateMultiSelectUI();
+                        renderCalendar();
+                    }
+                });
+
                 cell.addEventListener('click', () => {
+                    if (isMultiSelectActive) {
+                        // Handled by toggleCellDateSelection in mousedown
+                        return;
+                    }
                     openAgendaModalForDate(cellDateStr, dayEvents[0]);
                 });
 
                 calendarGrid.appendChild(cell);
             }
+        }
+
+        function toggleCellDateSelection(dateStr) {
+            if (selectedDatesSet.has(dateStr)) {
+                selectedDatesSet.delete(dateStr);
+            } else {
+                selectedDatesSet.add(dateStr);
+            }
+            updateMultiSelectUI();
+            renderCalendar();
         }
 
         // --- RENDER TABEL DAFTAR AGENDA TERJADWAL BULAN INI ---
@@ -820,40 +957,120 @@
                     agendaPresensiEnd.value = existingEvent.presensi_mandiri.end_time || '08:00';
                 } else {
                     agendaPresensiActive.checked = false;
-                    agendaPresensiStart.value = '06:30';
-                    agendaPresensiEnd.value = '08:00';
                 }
 
                 btnDeleteAgenda.classList.remove('hidden');
             } else {
-                modalAgendaTitle.textContent = `Tambah Agenda (${dateStr})`;
+                modalAgendaTitle.textContent = `Tambah Agenda Baru (${dateStr})`;
                 agendaId.value = '';
-                agendaTitle.value = '';
-                agendaDescription.value = '';
                 document.querySelector(`input[name="agendaColor"][value="biru"]`).checked = true;
                 document.querySelector(`input[name="agendaCycle"][value="1"]`).checked = true;
-
                 agendaPresensiActive.checked = false;
                 agendaPresensiStart.value = '06:30';
                 agendaPresensiEnd.value = '08:00';
-
                 btnDeleteAgenda.classList.add('hidden');
             }
 
             modalAgenda.classList.remove('hidden');
         };
 
-        // Submit Single Agenda
+        // --- BUKA MODAL 2: MULTI-DATE MODAL ---
+        function openMultiDateEditModal() {
+            formMultiDate.reset();
+            const sortedDates = Array.from(selectedDatesSet).sort();
+
+            if (sortedDates.length > 0) {
+                multiStartDate.value = sortedDates[0];
+                multiEndDate.value = sortedDates[sortedDates.length - 1];
+                multiSelectedDatesBadgeContainer.classList.remove('hidden');
+                multiDateCountText.textContent = `${sortedDates.length} tanggal terpilih`;
+                multiSelectedDatesPillList.innerHTML = sortedDates.map(d => `
+                    <span class="bg-purple-200 text-purple-900 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border border-purple-300">${d}</span>
+                `).join('');
+            } else {
+                const todayStr = new Date().toISOString().split('T')[0];
+                multiStartDate.value = todayStr;
+                multiEndDate.value = todayStr;
+                multiSelectedDatesBadgeContainer.classList.add('hidden');
+            }
+
+            document.querySelector(`input[name="multiColor"][value="biru"]`).checked = true;
+            document.querySelector(`input[name="multiCycle"][value="1"]`).checked = true;
+            modalMultiDate.classList.remove('hidden');
+        }
+
+        // Navigasi Bulan
+        btnPrevMonth.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            fetchCalendarEvents();
+        });
+
+        btnNextMonth.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            fetchCalendarEvents();
+        });
+
+        btnToday.addEventListener('click', () => {
+            currentDate = new Date();
+            fetchCalendarEvents();
+        });
+
+        // Tombol Tambah Agenda (Bisa untuk single atau multi jika ada tanggal terpilih)
+        btnOpenAddModal.addEventListener('click', () => {
+            if (selectedDatesSet.size > 0) {
+                openMultiDateEditModal();
+            } else {
+                const todayStr = new Date().toISOString().split('T')[0];
+                openAgendaModalForDate(todayStr, null);
+            }
+        });
+
+        // Tombol Pilih Banyak Tanggal (Toggle Mode atau Buka Edit jika sudah ada tanggal)
+        btnOpenMultiDateModal.addEventListener('click', () => {
+            if (selectedDatesSet.size > 0) {
+                openMultiDateEditModal();
+            } else {
+                isMultiSelectActive = !isMultiSelectActive;
+                updateMultiSelectUI();
+                renderCalendar();
+            }
+        });
+
+        // Tombol Bersihkan Seleksi
+        if (btnClearSelection) {
+            btnClearSelection.addEventListener('click', () => {
+                selectedDatesSet.clear();
+                updateMultiSelectUI();
+                renderCalendar();
+            });
+        }
+
+        // Tombol Tutup Mode Seleksi
+        if (btnExitMultiSelect) {
+            btnExitMultiSelect.addEventListener('click', () => {
+                selectedDatesSet.clear();
+                isMultiSelectActive = false;
+                updateMultiSelectUI();
+                renderCalendar();
+            });
+        }
+
+        btnCloseModalAgenda.addEventListener('click', () => modalAgenda.classList.add('hidden'));
+        btnCancelAgenda.addEventListener('click', () => modalAgenda.classList.add('hidden'));
+
+        // Simpan Agenda Single Date
         formAgenda.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const cycleRadio = document.querySelector('input[name="agendaCycle"]:checked');
             const colorRadio = document.querySelector('input[name="agendaColor"]:checked');
+
             const payload = {
+                id: agendaId.value || undefined,
                 date: agendaDate.value,
                 title: agendaTitle.value,
-                color: colorRadio ? colorRadio.value : 'biru',
                 description: agendaDescription.value,
+                color: colorRadio ? colorRadio.value : 'biru',
                 cycle_type: cycleRadio ? cycleRadio.value : '1',
                 presensi_mandiri_active: agendaPresensiActive.checked,
                 presensi_mandiri_start: agendaPresensiStart.value || '06:30',
@@ -912,37 +1129,31 @@
             }
         });
 
-        // --- MODAL 2: BANYAK TANGGAL SEKALIGUS (Item 2) ---
-        btnOpenMultiDateModal.addEventListener('click', () => {
-            formMultiDate.reset();
-            const todayStr = new Date().toISOString().split('T')[0];
-            multiStartDate.value = todayStr;
-            multiEndDate.value = todayStr;
-            document.querySelector(`input[name="multiColor"][value="biru"]`).checked = true;
-            document.querySelector(`input[name="multiCycle"][value="1"]`).checked = true;
-            modalMultiDate.classList.remove('hidden');
-        });
-
+        // Modal Multi-Date close
         btnCloseMultiDateModal.addEventListener('click', () => modalMultiDate.classList.add('hidden'));
         btnCancelMultiDate.addEventListener('click', () => modalMultiDate.classList.add('hidden'));
 
+        // Simpan Agenda Multi-Date
         formMultiDate.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const start = new Date(multiStartDate.value);
-            const end = new Date(multiEndDate.value);
+            let datesList = [];
+            if (selectedDatesSet.size > 0) {
+                datesList = Array.from(selectedDatesSet).sort();
+            } else {
+                const start = new Date(multiStartDate.value);
+                const end = new Date(multiEndDate.value);
 
-            if (start > end) {
-                alert('Tanggal Mulai tidak boleh lebih besar dari Tanggal Selesai!');
-                return;
-            }
+                if (start > end) {
+                    alert('Tanggal Mulai tidak boleh lebih besar dari Tanggal Selesai!');
+                    return;
+                }
 
-            // Himpun semua tanggal dalam rentang
-            const datesList = [];
-            const curr = new Date(start);
-            while (curr <= end) {
-                datesList.push(curr.toISOString().split('T')[0]);
-                curr.setDate(curr.getDate() + 1);
+                const curr = new Date(start);
+                while (curr <= end) {
+                    datesList.push(curr.toISOString().split('T')[0]);
+                    curr.setDate(curr.getDate() + 1);
+                }
             }
 
             const cycleRadio = document.querySelector('input[name="multiCycle"]:checked');
@@ -974,8 +1185,11 @@
                 });
                 const json = await res.json();
                 if (res.ok) {
-                    alert(`Berhasil menambahkan agenda ke ${datesList.length} tanggal sekaligus!`);
+                    alert(`Berhasil menyimpan agenda ke ${datesList.length} tanggal terpilih!`);
                     modalMultiDate.classList.add('hidden');
+                    selectedDatesSet.clear();
+                    isMultiSelectActive = false;
+                    updateMultiSelectUI();
                     await fetchCalendarEvents();
                 } else {
                     alert('Gagal: ' + (json.message || 'Error'));
@@ -988,56 +1202,56 @@
             }
         });
 
-        // --- ITEM 13: TOMBOL OTOMATIS POLA PUTARAN 2 MINGGU ---
+        // --- UPDATE BARU POLA PUTARAN (TOGGLE / BATALKAN) ---
         btnApplyCyclePattern.addEventListener('click', async () => {
-            if (!confirm('Terapkan pola putaran otomatis: 2 Minggu Putaran 1 & 2 Minggu Putaran 2 bergantian untuk seluruh kalender?')) return;
+            if (isPatternActive) {
+                if (!confirm('Apakah Anda yakin ingin membatalkan pola putaran otomatis 2 mingguan?')) return;
 
-            btnApplyCyclePattern.disabled = true;
-            btnApplyCyclePattern.textContent = 'Menerapkan Pola...';
+                btnApplyCyclePattern.disabled = true;
+                btnCyclePatternText.textContent = 'Membatalkan...';
 
-            try {
-                const res = await fetch(`${API_BASE_URL}/calendar/apply-cycle-pattern`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                });
-                const json = await res.json();
-                if (res.ok) {
-                    alert(json.message);
+                try {
+                    const res = await fetch(`${API_BASE_URL}/calendar/cancel-cycle-pattern`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    });
+                    const json = await res.json();
+                    isPatternActive = false;
+                    cycleMap = {};
+                    alert(json.message || 'Pola putaran otomatis dibatalkan.');
                     await fetchCalendarEvents();
-                } else {
-                    alert('Gagal menerapkan pola: ' + (json.message || 'Error'));
+                } catch (e) {
+                    alert('Kesalahan koneksi saat membatalkan pola putaran.');
+                } finally {
+                    btnApplyCyclePattern.disabled = false;
+                    updateCyclePatternButtonUI();
                 }
-            } catch (e) {
-                alert('Kesalahan koneksi.');
-            } finally {
-                btnApplyCyclePattern.disabled = false;
-                btnApplyCyclePattern.textContent = 'Pola Putaran (2 Minggu)';
+            } else {
+                if (!confirm('Terapkan pola putaran otomatis 2 minggu Putaran 1 & 2 minggu Putaran 2 bergantian untuk kalender?')) return;
+
+                btnApplyCyclePattern.disabled = true;
+                btnCyclePatternText.textContent = 'Menerapkan Pola...';
+
+                try {
+                    const res = await fetch(`${API_BASE_URL}/calendar/apply-cycle-pattern`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    });
+                    const json = await res.json();
+                    if (res.ok) {
+                        alert(json.message || 'Pola putaran berhasil diterapkan!');
+                        await fetchCalendarEvents();
+                    } else {
+                        alert('Gagal: ' + (json.message || 'Error'));
+                    }
+                } catch (e) {
+                    alert('Kesalahan koneksi saat menerapkan pola putaran.');
+                } finally {
+                    btnApplyCyclePattern.disabled = false;
+                    updateCyclePatternButtonUI();
+                }
             }
         });
-
-        // --- NAVIGASI BULAN ---
-        btnPrevMonth.addEventListener('click', () => {
-            currentDate.setMonth(currentDate.getMonth() - 1);
-            fetchCalendarEvents();
-        });
-
-        btnNextMonth.addEventListener('click', () => {
-            currentDate.setMonth(currentDate.getMonth() + 1);
-            fetchCalendarEvents();
-        });
-
-        btnToday.addEventListener('click', () => {
-            currentDate = new Date();
-            fetchCalendarEvents();
-        });
-
-        btnOpenAddModal.addEventListener('click', () => {
-            const todayStr = new Date().toISOString().split('T')[0];
-            openAgendaModalForDate(todayStr, null);
-        });
-
-        btnCloseModalAgenda.addEventListener('click', () => modalAgenda.classList.add('hidden'));
-        btnCancelAgenda.addEventListener('click', () => modalAgenda.classList.add('hidden'));
 
         // --- SMART KALDIK EXCEL IMPORTER (Item 2) ---
         btnOpenImportModal.addEventListener('click', () => {

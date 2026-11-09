@@ -19,6 +19,33 @@ class CalendarDemoController extends Controller
         return $dir . '/calendar_events.json';
     }
 
+    private function getCycleConfigPath()
+    {
+        $dir = storage_path('app/demo_data');
+        if (!file_exists($dir)) {
+            mkdir($dir, 0777, true);
+        }
+        return $dir . '/cycle_config.json';
+    }
+
+    public function readCycleConfig()
+    {
+        $path = $this->getCycleConfigPath();
+        if (!file_exists($path)) {
+            return [
+                'pattern_active' => false,
+                'cycle_map'      => []
+            ];
+        }
+        $data = json_decode(file_get_contents($path), true);
+        return is_array($data) ? $data : ['pattern_active' => false, 'cycle_map' => []];
+    }
+
+    private function saveCycleConfig(array $config)
+    {
+        file_put_contents($this->getCycleConfigPath(), json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
     private function getDefaultEvents()
     {
         return [
@@ -259,9 +286,12 @@ class CalendarDemoController extends Controller
             }));
         }
 
+        $cycleConfig = $this->readCycleConfig();
         return response()->json([
-            'status' => 'success',
-            'data'   => $events
+            'status'            => 'success',
+            'data'              => $events,
+            'is_pattern_active' => (bool) ($cycleConfig['pattern_active'] ?? false),
+            'cycle_map'         => $cycleConfig['cycle_map'] ?? []
         ], 200);
     }
 
@@ -346,38 +376,106 @@ class CalendarDemoController extends Controller
 
     public function applyCyclePattern(Request $request)
     {
+        $now = Carbon::now('Asia/Jakarta');
+        $todayStr = $now->toDateString();
+
+        // 1. Tentukan putaran aktif acuan (cNow)
+        $activeCycle = '1';
+        try {
+            $config = SystemConfiguration::first();
+            if ($config && !empty($config->active_cycle)) {
+                $activeCycle = (string) $config->active_cycle;
+            }
+        } catch (\Throwable $e) {}
+
         $events = $this->readEvents();
-        $startDateStr = $request->input('start_date', '2026-07-01');
-        $endDateStr = $request->input('end_date', '2027-06-30');
+        foreach ($events as $e) {
+            if (isset($e['date']) && $e['date'] === $todayStr && !empty($e['cycle_type'])) {
+                $activeCycle = (string) $e['cycle_type'];
+                break;
+            }
+        }
 
-        $start = Carbon::parse($startDateStr)->startOfWeek();
-        $end = Carbon::parse($endDateStr)->endOfWeek();
+        $cNow = ($activeCycle === '2') ? '2' : '1';
+        $cOpp = ($cNow === '1') ? '2' : '1';
 
-        // 2 minggu Putaran 1, 2 minggu Putaran 2, berulang
-        $curr = $start->copy();
-        $weekIndex = 0;
+        // 2. Tentukan minggu ini W_0 (Senin s/d Minggu)
+        $w0Monday = $now->copy()->startOfWeek(Carbon::MONDAY);
+        $wPrevMonday = $w0Monday->copy()->subWeek();
+
+        // Cek apakah minggu sebelumnya (W_-1) sudah memiliki putaran yang sama dengan cNow
+        $prevWeekSame = false;
+        $prevCycleConfig = $this->readCycleConfig();
+        if (!empty($prevCycleConfig['cycle_map'][$wPrevMonday->toDateString()])) {
+            $prevWeekSame = ($prevCycleConfig['cycle_map'][$wPrevMonday->toDateString()] === $cNow);
+        } else {
+            foreach ($events as $e) {
+                if (isset($e['date']) && $e['date'] === $wPrevMonday->toDateString() && !empty($e['cycle_type'])) {
+                    $prevWeekSame = ($e['cycle_type'] === $cNow);
+                    break;
+                }
+            }
+        }
+
+        if ($request->has('prev_week_same')) {
+            $prevWeekSame = (bool) $request->input('prev_week_same');
+        }
+
+        // 3. Rentang tanggal (default 1 tahun ajaran sekeliling hari ini)
+        $startDateStr = $request->input('start_date', $now->copy()->subMonths(6)->startOfWeek(Carbon::MONDAY)->toDateString());
+        $endDateStr = $request->input('end_date', $now->copy()->addMonths(8)->endOfWeek(Carbon::SUNDAY)->toDateString());
+
+        $startMon = Carbon::parse($startDateStr)->startOfWeek(Carbon::MONDAY);
+        $endSun = Carbon::parse($endDateStr)->endOfWeek(Carbon::SUNDAY);
 
         $cycleMap = [];
-        while ($curr->lte($end)) {
-            $cycle = (intdiv($weekIndex, 2) % 2 === 0) ? '1' : '2';
-            $cycleMap[$curr->toDateString()] = $cycle;
-            $curr->addDay();
-            if ($curr->dayOfWeek === 1) { // Setiap hari Senin
-                $weekIndex++;
+        $currMon = $startMon->copy();
+
+        while ($currMon->lte($endSun)) {
+            // Hitung selisih minggu terhadap W_0 (Senin hari ini)
+            $weekDiff = (int) round($w0Monday->diffInDays($currMon, false) / 7);
+
+            if ($prevWeekSame) {
+                // Kasus B: Sudah memiliki putaran aktif pada 2 minggu (W_-1 dan W_0 adalah cNow)
+                // 2 minggu setelahnya (W+1, W+2) menjadi cOpp, lalu 2 minggu cNow, dst.
+                // 2 minggu sebelumnya (W-2, W-3) menjadi cOpp, lalu 2 minggu cNow, dst.
+                $w = $weekDiff + 1;
+                $div = (int) floor($w / 2);
+                $assignedCycle = ((($div % 2) + 2) % 2 === 0) ? $cNow : $cOpp;
+            } else {
+                // Kasus A: Hanya 1 minggu putaran aktif (W_0 adalah cNow)
+                // Di + 1 minggu putaran yang sama: W+1 juga cNow (sehingga W_0 dan W+1 = 2 minggu cNow)
+                // Baru ganti 2 minggu putaran berbeda: W+2, W+3 = cOpp
+                // Minggu sebelumnya (W-1, W-2) menjadi 2 minggu putaran berbeda (cOpp)
+                if ($weekDiff >= 0) {
+                    $div = (int) floor($weekDiff / 2);
+                    $assignedCycle = ((($div % 2) + 2) % 2 === 0) ? $cNow : $cOpp;
+                } else {
+                    $m = -$weekDiff;
+                    $div = (int) floor(($m - 1) / 2);
+                    $assignedCycle = ((($div % 2) + 2) % 2 === 0) ? $cOpp : $cNow;
+                }
             }
+
+            // Terapkan ke 7 hari dalam minggu ini (Senin s/d Minggu)
+            $dayRunner = $currMon->copy();
+            for ($d = 0; $d < 7; $d++) {
+                $cycleMap[$dayRunner->toDateString()] = (string) $assignedCycle;
+                $dayRunner->addDay();
+            }
+
+            $currMon->addWeek();
         }
 
-        foreach ($events as $k => $e) {
-            $d = $e['date'] ?? null;
-            if ($d && isset($cycleMap[$d])) {
-                $events[$k]['cycle_type'] = $cycleMap[$d];
-            }
-        }
+        // Simpan ke cycle_config.json
+        $this->saveCycleConfig([
+            'pattern_active' => true,
+            'cycle_map'      => $cycleMap,
+            'prev_week_same' => $prevWeekSame,
+            'applied_at'     => $now->toIso8601String()
+        ]);
 
-        $this->saveEvents($events);
-
-        // Update active_cycle jika hari ini ada di cycleMap
-        $todayStr = Carbon::now('Asia/Jakarta')->toDateString();
+        // Perbarui SystemConfiguration
         if (isset($cycleMap[$todayStr])) {
             try {
                 $config = SystemConfiguration::first();
@@ -389,9 +487,27 @@ class CalendarDemoController extends Controller
         }
 
         return response()->json([
-            'status'  => 'success',
-            'message' => 'Pola putaran otomatis 2 minggu Putaran 1 & 2 minggu Putaran 2 berhasil diterapkan!',
-            'active_cycle_today' => $cycleMap[$todayStr] ?? '1'
+            'status'             => 'success',
+            'is_pattern_active'  => true,
+            'active_cycle_today' => $cycleMap[$todayStr] ?? $cNow,
+            'cycle_map'          => $cycleMap,
+            'message'            => 'Pola putaran otomatis 2 minggu berhasil diterapkan!'
+        ], 200);
+    }
+
+    public function cancelCyclePattern(Request $request)
+    {
+        $this->saveCycleConfig([
+            'pattern_active' => false,
+            'cycle_map'      => [],
+            'cancelled_at'   => Carbon::now('Asia/Jakarta')->toIso8601String()
+        ]);
+
+        return response()->json([
+            'status'            => 'success',
+            'is_pattern_active' => false,
+            'cycle_map'         => [],
+            'message'           => 'Pola putaran otomatis berhasil dibatalkan.'
         ], 200);
     }
 

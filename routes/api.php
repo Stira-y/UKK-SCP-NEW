@@ -152,6 +152,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/calendar/today-config', [\App\Http\Controllers\Api\CalendarDemoController::class, 'todayConfig']);
     Route::post('/calendar/toggle-presensi-today', [\App\Http\Controllers\Api\CalendarDemoController::class, 'togglePresensiToday']);
     Route::post('/calendar/apply-cycle-pattern', [\App\Http\Controllers\Api\CalendarDemoController::class, 'applyCyclePattern']);
+    Route::post('/calendar/cancel-cycle-pattern', [\App\Http\Controllers\Api\CalendarDemoController::class, 'cancelCyclePattern']);
 
     Route::post('/self-attendance/submit', [\App\Http\Controllers\Api\SelfAttendanceDemoController::class, 'submit']);
     Route::get('/self-attendance/list', [\App\Http\Controllers\Api\SelfAttendanceDemoController::class, 'list']);
