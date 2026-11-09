@@ -123,10 +123,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     <h1 id="navTitle" class="hidden lg:block text-base md:text-lg font-bold border-l border-indigo-400/40 pl-4">SCP Sekolah - Panel</h1>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button id="btnPwaInstall" type="button" class="hidden bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm flex items-center space-x-1.5" title="Pasang aplikasi di perangkat">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                        <span class="hidden sm:inline">Install App</span>
-                    </button>
                     <button id="btnLogout" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition">Keluar</button>
                 </div>
             </nav>
@@ -1330,28 +1326,13 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // PWA: Listener Prompt Tombol Install App
-    let deferredPwaPrompt = null;
+    // PWA: Listener Prompt (Install App button removed as requested)
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
-        deferredPwaPrompt = e;
-        const btnPwa = document.getElementById('btnPwaInstall');
-        if (btnPwa) {
-            btnPwa.classList.remove('hidden');
-            btnPwa.onclick = async () => {
-                btnPwa.classList.add('hidden');
-                if (deferredPwaPrompt) {
-                    deferredPwaPrompt.prompt();
-                    await deferredPwaPrompt.userChoice;
-                    deferredPwaPrompt = null;
-                }
-            };
-        }
+        window.deferredPwaPrompt = e;
     });
 
     window.addEventListener('appinstalled', () => {
-        const btnPwa = document.getElementById('btnPwaInstall');
-        if (btnPwa) btnPwa.classList.add('hidden');
-        deferredPwaPrompt = null;
+        window.deferredPwaPrompt = null;
     });
 });

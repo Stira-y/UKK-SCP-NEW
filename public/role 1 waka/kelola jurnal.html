@@ -12,196 +12,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SCP Sekolah">
-    <script src="/js/pwa.js?v=20261109_3.0">
-        // --- FITUR ATUR TITIK LOKASI & RADIUS PRESENSI SEKOLAH ---
-        let locationMap = null;
-        let locationMarker = null;
-        let locationCircle = null;
-        let currentSchoolLocation = {
-            latitude: -7.8899,
-            longitude: 110.3556,
-            radius_meters: 200,
-            school_name: 'SMK Negeri 1 Bantul'
-        };
-
-        const modalLocationSettings = document.getElementById('modalLocationSettings');
-        const btnOpenLocationModal = document.getElementById('btnOpenLocationModal');
-        const btnCloseLocationModal = document.getElementById('btnCloseLocationModal');
-        const btnCancelLocationModal = document.getElementById('btnCancelLocationModal');
-        const btnSaveLocationConfig = document.getElementById('btnSaveLocationConfig');
-
-        const inputSearchAddress = document.getElementById('inputSearchAddress');
-        const btnSearchAddress = document.getElementById('btnSearchAddress');
-        const locLatitude = document.getElementById('locLatitude');
-        const locLongitude = document.getElementById('locLongitude');
-        const sliderRadius = document.getElementById('sliderRadius');
-        const numRadius = document.getElementById('numRadius');
-        const radiusDisplayBadge = document.getElementById('radiusDisplayBadge');
-        const labelRadiusHadir = document.getElementById('labelRadiusHadir');
-        const labelRadiusAlpa = document.getElementById('labelRadiusAlpa');
-
-        window.setRadiusValue = function(val) {
-            if (sliderRadius) sliderRadius.value = val;
-            if (numRadius) numRadius.value = val;
-            if (radiusDisplayBadge) radiusDisplayBadge.textContent = `${val} meter`;
-            if (locationCircle) locationCircle.setRadius(val);
-        };
-
-        if (sliderRadius) {
-            sliderRadius.addEventListener('input', () => {
-                setRadiusValue(sliderRadius.value);
-            });
-        }
-        if (numRadius) {
-            numRadius.addEventListener('input', () => {
-                setRadiusValue(numRadius.value);
-            });
-        }
-
-        function initLocationMap() {
-            if (!locationMap) {
-                locationMap = L.map('mapLocationPicker').setView([currentSchoolLocation.latitude, currentSchoolLocation.longitude], 16);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; OpenStreetMap contributors'
-                }).addTo(locationMap);
-
-                locationMarker = L.marker([currentSchoolLocation.latitude, currentSchoolLocation.longitude], {
-                    draggable: true
-                }).addTo(locationMap);
-
-                locationCircle = L.circle([currentSchoolLocation.latitude, currentSchoolLocation.longitude], {
-                    color: '#4f46e5',
-                    fillColor: '#6366f1',
-                    fillOpacity: 0.25,
-                    radius: currentSchoolLocation.radius_meters
-                }).addTo(locationMap);
-
-                locationMarker.on('drag', (e) => {
-                    const pos = e.target.getLatLng();
-                    locLatitude.value = pos.lat.toFixed(6);
-                    locLongitude.value = pos.lng.toFixed(6);
-                    locationCircle.setLatLng(pos);
-                });
-
-                locationMap.on('click', (e) => {
-                    locationMarker.setLatLng(e.latlng);
-                    locationCircle.setLatLng(e.latlng);
-                    locLatitude.value = e.latlng.lat.toFixed(6);
-                    locLongitude.value = e.latlng.lng.toFixed(6);
-                });
-            } else {
-                locationMap.setView([currentSchoolLocation.latitude, currentSchoolLocation.longitude], 16);
-                locationMarker.setLatLng([currentSchoolLocation.latitude, currentSchoolLocation.longitude]);
-                locationCircle.setLatLng([currentSchoolLocation.latitude, currentSchoolLocation.longitude]);
-                locationCircle.setRadius(currentSchoolLocation.radius_meters);
-                setTimeout(() => locationMap.invalidateSize(), 300);
-            }
-        }
-
-        if (btnOpenLocationModal) {
-            btnOpenLocationModal.addEventListener('click', async () => {
-                try {
-                    const res = await fetch(`${API_BASE_URL}/self-attendance/location-config`, {
-                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                    });
-                    const json = await res.json();
-                    if (json.data) {
-                        currentSchoolLocation = json.data;
-                    }
-                } catch (e) {}
-
-                locLatitude.value = currentSchoolLocation.latitude;
-                locLongitude.value = currentSchoolLocation.longitude;
-                setRadiusValue(currentSchoolLocation.radius_meters || 200);
-
-                modalLocationSettings.classList.remove('hidden');
-                setTimeout(initLocationMap, 150);
-            });
-        }
-
-        if (btnCloseLocationModal) btnCloseLocationModal.addEventListener('click', () => modalLocationSettings.classList.add('hidden'));
-        if (btnCancelLocationModal) btnCancelLocationModal.addEventListener('click', () => modalLocationSettings.classList.add('hidden'));
-
-        if (btnSearchAddress) {
-            btnSearchAddress.addEventListener('click', async () => {
-                const query = (inputSearchAddress.value || '').trim();
-                if (!query) return;
-
-                btnSearchAddress.disabled = true;
-                btnSearchAddress.textContent = 'Mencari...';
-
-                try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-                    const data = await res.json();
-                    if (data && data.length > 0) {
-                        const lat = parseFloat(data[0].lat);
-                        const lon = parseFloat(data[0].lon);
-
-                        locLatitude.value = lat.toFixed(6);
-                        locLongitude.value = lon.toFixed(6);
-
-                        if (locationMap && locationMarker && locationCircle) {
-                            locationMap.setView([lat, lon], 17);
-                            locationMarker.setLatLng([lat, lon]);
-                            locationCircle.setLatLng([lat, lon]);
-                        }
-                    } else {
-                        alert('Lokasi tidak ditemukan. Coba ketik nama jalan, kelurahan, atau kecamatan.');
-                    }
-                } catch (e) {
-                    alert('Gagal mencari alamat. Pastikan terkoneksi internet.');
-                } finally {
-                    btnSearchAddress.disabled = false;
-                    btnSearchAddress.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg><span>Cari</span>`;
-                }
-            });
-        }
-
-        if (btnSaveLocationConfig) {
-            btnSaveLocationConfig.addEventListener('click', async () => {
-                const lat = parseFloat(locLatitude.value);
-                const lng = parseFloat(locLongitude.value);
-                const radius = parseInt(numRadius.value) || 200;
-
-                btnSaveLocationConfig.disabled = true;
-                btnSaveLocationConfig.textContent = 'Menyimpan...';
-
-                try {
-                    const res = await fetch(`${API_BASE_URL}/self-attendance/location-config`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            latitude: lat,
-                            longitude: lng,
-                            radius_meters: radius,
-                            school_name: 'SMK Negeri 1 Bantul'
-                        })
-                    });
-                    const json = await res.json();
-                    if (res.ok) {
-                        alert(json.message || 'Lokasi dan radius presensi berhasil disimpan!');
-                        modalLocationSettings.classList.add('hidden');
-                        if (labelRadiusHadir) labelRadiusHadir.textContent = `${radius}m`;
-                        if (labelRadiusAlpa) labelRadiusAlpa.textContent = `${radius}m`;
-                        fetchSelfAttendanceData();
-                    } else {
-                        alert('Gagal menyimpan: ' + (json.message || 'Error'));
-                    }
-                } catch (e) {
-                    alert('Kesalahan koneksi saat menyimpan pengaturan lokasi.');
-                } finally {
-                    btnSaveLocationConfig.disabled = false;
-                    btnSaveLocationConfig.textContent = 'Simpan Pengaturan';
-                }
-            });
-        }
-
-    </script>
-    <title>Kelola Jurnal KBM - Sistem SCP</title>
+    <script src="/js/pwa.js?v=20261109_3.0"></script>
+    <title>Kelola Jurnal KBM & Presensi - Sistem SCP</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -419,7 +231,8 @@
     </div>
 
     <script>
-        
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const API_BASE_URL = window.API_BASE_URL || (isLocalhost ? `${window.location.origin}/api` : `${window.location.origin}/api`);
         const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
         const userData = JSON.parse(localStorage.getItem('user_data') || sessionStorage.getItem('user_data') || '{}');
 
@@ -650,6 +463,12 @@
                 });
                 const json = await res.json();
                 presensiDataList = json.data || [];
+                if (json.location_config) {
+                    currentSchoolLocation = json.location_config;
+                    const r = currentSchoolLocation.radius_meters || 200;
+                    if (labelRadiusHadir) labelRadiusHadir.textContent = `${r}m`;
+                    if (labelRadiusAlpa) labelRadiusAlpa.textContent = `${r}m`;
+                }
                 updatePresensiStats();
                 renderPresensiTable();
             } catch (err) {
@@ -677,6 +496,8 @@
                 return;
             }
 
+            const currentRadius = currentSchoolLocation.radius_meters || 200;
+
             presensiTableBody.innerHTML = list.map((item, idx) => {
                 const isHadir = (item.status === 'Hadir');
                 const statusBadge = isHadir 
@@ -685,7 +506,7 @@
 
                 const locationBadge = isHadir
                     ? `<span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Di Area Sekolah</span>`
-                    : `<span class="text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">Di Luar Area (&gt;500m)</span>`;
+                    : `<span class="text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">Di Luar Area (&gt;${currentRadius}m)</span>`;
 
                 const dist = (item.distance_meters !== undefined && item.distance_meters !== null)
                     ? item.distance_meters 
@@ -730,6 +551,261 @@
 
         if (btnClosePhotoPreview) btnClosePhotoPreview.addEventListener('click', () => photoPreviewModal.classList.add('hidden'));
         if (btnOkPhotoPreview) btnOkPhotoPreview.addEventListener('click', () => photoPreviewModal.classList.add('hidden'));
+        if (photoPreviewModal) {
+            photoPreviewModal.addEventListener('click', (e) => {
+                if (e.target === photoPreviewModal) photoPreviewModal.classList.add('hidden');
+            });
+        }
+
+        // =========================================================================
+        // FITUR ATUR TITIK LOKASI & RADIUS PRESENSI SEKOLAH
+        // =========================================================================
+        let locationMap = null;
+        let locationMarker = null;
+        let locationCircle = null;
+        let currentSchoolLocation = {
+            latitude: -7.8899,
+            longitude: 110.3556,
+            radius_meters: 200,
+            school_name: 'SMK Negeri 1 Bantul'
+        };
+
+        const modalLocationSettings = document.getElementById('modalLocationSettings');
+        const btnOpenLocationModal = document.getElementById('btnOpenLocationModal');
+        const btnCloseLocationModal = document.getElementById('btnCloseLocationModal');
+        const btnCancelLocationModal = document.getElementById('btnCancelLocationModal');
+        const btnSaveLocationConfig = document.getElementById('btnSaveLocationConfig');
+
+        const inputSearchAddress = document.getElementById('inputSearchAddress');
+        const btnSearchAddress = document.getElementById('btnSearchAddress');
+        const locLatitude = document.getElementById('locLatitude');
+        const locLongitude = document.getElementById('locLongitude');
+        const sliderRadius = document.getElementById('sliderRadius');
+        const numRadius = document.getElementById('numRadius');
+        const radiusDisplayBadge = document.getElementById('radiusDisplayBadge');
+        const labelRadiusHadir = document.getElementById('labelRadiusHadir');
+        const labelRadiusAlpa = document.getElementById('labelRadiusAlpa');
+
+        window.setRadiusValue = function(val) {
+            const num = parseInt(val) || 200;
+            if (sliderRadius) sliderRadius.value = num;
+            if (numRadius) numRadius.value = num;
+            if (radiusDisplayBadge) radiusDisplayBadge.textContent = `${num} meter`;
+            if (locationCircle) locationCircle.setRadius(num);
+        };
+
+        if (sliderRadius) {
+            sliderRadius.addEventListener('input', () => {
+                setRadiusValue(sliderRadius.value);
+            });
+        }
+        if (numRadius) {
+            numRadius.addEventListener('input', () => {
+                setRadiusValue(numRadius.value);
+            });
+        }
+
+        function initLocationMap() {
+            const lat = parseFloat(currentSchoolLocation.latitude) || -7.8899;
+            const lng = parseFloat(currentSchoolLocation.longitude) || 110.3556;
+            const rad = parseInt(currentSchoolLocation.radius_meters) || 200;
+
+            if (typeof L === 'undefined') {
+                console.warn('Leaflet library belum terpasang!');
+                return;
+            }
+
+            if (!locationMap) {
+                locationMap = L.map('mapLocationPicker').setView([lat, lng], 16);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(locationMap);
+
+                locationMarker = L.marker([lat, lng], {
+                    draggable: true,
+                    title: 'Geser marker untuk mengubah koordinat'
+                }).addTo(locationMap);
+
+                locationCircle = L.circle([lat, lng], {
+                    color: '#4f46e5',
+                    fillColor: '#6366f1',
+                    fillOpacity: 0.25,
+                    radius: rad
+                }).addTo(locationMap);
+
+                function onMarkerMove(e) {
+                    const pos = e.target.getLatLng();
+                    if (locLatitude) locLatitude.value = pos.lat.toFixed(6);
+                    if (locLongitude) locLongitude.value = pos.lng.toFixed(6);
+                    if (locationCircle) locationCircle.setLatLng(pos);
+                }
+
+                locationMarker.on('drag', onMarkerMove);
+                locationMarker.on('dragend', onMarkerMove);
+
+                locationMap.on('click', (e) => {
+                    locationMarker.setLatLng(e.latlng);
+                    if (locationCircle) locationCircle.setLatLng(e.latlng);
+                    if (locLatitude) locLatitude.value = e.latlng.lat.toFixed(6);
+                    if (locLongitude) locLongitude.value = e.latlng.lng.toFixed(6);
+                });
+            } else {
+                locationMap.setView([lat, lng], 16);
+                locationMarker.setLatLng([lat, lng]);
+                locationCircle.setLatLng([lat, lng]);
+                locationCircle.setRadius(rad);
+            }
+
+            setTimeout(() => {
+                if (locationMap) locationMap.invalidateSize();
+            }, 300);
+        }
+
+        async function fetchLocationConfig() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/self-attendance/location-config`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                if (json.data) {
+                    currentSchoolLocation = json.data;
+                    const r = currentSchoolLocation.radius_meters || 200;
+                    if (labelRadiusHadir) labelRadiusHadir.textContent = `${r}m`;
+                    if (labelRadiusAlpa) labelRadiusAlpa.textContent = `${r}m`;
+                }
+            } catch (e) {}
+        }
+
+        function openLocationModal() {
+            if (locLatitude) locLatitude.value = (parseFloat(currentSchoolLocation.latitude) || -7.8899).toFixed(6);
+            if (locLongitude) locLongitude.value = (parseFloat(currentSchoolLocation.longitude) || 110.3556).toFixed(6);
+            setRadiusValue(currentSchoolLocation.radius_meters || 200);
+
+            if (modalLocationSettings) {
+                modalLocationSettings.classList.remove('hidden');
+            }
+            setTimeout(initLocationMap, 200);
+        }
+
+        function closeLocationModal() {
+            if (modalLocationSettings) modalLocationSettings.classList.add('hidden');
+        }
+
+        if (btnOpenLocationModal) {
+            btnOpenLocationModal.addEventListener('click', async () => {
+                await fetchLocationConfig();
+                openLocationModal();
+            });
+        }
+
+        if (btnCloseLocationModal) btnCloseLocationModal.addEventListener('click', closeLocationModal);
+        if (btnCancelLocationModal) btnCancelLocationModal.addEventListener('click', closeLocationModal);
+        if (modalLocationSettings) {
+            modalLocationSettings.addEventListener('click', (e) => {
+                if (e.target === modalLocationSettings) closeLocationModal();
+            });
+        }
+
+        async function searchLocationAddress() {
+            const query = (inputSearchAddress.value || '').trim();
+            if (!query) {
+                alert('Silakan ketik nama sekolah atau alamat yang ingin dicari di peta!');
+                return;
+            }
+
+            btnSearchAddress.disabled = true;
+            const origHtml = btnSearchAddress.innerHTML;
+            btnSearchAddress.textContent = 'Mencari...';
+
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
+
+                    if (locLatitude) locLatitude.value = lat.toFixed(6);
+                    if (locLongitude) locLongitude.value = lon.toFixed(6);
+
+                    initLocationMap();
+                    if (locationMap && locationMarker && locationCircle) {
+                        locationMap.setView([lat, lon], 17);
+                        locationMarker.setLatLng([lat, lon]);
+                        locationCircle.setLatLng([lat, lon]);
+                    }
+                } else {
+                    alert('Lokasi tidak ditemukan! Coba gunakan kata kunci lain (misalnya: SMK Negeri 1 Bantul, Bantul, Yogyakarta).');
+                }
+            } catch (e) {
+                alert('Gagal mencari lokasi. Pastikan koneksi internet tersedia.');
+            } finally {
+                btnSearchAddress.disabled = false;
+                btnSearchAddress.innerHTML = origHtml;
+            }
+        }
+
+        if (btnSearchAddress) {
+            btnSearchAddress.addEventListener('click', searchLocationAddress);
+        }
+        if (inputSearchAddress) {
+            inputSearchAddress.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchLocationAddress();
+                }
+            });
+        }
+
+        if (btnSaveLocationConfig) {
+            btnSaveLocationConfig.addEventListener('click', async () => {
+                const lat = parseFloat(locLatitude.value);
+                const lng = parseFloat(locLongitude.value);
+                const radius = parseInt(numRadius.value) || 200;
+
+                btnSaveLocationConfig.disabled = true;
+                btnSaveLocationConfig.textContent = 'Menyimpan...';
+
+                try {
+                    const res = await fetch(`${API_BASE_URL}/self-attendance/location-config`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            latitude: lat,
+                            longitude: lng,
+                            radius_meters: radius,
+                            school_name: currentSchoolLocation.school_name || 'SMK Negeri 1 Bantul'
+                        })
+                    });
+                    const json = await res.json();
+                    if (res.ok) {
+                        alert(json.message || 'Titik lokasi dan radius presensi sekolah berhasil disimpan!');
+                        currentSchoolLocation.latitude = lat;
+                        currentSchoolLocation.longitude = lng;
+                        currentSchoolLocation.radius_meters = radius;
+
+                        closeLocationModal();
+                        if (labelRadiusHadir) labelRadiusHadir.textContent = `${radius}m`;
+                        if (labelRadiusAlpa) labelRadiusAlpa.textContent = `${radius}m`;
+                        fetchSelfAttendanceData();
+                    } else {
+                        alert('Gagal menyimpan pengaturan: ' + (json.message || 'Error'));
+                    }
+                } catch (e) {
+                    alert('Kesalahan koneksi saat menyimpan pengaturan lokasi.');
+                } finally {
+                    btnSaveLocationConfig.disabled = false;
+                    btnSaveLocationConfig.textContent = 'Simpan Pengaturan';
+                }
+            });
+        }
+
+        // Ambil konfigurasi lokasi saat awal buka halaman
+        fetchLocationConfig();
 
     </script>
     <script src="../js/global-layout.js?v=20261109_23.0"></script>
