@@ -46,14 +46,14 @@
                     </div>
                 </div>
 
-                <!-- Tab Navigasi Rekap KBM vs Presensi Mandiri [DEMO] -->
+                <!-- Tab Navigasi Rekap KBM vs Presensi Mandiri -->
                 <div class="flex items-center space-x-2 border-b border-slate-200 pb-2">
                     <button id="tabBtnRekapKbm" type="button" class="px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-indigo-600 text-white shadow-sm transition">
                         Rekap Jurnal KBM
                     </button>
                     <button id="tabBtnRekapPresensi" type="button" class="px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition flex items-center space-x-2">
                         <span>Presensi Mandiri Siswa</span>
-                        <span class="bg-amber-100 text-amber-800 text-[10px] font-black px-1.5 py-0.5 rounded border border-amber-300">DEMO</span>
+                        
                     </button>
                 </div>
 
@@ -265,7 +265,7 @@
     </div>
 
     <!-- Script Global Layout -->
-    <script src="../js/global-layout.js?v=20261109_22.0"></script>
+    <script src="../js/global-layout.js?v=20261109_23.0"></script>
 
     <script>
         const token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
@@ -793,7 +793,7 @@
         filterWeek.addEventListener('change', renderJournalTable);
 
         
-        // --- LOGIKA TAB PRESENSI MANDIRI PADA REKAP GURU [DEMO] ---
+        // --- LOGIKA TAB PRESENSI MANDIRI PADA REKAP GURU ---
         const tabBtnRekapKbm = document.getElementById('tabBtnRekapKbm');
         const tabBtnRekapPresensi = document.getElementById('tabBtnRekapPresensi');
         const sectionRekapKbm = document.getElementById('sectionRekapKbm');

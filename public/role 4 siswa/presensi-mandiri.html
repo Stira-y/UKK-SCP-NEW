@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SCP Sekolah">
     <script src="/js/pwa.js?v=20261109_3.0"></script>
-    <title>Presensi Mandiri (DEMO) - Sistem SCP</title>
+    <title>Presensi Mandiri Siswa - Sistem SCP</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -60,11 +60,10 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                         <span>Surat Izin</span>
                     </a>
-                    <!-- Menu Presensi Mandiri (DEMO) -->
+                    <!-- Menu Presensi Mandiri Siswa -->
                     <a href="presensi-mandiri.html" class="flex items-center space-x-3 px-4 py-3 bg-indigo-50 text-indigo-600 font-semibold rounded-xl transition">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                         <span class="flex-1">Presensi Mandiri</span>
-                        <span class="bg-amber-200 text-amber-800 text-[9px] font-black px-1.5 py-0.5 rounded">DEMO</span>
                     </a>
                 </nav>
             </div>
@@ -80,7 +79,7 @@
                     <div>
                         <div class="flex items-center space-x-2.5">
                             <h2 class="text-xl md:text-2xl font-bold text-slate-800">Presensi Mandiri</h2>
-                            <span class="bg-amber-100 text-amber-800 text-xs font-black px-2.5 py-0.5 rounded-full border border-amber-300">DEMO</span>
+                            
                         </div>
                         <p class="text-slate-500 text-xs md:text-sm mt-0.5">Ambil foto kehadiran langsung di lokasi SMK Negeri 1 Bantul.</p>
                     </div>
@@ -191,9 +190,27 @@
     <!-- Script Modular Siswa -->
     <script src="../js/profile-role siswa.js?v=20261109_7.0"></script>
     <script>
-        const SCHOOL_LAT = -7.8899;
-        const SCHOOL_LNG = 110.3556;
-        const ALLOWED_RADIUS_M = 500;
+        let SCHOOL_LAT = -7.8899;
+        let SCHOOL_LNG = 110.3556;
+        let ALLOWED_RADIUS_M = 200;
+        let SCHOOL_NAME = 'SMK Negeri 1 Bantul';
+
+        async function loadSchoolLocationConfig() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/self-attendance/location-config`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                if (json.data) {
+                    SCHOOL_LAT = parseFloat(json.data.latitude);
+                    SCHOOL_LNG = parseFloat(json.data.longitude);
+                    ALLOWED_RADIUS_M = parseInt(json.data.radius_meters) || 200;
+                    SCHOOL_NAME = json.data.school_name || 'SMK Negeri 1 Bantul';
+                    const elTarget = document.getElementById('labelTargetSchool');
+                    if (elTarget) elTarget.textContent = `${SCHOOL_NAME} (Maks. ${ALLOWED_RADIUS_M}m)`;
+                }
+            } catch (e) {}
+        }
 
         let userLatitude = null;
         let userLongitude = null;
@@ -271,7 +288,7 @@
                 }
                 validateReadyToSubmit();
             } catch (e) {
-                badgeSessionStatus.textContent = 'Mode Uji Coba Demo';
+                badgeSessionStatus.textContent = 'Sesi Presensi';
                 isSessionActive = true;
                 validateReadyToSubmit();
             }
@@ -296,18 +313,18 @@
                     textUserCoords.textContent = `${userLatitude.toFixed(6)}, ${userLongitude.toFixed(6)}`;
 
                     userDistanceM = calcHaversine(userLatitude, userLongitude, SCHOOL_LAT, SCHOOL_LNG);
-                    textDistanceToSchool.textContent = `Jarak ke SMKN 1 Bantul: ${userDistanceM} meter`;
+                    textDistanceToSchool.textContent = `Jarak ke ${SCHOOL_NAME}: ${userDistanceM} meter`;
 
                     if (userDistanceM <= ALLOWED_RADIUS_M) {
                         badgeGpsStatus.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700';
                         badgeGpsStatus.textContent = 'Lokasi Valid (Di Sekolah)';
                         textEstimatedStatus.className = 'font-extrabold text-sm text-emerald-600';
-                        textEstimatedStatus.textContent = 'HADIR (Dalam Radius 500m)';
+                        textEstimatedStatus.textContent = 'HADIR (Dalam Radius ${ALLOWED_RADIUS_M}m)';
                     } else {
                         badgeGpsStatus.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700';
                         badgeGpsStatus.textContent = `Di Luar Radius (${userDistanceM}m)`;
                         textEstimatedStatus.className = 'font-extrabold text-sm text-rose-600';
-                        textEstimatedStatus.textContent = `ALPA (Di Luar Radius Sekolah)`;
+                        textEstimatedStatus.textContent = `ALPA (Di Luar Radius >${ALLOWED_RADIUS_M}m)`;
                     }
 
                     validateReadyToSubmit();

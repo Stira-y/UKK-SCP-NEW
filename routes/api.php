@@ -156,6 +156,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/self-attendance/submit', [\App\Http\Controllers\Api\SelfAttendanceDemoController::class, 'submit']);
     Route::get('/self-attendance/list', [\App\Http\Controllers\Api\SelfAttendanceDemoController::class, 'list']);
+    Route::get('/self-attendance/location-config', [\App\Http\Controllers\Api\SelfAttendanceDemoController::class, 'getLocationConfig']);
+    Route::post('/self-attendance/location-config', [\App\Http\Controllers\Api\SelfAttendanceDemoController::class, 'updateLocationConfig']);
 
     // Endpoint Rekap Kehadiran Siswa 1 Bulan (Hanya Status Hadir = +1, status lainnya +0)
     Route::get('/waka/attendance-recap-monthly', function (Request $request) {

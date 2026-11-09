@@ -9,10 +9,81 @@ use App\Models\User;
 
 class SelfAttendanceDemoController extends Controller
 {
-    // Koordinat Resmi SMK Negeri 1 Bantul
-    const SCHOOL_LAT = -7.8899;
-    const SCHOOL_LNG = 110.3556;
-    const DEFAULT_RADIUS_METERS = 500; // Radius toleransi sekolah
+    // Koordinat Default SMK Negeri 1 Bantul
+    const DEFAULT_SCHOOL_LAT = -7.8899;
+    const DEFAULT_SCHOOL_LNG = 110.3556;
+    const DEFAULT_RADIUS_METERS = 200; // Radius toleransi sekolah default 200m
+
+    private function getLocationConfigPath()
+    {
+        $dir = storage_path('app/demo_data');
+        if (!file_exists($dir)) {
+            mkdir($dir, 0777, true);
+        }
+        return $dir . '/school_location.json';
+    }
+
+    public function readLocationConfig()
+    {
+        $path = $this->getLocationConfigPath();
+        if (!file_exists($path)) {
+            return [
+                'school_name'   => 'SMK Negeri 1 Bantul',
+                'latitude'      => self::DEFAULT_SCHOOL_LAT,
+                'longitude'     => self::DEFAULT_SCHOOL_LNG,
+                'radius_meters' => self::DEFAULT_RADIUS_METERS
+            ];
+        }
+        $data = json_decode(file_get_contents($path), true);
+        if (!is_array($data)) {
+            return [
+                'school_name'   => 'SMK Negeri 1 Bantul',
+                'latitude'      => self::DEFAULT_SCHOOL_LAT,
+                'longitude'     => self::DEFAULT_SCHOOL_LNG,
+                'radius_meters' => self::DEFAULT_RADIUS_METERS
+            ];
+        }
+        return [
+            'school_name'   => $data['school_name'] ?? 'SMK Negeri 1 Bantul',
+            'latitude'      => (float) ($data['latitude'] ?? self::DEFAULT_SCHOOL_LAT),
+            'longitude'     => (float) ($data['longitude'] ?? self::DEFAULT_SCHOOL_LNG),
+            'radius_meters' => (int) ($data['radius_meters'] ?? self::DEFAULT_RADIUS_METERS),
+        ];
+    }
+
+    public function getLocationConfig()
+    {
+        return response()->json([
+            'status' => 'success',
+            'data'   => $this->readLocationConfig()
+        ], 200);
+    }
+
+    public function updateLocationConfig(Request $request)
+    {
+        $request->validate([
+            'latitude'      => 'required|numeric',
+            'longitude'     => 'required|numeric',
+            'radius_meters' => 'required|integer|min:10|max:5000',
+            'school_name'   => 'nullable|string|max:255'
+        ]);
+
+        $config = [
+            'school_name'   => $request->input('school_name', 'SMK Negeri 1 Bantul'),
+            'latitude'      => (float) $request->input('latitude'),
+            'longitude'     => (float) $request->input('longitude'),
+            'radius_meters' => (int) $request->input('radius_meters', self::DEFAULT_RADIUS_METERS),
+            'updated_at'    => Carbon::now('Asia/Jakarta')->toIso8601String()
+        ];
+
+        file_put_contents($this->getLocationConfigPath(), json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Titik lokasi dan radius presensi sekolah berhasil disimpan!',
+            'data'    => $config
+        ], 200);
+    }
 
     private function getStoragePath()
     {
@@ -73,11 +144,15 @@ class SelfAttendanceDemoController extends Controller
             $className = $request->input('student_class');
         }
 
+        $locConfig = $this->readLocationConfig();
+        $targetLat = (float) $locConfig['latitude'];
+        $targetLng = (float) $locConfig['longitude'];
+        $allowedRadius = (int) $locConfig['radius_meters'];
+
         $lat = (float) $request->input('latitude');
         $lng = (float) $request->input('longitude');
-        $distance = $this->calculateDistance($lat, $lng, self::SCHOOL_LAT, self::SCHOOL_LNG);
+        $distance = $this->calculateDistance($lat, $lng, $targetLat, $targetLng);
 
-        $allowedRadius = self::DEFAULT_RADIUS_METERS;
         $isWithinSchool = ($distance <= $allowedRadius);
 
         $status = $isWithinSchool ? 'Hadir' : 'Alpa';
@@ -178,11 +253,14 @@ class SelfAttendanceDemoController extends Controller
             }));
         }
 
+        $locConfig = $this->readLocationConfig();
+
         return response()->json([
-            'status' => 'success',
-            'date'   => $date,
-            'total'  => count($attendances),
-            'data'   => $attendances
+            'status'          => 'success',
+            'date'            => $date,
+            'total'           => count($attendances),
+            'location_config' => $locConfig,
+            'data'            => $attendances
         ], 200);
     }
 }

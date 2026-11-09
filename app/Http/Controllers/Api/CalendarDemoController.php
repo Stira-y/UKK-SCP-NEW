@@ -298,7 +298,7 @@ class CalendarDemoController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'title' => 'required|string|max:255',
+            'title' => 'nullable|string|max:255',
         ]);
 
         $events = $this->readEvents();
@@ -319,6 +319,18 @@ class CalendarDemoController extends Controller
         $presensiEnd = $request->input('presensi_mandiri_end', '08:00');
         $description = $request->input('description', '');
 
+        // Judul boleh kosong jika hanya mengubah putaran atau mengaktifkan presensi mandiri
+        $titleInput = trim((string) $request->input('title', ''));
+        if ($titleInput === '') {
+            if ($presensiActive) {
+                $titleInput = 'Presensi Mandiri Siswa';
+            } elseif (!empty($cycleType)) {
+                $titleInput = 'Jadwal Putaran ' . $cycleType;
+            } else {
+                $titleInput = 'Agenda Terjadwal';
+            }
+        }
+
         $savedEvents = [];
         $todayStr = Carbon::now('Asia/Jakarta')->toDateString();
 
@@ -326,7 +338,7 @@ class CalendarDemoController extends Controller
             $newEvent = [
                 'id'               => 'cal_' . time() . '_' . rand(100, 999),
                 'date'             => $date,
-                'title'            => $request->input('title'),
+                'title'            => $titleInput,
                 'color'            => $color,
                 'description'      => $description,
                 'is_holiday'       => $isHoliday,

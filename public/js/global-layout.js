@@ -166,9 +166,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 <a href="../role 1 waka/dashboard1.html" class="flex items-center space-x-3 px-4 py-3 ${dashboardActive} rounded-xl transition">
                     <span>Dashboard</span>
                 </a>
-                <a href="../role 1 waka/kalender.html" class="flex items-center justify-between px-4 py-3 ${kalenderActive} rounded-xl transition">
+                <a href="../role 1 waka/kalender.html" class="flex items-center space-x-3 px-4 py-3 ${kalenderActive} rounded-xl transition">
                     <span>Kalender Akademik</span>
-                    <span class="bg-amber-100 text-amber-800 text-[10px] font-black px-1.5 py-0.5 rounded border border-amber-300">DEMO</span>
                 </a>
                 <a href="../role 1 waka/kelola jurnal.html" class="flex items-center space-x-3 px-4 py-3 ${kelolaJurnalActive} rounded-xl transition">
                     <span>Kelola Jurnal & Presensi</span>
@@ -293,9 +292,18 @@ document.addEventListener("DOMContentLoaded", function() {
             `;
         } else if (role === 4) {
             panelTitle = 'Panel Siswa';
+            const isDashboardActive = currentPath.includes('dashboard4.html');
+            const isPresensiActive = currentPath.includes('presensi-mandiri.html');
+            const isSuratIzinActive = currentPath.includes('suratizin.html');
+
+            const dashClass = isDashboardActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
+            const presensiClass = isPresensiActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
+            const izinClass = isSuratIzinActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
+
             menuHTML = `
-                <a href="../role 4 siswa/dashboard4.html" class="flex items-center space-x-3 px-4 py-3 bg-indigo-50 text-indigo-600 font-semibold rounded-xl"><span>Dashboard Siswa</span></a>
-                <a href="../role 4 siswa/suratizin.html" class="flex items-center space-x-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl"><span>Surat Izin</span></a>
+                <a href="../role 4 siswa/dashboard4.html" class="flex items-center space-x-3 px-4 py-3 ${dashClass} rounded-xl transition"><span>Dashboard</span></a>
+                <a href="../role 4 siswa/presensi-mandiri.html" class="flex items-center space-x-3 px-4 py-3 ${presensiClass} rounded-xl transition"><span>Presensi Mandiri</span></a>
+                <a href="../role 4 siswa/suratizin.html" class="flex items-center space-x-3 px-4 py-3 ${izinClass} rounded-xl transition"><span>Surat Izin</span></a>
             `;
         }
 
