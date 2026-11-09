@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <!-- PWA & Mobile Web App Meta -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#4f46e5">
@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SCP Sekolah">
-    <script src="/js/pwa.js?v=20261109_2.0"></script>
+    <script src="/js/pwa.js?v=20261109_3.0"></script>
     <title>Dashboard Siswa - Sistem SCP</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -99,8 +99,8 @@
         </aside>
 
         <!-- Konten Utama Dashboard Siswa -->
-        <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full">
-            <div class="max-w-6xl mx-auto space-y-6">
+        <main class="flex-1 p-4 md:p-8 pb-32 md:pb-12 overflow-y-auto h-full">
+            <div class="max-w-6xl mx-auto space-y-6 pb-20 md:pb-6">
 
                 <!-- Notifikasi Buat Akun Orang Tua (Muncul jika belum dibuat) -->
                 <div id="parentAccountBanner" class="hidden bg-amber-50 border border-amber-300 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -266,6 +266,8 @@
                     </div>
                 </div>
 
+                <!-- Spacer Bawah agar data tabel tidak tertutup tombol navigasi HP (kotak, bulat, segitiga) -->
+                <div class="h-24 md:h-6 w-full shrink-0" aria-hidden="true"></div>
             </div>
         </main>
     </div>
