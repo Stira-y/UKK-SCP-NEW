@@ -105,7 +105,7 @@
                                     <th class="py-3.5 px-4 font-semibold">Nama Lengkap</th>
                                     <th class="py-3.5 px-3 font-semibold text-center w-20">Izin</th>
                                     <th class="py-3.5 px-3 font-semibold text-center w-20">Alpa</th>
-                                    <th class="py-3.5 px-3 font-semibold text-center w-24">Harian</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-24">Hari Ini</th>
                                     <th class="py-3.5 px-3 font-semibold text-center w-20">Minggu 1</th>
                                     <th class="py-3.5 px-3 font-semibold text-center w-20">Minggu 2</th>
                                     <th class="py-3.5 px-3 font-semibold text-center w-20">Minggu 3</th>
@@ -546,7 +546,7 @@
 
             doc.autoTable({
                 startY: 32,
-                head: [['NISN', 'NIS', 'Nama Lengkap', 'Izin', 'Alpa', 'Harian', 'Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4', 'Total Hadir', 'Total Izin', 'Total Alpa']],
+                head: [['NISN', 'NIS', 'Nama Lengkap', 'Izin', 'Alpa', 'Hari Ini', 'Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4', 'Total Hadir', 'Total Izin', 'Total Alpa']],
                 body: tableData,
                 styles: { fontSize: 8, cellPadding: 2, lineColor: [203, 213, 225], lineWidth: 0.1 },
                 headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
@@ -571,6 +571,6 @@
             doc.save(`Rekap_Kehadiran_${monthNames[m]}_${y}.pdf`);
         });
     </script>
-    <script src="../js/global-layout.js?v=20261109_9.0"></script>
+    <script src="../js/global-layout.js?v=20261109_10.0"></script>
 </body>
 </html>
