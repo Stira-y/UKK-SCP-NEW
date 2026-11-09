@@ -42,16 +42,48 @@ class ScheduleController extends Controller
     {
         try {
             $daysIndo = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
-            $todayName = $daysIndo[\Carbon\Carbon::now('Asia/Jakarta')->dayOfWeek] ?? 'Senin';
+            $now = \Carbon\Carbon::now('Asia/Jakarta');
+            $todayName = $daysIndo[$now->dayOfWeek] ?? 'Senin';
+            $yesterdayName = $daysIndo[$now->copy()->subDay()->dayOfWeek] ?? 'Minggu';
 
             $room = Room::first();
             $idRoom = $room ? $room->id_room : 1;
 
             $targets = [
-                ['username' => 'dinda', 'kelas_nomor' => 'X', 'nama_kelas' => 'RPL', 'nomor_kelas' => '2', 'mapel' => 'Dasar Pemrograman Web'],
-                ['username' => 'rosyida', 'kelas_nomor' => 'XI', 'nama_kelas' => 'RPL', 'nomor_kelas' => '2', 'mapel' => 'Pemrograman Perangkat Bergerak'],
-                ['username' => 'rya', 'kelas_nomor' => 'XII', 'nama_kelas' => 'RPL', 'nomor_kelas' => '2', 'mapel' => 'Pengembangan Produk Kreatif & Kewirausahaan']
+                [
+                    'username' => 'dinda',
+                    'kelas_nomor' => 'X',
+                    'nama_kelas' => 'RPL',
+                    'nomor_kelas' => '2',
+                    'mapel' => 'Dasar Pemrograman Web',
+                    'start_time' => '03:00:00',
+                    'end_time' => '07:00:00',
+                    'cleanup_starts' => ['18:00:00', '18:00']
+                ],
+                [
+                    'username' => 'rosyida',
+                    'kelas_nomor' => 'XI',
+                    'nama_kelas' => 'RPL',
+                    'nomor_kelas' => '2',
+                    'mapel' => 'Pemrograman Perangkat Bergerak',
+                    'start_time' => '18:00:00',
+                    'end_time' => '23:59:00',
+                    'cleanup_starts' => []
+                ],
+                [
+                    'username' => 'rya',
+                    'kelas_nomor' => 'XII',
+                    'nama_kelas' => 'RPL',
+                    'nomor_kelas' => '2',
+                    'mapel' => 'Pengembangan Produk Kreatif & Kewirausahaan',
+                    'start_time' => '18:00:00',
+                    'end_time' => '23:59:00',
+                    'cleanup_starts' => []
+                ]
             ];
+
+            // List of days to ensure schedules exist for (including today, yesterday, and Monday)
+            $daysToSeed = array_unique([$todayName, $yesterdayName, 'Senin']);
 
             foreach ($targets as $t) {
                 $guru = User::where('username', $t['username'])->first();
@@ -69,26 +101,35 @@ class ScheduleController extends Controller
                 }
 
                 if ($guru && $cls) {
-                    foreach (['1', '2'] as $cycle) {
-                        $exists = Schedule::where('id_guru', $guru->id_user)
-                            ->where('id_class', $cls->id_class)
-                            ->where('day_of_week', $todayName)
-                            ->where('start_time', '18:00:00')
-                            ->where('end_time', '23:59:00')
-                            ->where('cycle_type', $cycle)
-                            ->exists();
+                    // Clean up any obsolete schedules if specified
+                    if (!empty($t['cleanup_starts'])) {
+                        Schedule::where('id_guru', $guru->id_user)
+                            ->whereIn('start_time', $t['cleanup_starts'])
+                            ->delete();
+                    }
 
-                        if (!$exists) {
-                            Schedule::create([
-                                'id_guru'     => $guru->id_user,
-                                'id_class'    => $cls->id_class,
-                                'id_room'     => $idRoom,
-                                'mapel'       => $t['mapel'],
-                                'day_of_week' => $todayName,
-                                'start_time'  => '18:00:00',
-                                'end_time'    => '23:59:00',
-                                'cycle_type'  => $cycle,
-                            ]);
+                    foreach ($daysToSeed as $day) {
+                        foreach (['1', '2'] as $cycle) {
+                            $exists = Schedule::where('id_guru', $guru->id_user)
+                                ->where('id_class', $cls->id_class)
+                                ->where('day_of_week', $day)
+                                ->where('start_time', $t['start_time'])
+                                ->where('end_time', $t['end_time'])
+                                ->where('cycle_type', $cycle)
+                                ->exists();
+
+                            if (!$exists) {
+                                Schedule::create([
+                                    'id_guru'     => $guru->id_user,
+                                    'id_class'    => $cls->id_class,
+                                    'id_room'     => $idRoom,
+                                    'mapel'       => $t['mapel'],
+                                    'day_of_week' => $day,
+                                    'start_time'  => $t['start_time'],
+                                    'end_time'    => $t['end_time'],
+                                    'cycle_type'  => $cycle,
+                                ]);
+                            }
                         }
                     }
                 }
