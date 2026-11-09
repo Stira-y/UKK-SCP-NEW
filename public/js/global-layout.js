@@ -142,10 +142,12 @@ document.addEventListener("DOMContentLoaded", function() {
         if (role === 1) {
             panelTitle = 'Panel Waka / Admin';
             const isKelolaJurnalActive = currentPath.includes('kelola jurnal.html');
+            const isKalenderActive = currentPath.includes('kalender.html');
             const isJadwalActive = currentPath.includes('kelola jadwal.html');
             const isRekapActive = currentPath.includes('rekap kehadiran siswa.html');
-            const dashboardActive = !isKelolaUserPage && !isJadwalActive && !isKelolaJurnalActive && !isRekapActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
+            const dashboardActive = !isKelolaUserPage && !isJadwalActive && !isKelolaJurnalActive && !isRekapActive && !isKalenderActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
             const kelolaJurnalActive = isKelolaJurnalActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
+            const kalenderActive = isKalenderActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
             const jadwalActive = isJadwalActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
             const rekapActive = isRekapActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 font-medium';
             
@@ -169,6 +171,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 </a>
                 <a href="../role 1 waka/kelola jadwal.html" class="flex items-center space-x-3 px-4 py-3 ${jadwalActive} rounded-xl transition">
                     <span>Kelola Jadwal</span>
+                </a>
+                <a href="../role 1 waka/kalender.html" class="flex items-center justify-between px-4 py-3 ${kalenderActive} rounded-xl transition">
+                    <span>Kalender Pendidikan</span>
+                    <span class="bg-amber-100 text-amber-800 text-[10px] font-black px-1.5 py-0.5 rounded border border-amber-300">DEMO</span>
                 </a>
                 <div>
                     <button id="btnDropdownUser" type="button" class="w-full flex items-center justify-between px-4 py-3 text-slate-600 hover:bg-slate-50 font-medium rounded-xl transition">

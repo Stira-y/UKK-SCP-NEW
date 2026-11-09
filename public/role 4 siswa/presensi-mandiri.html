@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- PWA & Mobile Web App Meta -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="icon" type="image/png" href="/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SCP Sekolah">
+    <script src="/js/pwa.js?v=20261109_3.0"></script>
+    <title>Presensi Mandiri (DEMO) - Sistem SCP</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col font-sans overflow-hidden">
+
+    <!-- Navbar Utama -->
+    <nav class="relative z-40 bg-indigo-600 text-white px-4 md:px-6 py-3 flex justify-between items-center shadow-md shrink-0">
+        <div class="flex items-center space-x-3 md:space-x-4">
+            <button id="toggleSidebarNav" class="p-2 text-indigo-100 hover:text-white hover:bg-indigo-700/50 rounded-lg focus:outline-none transition md:pointer-events-none md:opacity-50 md:cursor-not-allowed" aria-label="Toggle Navigation">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+            <div id="btnOpenProfile" onclick="openProfileModal()" class="flex items-center space-x-2 bg-indigo-700/60 hover:bg-indigo-700/90 px-3 py-1.5 rounded-full border border-indigo-400/30 cursor-pointer transition">
+                <div class="w-7 h-7 rounded-full bg-indigo-200 text-indigo-800 flex items-center justify-center font-bold text-xs shadow-sm overflow-hidden flex-shrink-0">
+                    <img id="navAvatarImg" src="" class="w-full h-full object-cover hidden" alt="Avatar">
+                    <svg id="navAvatarSvg" class="w-5 h-5 text-indigo-600 mt-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                </div>
+                <div class="text-xs md:text-sm font-medium flex items-center space-x-1.5 leading-none truncate max-w-[150px]">
+                    <span id="navFullname" class="font-semibold truncate leading-none">Siswa</span>
+                    <span class="text-indigo-300">|</span>
+                    <span id="navRoleIdentity" class="text-indigo-200">-</span>
+                </div>
+            </div>
+            <h1 class="hidden lg:block text-base md:text-lg font-bold border-l border-indigo-400/40 pl-4">SCP Sekolah - Panel Siswa</h1>
+        </div>
+        <button id="btnLogout" onclick="handleLogout()" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition flex-shrink-0">Keluar</button>
+    </nav>
+
+    <!-- Layout Utama -->
+    <div class="flex flex-1 relative overflow-hidden h-[calc(100vh-57px)]">
+        <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-20 hidden md:hidden transition-opacity duration-300"></div>
+
+        <aside id="sidebar" class="fixed md:static bottom-0 left-0 w-64 bg-white border-r border-slate-200 p-5 flex flex-col justify-between transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-30 h-full shrink-0">
+            <div class="space-y-6">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Navigasi Utama</span>
+                </div>
+
+                <nav class="space-y-2">
+                    <a href="dashboard4.html" class="flex items-center space-x-3 px-4 py-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium rounded-xl transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 001 1m-6 0h6"></path></svg>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="suratizin.html" class="flex items-center space-x-3 px-4 py-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium rounded-xl transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span>Surat Izin</span>
+                    </a>
+                    <!-- Menu Presensi Mandiri (DEMO) -->
+                    <a href="presensi-mandiri.html" class="flex items-center space-x-3 px-4 py-3 bg-indigo-50 text-indigo-600 font-semibold rounded-xl transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <span class="flex-1">Presensi Mandiri</span>
+                        <span class="bg-amber-200 text-amber-800 text-[9px] font-black px-1.5 py-0.5 rounded">DEMO</span>
+                    </a>
+                </nav>
+            </div>
+            <div class="border-t border-slate-100 pt-4 text-xs text-slate-400 text-center">Sistem SCP &copy; 2026</div>
+        </aside>
+
+        <!-- Konten Utama Presensi Mandiri -->
+        <main class="flex-1 p-4 md:p-8 pb-32 md:pb-12 overflow-y-auto h-full w-full">
+            <div class="max-w-3xl mx-auto space-y-6">
+
+                <!-- Header Halaman -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center space-x-2.5">
+                            <h2 class="text-xl md:text-2xl font-bold text-slate-800">Presensi Mandiri</h2>
+                            <span class="bg-amber-100 text-amber-800 text-xs font-black px-2.5 py-0.5 rounded-full border border-amber-300">DEMO</span>
+                        </div>
+                        <p class="text-slate-500 text-xs md:text-sm mt-0.5">Ambil foto kehadiran langsung di lokasi SMK Negeri 1 Bantul.</p>
+                    </div>
+                    <span id="badgeSessionStatus" class="self-start sm:self-auto text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600">
+                        Memeriksa Sesi...
+                    </span>
+                </div>
+
+                <!-- Banner Informasi Status Jam & Waka -->
+                <div id="sessionNoticeBox" class="hidden rounded-2xl p-4 shadow-sm border text-xs md:text-sm flex items-start space-x-3">
+                    <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <div>
+                        <h4 id="sessionNoticeTitle" class="font-bold">Info Sesi</h4>
+                        <p id="sessionNoticeText" class="mt-0.5 text-xs">Memuat informasi jadwal presensi mandiri...</p>
+                    </div>
+                </div>
+
+                <!-- STATUS GPS / LOKASI PERANGKAT -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase text-slate-400 tracking-wider">Verifikasi Lokasi (GPS)</span>
+                        <span id="badgeGpsStatus" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500">Mendeteksi GPS...</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                            <span class="text-slate-400 block font-medium">Titik Kunci Sekolah:</span>
+                            <span class="font-bold text-slate-800 block mt-0.5">SMK Negeri 1 Bantul</span>
+                            <span class="text-slate-500 font-mono text-[11px]">-7.8899, 110.3556</span>
+                        </div>
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                            <span class="text-slate-400 block font-medium">Posisi Perangkat Anda:</span>
+                            <span id="textUserCoords" class="font-mono text-slate-700 block mt-0.5 font-bold">Mencari koordinat...</span>
+                            <span id="textDistanceToSchool" class="text-[11px] font-bold text-indigo-600 block mt-0.5">Jarak: -</span>
+                        </div>
+                    </div>
+
+                    <!-- Peringatan jika GPS mati -->
+                    <div id="gpsWarningAlert" class="hidden bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700 flex items-center justify-between">
+                        <span><strong>GPS Tidak Terdeteksi!</strong> Silakan hidupkan lokasi perangkat Anda agar sistem dapat memvalidasi posisi.</span>
+                        <button type="button" onclick="detectUserLocation()" class="ml-2 px-3 py-1 bg-rose-600 text-white rounded-lg font-bold shrink-0">Coba Lagi</button>
+                    </div>
+                </div>
+
+                <!-- KAMERA LANGSUNG (LIVE VIEWFINDER) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+                    <span class="text-xs font-bold uppercase text-slate-400 tracking-wider block">Foto Kehadiran (Hanya Kamera Langsung)</span>
+
+                    <!-- Area Kamera / Preview -->
+                    <div class="relative bg-black rounded-2xl overflow-hidden aspect-[4/3] max-w-md mx-auto flex items-center justify-center shadow-inner">
+                        <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+                        <canvas id="photoCanvas" class="hidden"></canvas>
+                        <img id="photoPreview" class="hidden w-full h-full object-cover" alt="Preview Foto">
+
+                        <div id="cameraLoadingPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-white bg-slate-900/80 p-4 text-center">
+                            <svg class="w-10 h-10 animate-spin mb-2 text-indigo-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                            <span class="text-xs font-bold">Menyiapkan kamera langsung...</span>
+                        </div>
+                    </div>
+
+                    <!-- Tombol Kontrol Kamera -->
+                    <div class="flex flex-wrap items-center justify-center gap-3">
+                        <button type="button" id="btnSnapPhoto" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs md:text-sm font-bold transition flex items-center space-x-2 shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <span>Ambil Foto Langsung</span>
+                        </button>
+                        <button type="button" id="btnRetakePhoto" class="hidden px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+                            Foto Ulang
+                        </button>
+                    </div>
+
+                    <!-- Input Alternatif Kamera Langsung (Mobile Native) -->
+                    <div class="text-center pt-2 border-t border-slate-100">
+                        <label for="nativeCameraInput" class="text-[11px] text-slate-500 hover:text-indigo-600 cursor-pointer underline">
+                            Jika kamera browser bermasalah, klik di sini untuk buka kamera HP
+                        </label>
+                        <input type="file" id="nativeCameraInput" accept="image/*" capture="user" class="hidden">
+                    </div>
+                </div>
+
+                <!-- TOMBOL SUBMIT PRESENSI MANDIRI -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-500">Estimasi Status Kehadiran:</span>
+                        <span id="textEstimatedStatus" class="font-extrabold text-sm text-slate-400">Menunggu Verifikasi...</span>
+                    </div>
+
+                    <button type="button" id="btnSubmitPresensi" disabled class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-sm font-extrabold transition shadow-md flex items-center justify-center space-x-2">
+                        <span>Kirim Presensi Mandiri Sekarang</span>
+                    </button>
+                    <p class="text-[11px] text-slate-400 text-center">Pastikan posisi GPS valid dan wajah Anda terlihat jelas pada foto.</p>
+                </div>
+
+                <!-- Spacer Bawah -->
+                <div class="h-24 w-full" aria-hidden="true"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Script Modular Siswa -->
+    <script src="../js/profile-role siswa.js?v=20261109_7.0"></script>
+    <script>
+        const SCHOOL_LAT = -7.8899;
+        const SCHOOL_LNG = 110.3556;
+        const ALLOWED_RADIUS_M = 500;
+
+        let userLatitude = null;
+        let userLongitude = null;
+        let userDistanceM = null;
+        let capturedPhotoBase64 = null;
+        let cameraMediaStream = null;
+
+        const badgeSessionStatus = document.getElementById('badgeSessionStatus');
+        const sessionNoticeBox = document.getElementById('sessionNoticeBox');
+        const sessionNoticeTitle = document.getElementById('sessionNoticeTitle');
+        const sessionNoticeText = document.getElementById('sessionNoticeText');
+
+        const badgeGpsStatus = document.getElementById('badgeGpsStatus');
+        const textUserCoords = document.getElementById('textUserCoords');
+        const textDistanceToSchool = document.getElementById('textDistanceToSchool');
+        const gpsWarningAlert = document.getElementById('gpsWarningAlert');
+
+        const cameraVideo = document.getElementById('cameraVideo');
+        const photoCanvas = document.getElementById('photoCanvas');
+        const photoPreview = document.getElementById('photoPreview');
+        const cameraLoadingPlaceholder = document.getElementById('cameraLoadingPlaceholder');
+        const btnSnapPhoto = document.getElementById('btnSnapPhoto');
+        const btnRetakePhoto = document.getElementById('btnRetakePhoto');
+        const nativeCameraInput = document.getElementById('nativeCameraInput');
+
+        const textEstimatedStatus = document.getElementById('textEstimatedStatus');
+        const btnSubmitPresensi = document.getElementById('btnSubmitPresensi');
+
+        // Hitung Jarak Haversine (meter)
+        function calcHaversine(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return Math.round(R * c);
+        }
+
+        // 1. Cek Sesi Hari Ini dari Waka (API Kaldik / Today Config)
+        async function checkTodayPresensiSession() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/calendar/today-config`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                const pm = json.presensi_mandiri || {};
+
+                sessionNoticeBox.classList.remove('hidden');
+
+                if (pm.is_active_now) {
+                    badgeSessionStatus.className = 'text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300';
+                    badgeSessionStatus.textContent = 'Sesi Sedang Dibuka';
+                    sessionNoticeBox.className = 'rounded-2xl p-4 shadow-sm border text-xs md:text-sm flex items-start space-x-3 bg-emerald-50 border-emerald-200 text-emerald-800';
+                    sessionNoticeTitle.textContent = 'Sesi Presensi Mandiri Sedang Aktif!';
+                    sessionNoticeText.textContent = `Jam operasional: ${pm.start_time} - ${pm.end_time}. Silakan ambil foto selfie untuk presensi.`;
+                } else if (pm.is_scheduled) {
+                    badgeSessionStatus.className = 'text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-300';
+                    badgeSessionStatus.textContent = 'Sesi Belum Dimulai / Selesai';
+                    sessionNoticeBox.className = 'rounded-2xl p-4 shadow-sm border text-xs md:text-sm flex items-start space-x-3 bg-amber-50 border-amber-200 text-amber-800';
+                    sessionNoticeTitle.textContent = 'Di Luar Jam Presensi Mandiri';
+                    sessionNoticeText.textContent = `Presensi mandiri hari ini dijadwalkan pada pukul ${pm.start_time} s/d ${pm.end_time}. Anda tetap dapat mencoba demo pengujian sekarang.`;
+                } else {
+                    badgeSessionStatus.className = 'text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-300';
+                    badgeSessionStatus.textContent = 'Mode Uji Coba Demo';
+                    sessionNoticeBox.className = 'rounded-2xl p-4 shadow-sm border text-xs md:text-sm flex items-start space-x-3 bg-indigo-50 border-indigo-200 text-indigo-800';
+                    sessionNoticeTitle.textContent = 'Mode Uji Coba Presensi Mandiri [DEMO]';
+                    sessionNoticeText.textContent = 'Fitur ini aktif dalam mode pengujian demo untuk verifikasi kamera dan geolokasi sekolah.';
+                }
+            } catch (e) {
+                badgeSessionStatus.textContent = 'Mode Demo';
+            }
+        }
+
+        // 2. Deteksi Lokasi GPS Perangkat
+        function detectUserLocation() {
+            gpsWarningAlert.classList.add('hidden');
+            badgeGpsStatus.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700';
+            badgeGpsStatus.textContent = 'Mendeteksi GPS...';
+
+            if (!navigator.geolocation) {
+                badgeGpsStatus.textContent = 'GPS Tidak Didukung';
+                gpsWarningAlert.classList.remove('hidden');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    userLatitude = pos.coords.latitude;
+                    userLongitude = pos.coords.longitude;
+                    textUserCoords.textContent = `${userLatitude.toFixed(6)}, ${userLongitude.toFixed(6)}`;
+
+                    userDistanceM = calcHaversine(userLatitude, userLongitude, SCHOOL_LAT, SCHOOL_LNG);
+                    textDistanceToSchool.textContent = `Jarak ke SMKN 1 Bantul: ${userDistanceM} meter`;
+
+                    if (userDistanceM <= ALLOWED_RADIUS_M) {
+                        badgeGpsStatus.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700';
+                        badgeGpsStatus.textContent = 'Lokasi Valid (Di Sekolah)';
+                        textEstimatedStatus.className = 'font-extrabold text-sm text-emerald-600';
+                        textEstimatedStatus.textContent = 'HADIR (Dalam Radius 500m)';
+                    } else {
+                        badgeGpsStatus.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700';
+                        badgeGpsStatus.textContent = `Di Luar Radius (${userDistanceM}m)`;
+                        textEstimatedStatus.className = 'font-extrabold text-sm text-rose-600';
+                        textEstimatedStatus.textContent = `ALPA (Di Luar Radius Sekolah)`;
+                    }
+
+                    validateReadyToSubmit();
+                },
+                (err) => {
+                    console.warn('Geolocation error:', err);
+                    badgeGpsStatus.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700';
+                    badgeGpsStatus.textContent = 'GPS Mati / Ditolak';
+                    gpsWarningAlert.classList.remove('hidden');
+                    textUserCoords.textContent = 'Lokasi perangkat belum aktif';
+                    validateReadyToSubmit();
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        // 3. Menyiapkan Live Camera
+        async function startCamera() {
+            cameraLoadingPlaceholder.classList.remove('hidden');
+            try {
+                cameraMediaStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false
+                });
+                cameraVideo.srcObject = cameraMediaStream;
+                cameraLoadingPlaceholder.classList.add('hidden');
+            } catch (err) {
+                console.warn('Kamera web tidak dapat diakses langsung:', err);
+                cameraLoadingPlaceholder.innerHTML = `
+                    <svg class="w-8 h-8 text-amber-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <span class="text-xs">Kamera live browser diblokir. Gunakan tombol kamera HP di bawah.</span>
+                `;
+            }
+        }
+
+        // Ambil Snapshot dari Video
+        btnSnapPhoto.addEventListener('click', () => {
+            if (!cameraMediaStream) {
+                nativeCameraInput.click();
+                return;
+            }
+            photoCanvas.width = cameraVideo.videoWidth || 640;
+            photoCanvas.height = cameraVideo.videoHeight || 480;
+            const ctx = photoCanvas.getContext('2d');
+            ctx.drawImage(cameraVideo, 0, 0, photoCanvas.width, photoCanvas.height);
+
+            capturedPhotoBase64 = photoCanvas.toDataURL('image/jpeg', 0.85);
+            photoPreview.src = capturedPhotoBase64;
+            photoPreview.classList.remove('hidden');
+            cameraVideo.classList.add('hidden');
+
+            btnSnapPhoto.classList.add('hidden');
+            btnRetakePhoto.classList.remove('hidden');
+
+            validateReadyToSubmit();
+        });
+
+        // Foto Ulang
+        btnRetakePhoto.addEventListener('click', () => {
+            capturedPhotoBase64 = null;
+            photoPreview.classList.add('hidden');
+            cameraVideo.classList.remove('hidden');
+            btnSnapPhoto.classList.remove('hidden');
+            btnRetakePhoto.classList.add('hidden');
+            validateReadyToSubmit();
+        });
+
+        // Fallback Input Kamera HP
+        nativeCameraInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                capturedPhotoBase64 = evt.target.result;
+                photoPreview.src = capturedPhotoBase64;
+                photoPreview.classList.remove('hidden');
+                cameraVideo.classList.add('hidden');
+                cameraLoadingPlaceholder.classList.add('hidden');
+
+                btnSnapPhoto.classList.add('hidden');
+                btnRetakePhoto.classList.remove('hidden');
+                validateReadyToSubmit();
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function validateReadyToSubmit() {
+            const hasLocation = (userLatitude !== null && userLongitude !== null);
+            const hasPhoto = !!capturedPhotoBase64;
+            btnSubmitPresensi.disabled = !(hasLocation && hasPhoto);
+        }
+
+        // 4. Kirim Data Presensi Mandiri
+        btnSubmitPresensi.addEventListener('click', async () => {
+            if (!capturedPhotoBase64 || userLatitude === null) return;
+
+            btnSubmitPresensi.disabled = true;
+            btnSubmitPresensi.textContent = 'Memverifikasi Presensi...';
+
+            try {
+                const effectiveStudent = window.getEffectiveStudentData ? window.getEffectiveStudentData() : userData;
+                const studentId = effectiveStudent.id_user || effectiveStudent.id;
+
+                const res = await fetch(`${API_BASE_URL}/self-attendance/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id_siswa: studentId,
+                        latitude: userLatitude,
+                        longitude: userLongitude,
+                        photo: capturedPhotoBase64
+                    })
+                });
+
+                const json = await res.json();
+                if (res.ok) {
+                    alert(`${json.message}\nStatus: ${json.attendance_status}\nJarak: ${json.distance_meters}m dari SMKN 1 Bantul`);
+                    window.location.href = 'dashboard4.html';
+                } else {
+                    alert('Gagal mengirim presensi: ' + (json.message || 'Error'));
+                    btnSubmitPresensi.disabled = false;
+                    btnSubmitPresensi.textContent = 'Kirim Presensi Mandiri Sekarang';
+                }
+            } catch (err) {
+                alert('Kesalahan koneksi saat mengirim presensi: ' + err.message);
+                btnSubmitPresensi.disabled = false;
+                btnSubmitPresensi.textContent = 'Kirim Presensi Mandiri Sekarang';
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkTodayPresensiSession();
+            detectUserLocation();
+            startCamera();
+        });
+    </script>
+</body>
+</html>

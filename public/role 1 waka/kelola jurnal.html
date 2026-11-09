@@ -49,6 +49,19 @@
                     </div>
                 </div>
 
+                <!-- Tab Navigasi: Jurnal KBM vs Presensi Mandiri Siswa -->
+                <div class="flex items-center space-x-2 border-b border-slate-200 pb-2">
+                    <button id="tabBtnKbm" type="button" class="px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-indigo-600 text-white shadow-sm transition">
+                        Jurnal Pembelajaran (KBM)
+                    </button>
+                    <button id="tabBtnPresensi" type="button" class="px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition flex items-center space-x-2">
+                        <span>Presensi Mandiri Siswa</span>
+                        <span class="bg-amber-100 text-amber-800 text-[10px] font-black px-1.5 py-0.5 rounded border border-amber-300">DEMO</span>
+                    </button>
+                </div>
+
+                <!-- SECTION 1: JURNAL KBM -->
+                <div id="sectionKbm" class="space-y-6">
                 <!-- Kartu Statistik Hari Ini -->
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
@@ -108,6 +121,70 @@
                                 <tr><td colspan="7" class="py-8 text-center text-slate-400">Memuat data pemantauan jurnal...</td></tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+                </div>
+
+                <!-- SECTION 2: PRESENSI MANDIRI SISWA [DEMO] -->
+                <div id="sectionPresensi" class="space-y-6 hidden">
+                    <!-- Kartu Statistik Presensi Mandiri -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                            <span class="text-xs font-semibold text-slate-500 block uppercase">Total Presensi Hari Ini</span>
+                            <span id="statPresensiTotal" class="text-2xl font-bold text-slate-800">0</span>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-emerald-200 shadow-sm bg-emerald-50/30">
+                            <span class="text-xs font-semibold text-emerald-600 block uppercase">Hadir (&le; 500m dari Sekolah)</span>
+                            <span id="statPresensiHadir" class="text-2xl font-bold text-emerald-600">0</span>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-rose-200 shadow-sm bg-rose-50/30">
+                            <span class="text-xs font-semibold text-rose-600 block uppercase">Alpa (&gt; 500m / Luar Radius)</span>
+                            <span id="statPresensiAlpa" class="text-2xl font-bold text-rose-600">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Filter Bar Presensi Mandiri -->
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-0.5">Filter Tanggal</label>
+                                <input type="date" id="filterPresensiDate" class="px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-0.5">Filter Status</label>
+                                <select id="filterPresensiStatus" class="px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                                    <option value="all">Semua Status</option>
+                                    <option value="Hadir">Hadir (&le; 500m)</option>
+                                    <option value="Alpa">Alpa (&gt; 500m)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button id="btnReloadPresensi" type="button" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            <span>Muat Ulang</span>
+                        </button>
+                    </div>
+
+                    <!-- Tabel Presensi Mandiri -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[850px]">
+                                <thead>
+                                    <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                        <th class="py-3.5 px-4 font-semibold text-center w-16">Foto</th>
+                                        <th class="py-3.5 px-4 font-semibold">Nama Siswa / NIS</th>
+                                        <th class="py-3.5 px-4 font-semibold text-center w-28">Kelas</th>
+                                        <th class="py-3.5 px-4 font-semibold text-center w-36">Waktu Presensi</th>
+                                        <th class="py-3.5 px-4 font-semibold text-center w-36">Jarak ke SMKN 1 Bantul</th>
+                                        <th class="py-3.5 px-4 font-semibold text-center w-32">Status Lokasi</th>
+                                        <th class="py-3.5 px-4 font-semibold text-center w-28">Hasil Presensi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="presensiTableBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
+                                    <tr><td colspan="7" class="py-8 text-center text-slate-400">Memuat data presensi mandiri...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -307,7 +384,165 @@
 
         btnCloseDetailModal.addEventListener('click', () => detailJournalModal.classList.add('hidden'));
         btnOkDetailModal.addEventListener('click', () => detailJournalModal.classList.add('hidden'));
+    
+        // --- LOGIKA TAB JURNAL KBM VS PRESENSI MANDIRI [DEMO] ---
+        const tabBtnKbm = document.getElementById('tabBtnKbm');
+        const tabBtnPresensi = document.getElementById('tabBtnPresensi');
+        const sectionKbm = document.getElementById('sectionKbm');
+        const sectionPresensi = document.getElementById('sectionPresensi');
+
+        const filterPresensiDate = document.getElementById('filterPresensiDate');
+        const filterPresensiStatus = document.getElementById('filterPresensiStatus');
+        const btnReloadPresensi = document.getElementById('btnReloadPresensi');
+        const presensiTableBody = document.getElementById('presensiTableBody');
+
+        const statPresensiTotal = document.getElementById('statPresensiTotal');
+        const statPresensiHadir = document.getElementById('statPresensiHadir');
+        const statPresensiAlpa = document.getElementById('statPresensiAlpa');
+
+        const photoPreviewModal = document.getElementById('photoPreviewModal');
+        const photoPreviewImg = document.getElementById('photoPreviewImg');
+        const photoPreviewTitle = document.getElementById('photoPreviewTitle');
+        const photoPreviewMeta = document.getElementById('photoPreviewMeta');
+        const btnClosePhotoPreview = document.getElementById('btnClosePhotoPreview');
+        const btnOkPhotoPreview = document.getElementById('btnOkPhotoPreview');
+
+        if (filterPresensiDate) {
+            filterPresensiDate.value = new Date().toISOString().split('T')[0];
+        }
+
+        let presensiDataList = [];
+
+        tabBtnKbm.addEventListener('click', () => {
+            tabBtnKbm.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-indigo-600 text-white shadow-sm transition';
+            tabBtnPresensi.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition flex items-center space-x-2';
+            sectionKbm.classList.remove('hidden');
+            sectionPresensi.classList.add('hidden');
+        });
+
+        tabBtnPresensi.addEventListener('click', () => {
+            tabBtnPresensi.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-indigo-600 text-white shadow-sm transition flex items-center space-x-2';
+            tabBtnKbm.className = 'px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition';
+            sectionPresensi.classList.remove('hidden');
+            sectionKbm.classList.add('hidden');
+            fetchSelfAttendanceData();
+        });
+
+        if (btnReloadPresensi) {
+            btnReloadPresensi.addEventListener('click', fetchSelfAttendanceData);
+        }
+        if (filterPresensiDate) {
+            filterPresensiDate.addEventListener('change', fetchSelfAttendanceData);
+        }
+        if (filterPresensiStatus) {
+            filterPresensiStatus.addEventListener('change', renderPresensiTable);
+        }
+
+        async function fetchSelfAttendanceData() {
+            if (!presensiTableBody) return;
+            presensiTableBody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><svg class="animate-spin h-5 w-5 mx-auto mb-2 text-indigo-600" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>Memuat data presensi mandiri...</td></tr>`;
+
+            const selectedDate = filterPresensiDate ? filterPresensiDate.value : '';
+            try {
+                const res = await fetch(`${API_BASE_URL}/self-attendance/list?date=${selectedDate}&_t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                presensiDataList = json.data || [];
+                updatePresensiStats();
+                renderPresensiTable();
+            } catch (err) {
+                presensiTableBody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-red-500 font-medium">Gagal memuat log presensi mandiri.</td></tr>`;
+            }
+        }
+
+        function updatePresensiStats() {
+            if (!statPresensiTotal) return;
+            statPresensiTotal.textContent = presensiDataList.length;
+            statPresensiHadir.textContent = presensiDataList.filter(d => d.status === 'Hadir').length;
+            statPresensiAlpa.textContent = presensiDataList.filter(d => d.status === 'Alpa').length;
+        }
+
+        function renderPresensiTable() {
+            if (!presensiTableBody) return;
+            const filterSt = filterPresensiStatus ? filterPresensiStatus.value : 'all';
+            let list = presensiDataList;
+            if (filterSt !== 'all') {
+                list = list.filter(d => d.status === filterSt);
+            }
+
+            if (list.length === 0) {
+                presensiTableBody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Belum ada siswa yang melakukan presensi mandiri pada tanggal ini.</td></tr>`;
+                return;
+            }
+
+            presensiTableBody.innerHTML = list.map((item, idx) => {
+                const isHadir = item.status === 'Hadir';
+                const statusBadge = isHadir 
+                    ? `<span class="bg-emerald-100 text-emerald-700 font-bold px-2.5 py-1 rounded-full text-xs">Hadir</span>`
+                    : `<span class="bg-rose-100 text-rose-700 font-bold px-2.5 py-1 rounded-full text-xs">Alpa (Luar Radius)</span>`;
+
+                const locationBadge = item.is_within_radius
+                    ? `<span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Di Area Sekolah</span>`
+                    : `<span class="text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">Di Luar Area (&gt;500m)</span>`;
+
+                const distanceText = item.distance_meters > 1000 
+                    ? `${(item.distance_meters / 1000).toFixed(2)} km` 
+                    : `${item.distance_meters} m`;
+
+                const photoUrl = item.photo_url || '';
+
+                return `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="py-3 px-4 text-center">
+                            ${photoUrl ? `<img src="${photoUrl}" onclick="openPhotoPreview('${photoUrl}', '${item.student_name}', '${item.submitted_at}', '${distanceText}')" class="w-10 h-10 rounded-lg object-cover mx-auto cursor-pointer border border-slate-200 hover:scale-105 transition shadow-xs" alt="Selfie">` : `<span class="text-slate-300">-</span>`}
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="font-bold text-slate-800 text-xs md:text-sm">${item.student_name || 'Siswa'}</div>
+                            <div class="text-[11px] text-slate-400">NIS: ${item.student_nis || '-'}</div>
+                        </td>
+                        <td class="py-3 px-4 text-center font-semibold text-slate-700 text-xs">${item.student_class || '-'}</td>
+                        <td class="py-3 px-4 text-center font-mono text-xs text-slate-600">${item.submitted_at || '-'}</td>
+                        <td class="py-3 px-4 text-center font-semibold text-xs text-slate-700">${distanceText}</td>
+                        <td class="py-3 px-4 text-center">${locationBadge}</td>
+                        <td class="py-3 px-4 text-center">${statusBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        window.openPhotoPreview = function(url, name, time, dist) {
+            if (!photoPreviewModal) return;
+            photoPreviewImg.src = url;
+            photoPreviewTitle.textContent = `Foto Selfie: ${name}`;
+            photoPreviewMeta.textContent = `Waktu: ${time} | Jarak: ${dist}`;
+            photoPreviewModal.classList.remove('hidden');
+        };
+
+        if (btnClosePhotoPreview) btnClosePhotoPreview.addEventListener('click', () => photoPreviewModal.classList.add('hidden'));
+        if (btnOkPhotoPreview) btnOkPhotoPreview.addEventListener('click', () => photoPreviewModal.classList.add('hidden'));
+
     </script>
     <script src="../js/global-layout.js?v=20261109_13.0"></script>
+
+    <!-- MODAL PREVIEW FOTO PRESENSI MANDIRI -->
+    <div id="photoPreviewModal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+                <h4 id="photoPreviewTitle" class="font-bold text-sm text-slate-800">Foto Presensi Selfie</h4>
+                <button type="button" id="btnClosePhotoPreview" class="text-slate-400 hover:text-slate-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-4 flex items-center justify-center bg-slate-900">
+                <img id="photoPreviewImg" src="" alt="Selfie Presensi" class="max-h-[65vh] w-auto rounded-lg object-contain">
+            </div>
+            <div class="p-4 border-t border-slate-100 flex justify-between items-center bg-slate-50 text-xs text-slate-600">
+                <span id="photoPreviewMeta">-</span>
+                <button type="button" id="btnOkPhotoPreview" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition">Tutup</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
