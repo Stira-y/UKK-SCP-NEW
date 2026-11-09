@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com data:; img-src 'self' data: blob: http: https:; connect-src 'self' http://localhost:* http://127.0.0.1:*; object-src 'none';">
+    <title>Kelola User Siswa - Sistem SCP</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS untuk Import Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .category-scroll::-webkit-scrollbar {
+            height: 4px;
+        }
+        .category-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col font-sans overflow-hidden">
+
+    <!-- 1. Navbar Universal -->
+    <div id="app-navbar"></div>
+
+    <!-- Layout Utama -->
+    <div class="flex flex-1 relative overflow-hidden h-[calc(100vh-57px)]">
+        <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-20 hidden md:hidden transition-opacity duration-300"></div>
+
+        <!-- 2. Sidebar Universal -->
+        <div id="app-sidebar"></div>
+
+        <!-- Konten Utama (Scrollable Vertikal) -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
+            <div class="max-w-7xl mx-auto space-y-6">
+                
+                <!-- Header & Column Search -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-slate-800">Kelola data siswa</h2>
+                        <p class="text-slate-500 text-xs md:text-sm mt-0.5">Manajemen akun dan data siswa terintegrasi SCP.</p>
+                    </div>
+                    <div class="w-full md:w-80">
+                        <div class="relative">
+                            <input type="text" id="searchInput" autocomplete="off" placeholder="Cari NIS, NISN, Nama, Username, Email, Kelas..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kategori Tabs & Action Buttons -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs md:text-sm font-semibold text-slate-600">
+                        <div class="flex items-center space-x-6 overflow-x-auto pb-1 whitespace-nowrap">
+                            <button class="cat-btn underline text-indigo-600 font-bold" data-cat="all">Semua Siswa</button>
+                            <span class="text-slate-300">|</span>
+                            <button class="cat-btn" data-cat="X">Siswa X</button>
+                            <span class="text-slate-300">|</span>
+                            <button class="cat-btn" data-cat="XI">Siswa XI</button>
+                            <span class="text-slate-300">|</span>
+                            <button class="cat-btn" data-cat="XII">Siswa XII</button>
+                            <span class="text-slate-300">|</span>
+                            <button class="cat-btn" data-cat="orang_tua">Akun Orang Tua</button>
+                        </div>
+                        <div class="flex items-center gap-2.5 shrink-0 whitespace-nowrap overflow-x-auto">
+                            <button id="btnOpenAddClass" onclick="window.location.href='kelola kelas.html'" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5 whitespace-nowrap shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                <span>Kelas</span>
+                            </button>
+                            <button id="btnOpenAddUser" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5 whitespace-nowrap shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                <span>Tambah User</span>
+                            </button>
+                            <button id="btnPromoteClasses" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition whitespace-nowrap shrink-0">
+                                Naikkan Kelas
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section UPDATE / NEW Notification Box -->
+                <div id="recentUpdatesContainer" class="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase text-amber-800 tracking-wider flex items-center space-x-1.5">
+                            <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span>Aktivitas Perubahan Terbaru (Auto reset 3 min)</span>
+                        </span>
+                        <button id="toggleRecentBox" class="text-xs font-semibold text-amber-700 hover:underline flex items-center space-x-1">
+                            <span id="recentBoxToggleText">Sembunyikan</span>
+                            <svg id="recentBoxArrow" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                    </div>
+                    <div id="recentList" class="space-y-1 text-xs text-amber-900 font-medium"></div>
+                </div>
+
+                <!-- Tabel Data Siswa -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[850px]">
+                            <thead>
+                                <tr id="tableHeaderRow" class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th id="thActionHeader" class="py-3.5 px-3 font-semibold text-center w-24">Aksi</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-36">Kelas</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center">NIS</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center">NISN</th>
+                                    <th class="py-3.5 px-3 font-semibold">Fullname</th>
+                                    <th class="py-3.5 px-3 font-semibold">Username</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center">Nomor Telepon</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center">Email</th>
+                                    <th class="py-3.5 px-3 font-semibold text-center w-28">Password (Encrypted)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentTableBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
+                                <tr>
+                                    <td colspan="9" class="py-8 text-center text-slate-400">Memuat data siswa...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- POP UP KONFIRMASI GLOBAL (NAIK KELAS & TAMBAH SISWA) -->
+    <div id="confirmActionModal" class="fixed inset-0 bg-slate-900/70 z-[70] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col p-6 text-center transform transition-all animate-in fade-in zoom-in duration-150">
+            <h3 id="confirmActionTitle" class="text-lg font-bold text-slate-800 mb-2">Konfirmasi Simpan</h3>
+            <p id="confirmActionSubtext" class="text-xs text-slate-500 mb-6">Apakah Anda yakin ingin memproses aksi ini?</p>
+            <div class="flex justify-center space-x-3">
+                <button type="button" id="btnConfirmActionNo" class="flex-1 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition">Tidak</button>
+                <button type="button" id="btnConfirmActionYes" class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow">Yakin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tambah User Siswa -->
+    <div id="addUserModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] relative">
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                <h3 class="font-bold text-base md:text-lg">Tambah User Siswa Baru</h3>
+                <div class="flex items-center space-x-2">
+                    <button type="button" id="btnDownloadStudentTemplate" title="Download Template Excel" class="bg-indigo-500 hover:bg-indigo-400 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow transition flex items-center space-x-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        <span>Template</span>
+                    </button>
+                    <button type="button" id="btnTriggerExcelImport" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md transition flex items-center space-x-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        <span>Import via Excel</span>
+                    </button>
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden">
+                    <button id="btnCloseAddUser" class="text-indigo-200 hover:text-white text-2xl font-bold ml-1 leading-none">&times;</button>
+                </div>
+            </div>
+            <form id="formAddUser" class="p-6 space-y-3.5 overflow-y-auto flex-1">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Fullname</label>
+                    <input type="text" id="addFullname" autocomplete="off" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                    <p id="error_addFullname" class="text-xs text-red-500 italic mt-0.5 hidden">silahkan isi data terlebih dahulu</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">NIS</label>
+                        <input type="text" id="addNis" autocomplete="off" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                        <p id="addNisError" class="text-xs text-red-500 italic mt-1 hidden"></p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">NISN</label>
+                        <input type="text" id="addNisn" autocomplete="off" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                        <p id="addNisnError" class="text-xs text-red-500 italic mt-1 hidden"></p>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Username</label>
+                    <input type="text" id="addUsername" autocomplete="off" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                    <p id="error_addUsername" class="text-xs text-red-500 italic mt-0.5 hidden">silahkan isi data terlebih dahulu</p>
+                    <p id="addUsernameError" class="text-xs text-red-500 italic mt-1 hidden"></p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Email</label>
+                    <input type="email" id="addEmail" autocomplete="off" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                    <p id="error_addEmail" class="text-xs text-red-500 italic mt-0.5 hidden">silahkan isi data terlebih dahulu</p>
+                    <p id="addEmailError" class="text-xs text-red-500 italic mt-1 hidden"></p>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Kelas</label>
+                        <select id="addTingkat" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition bg-white">
+                            <option value="">Pilih</option>
+                            <option value="X">X</option>
+                            <option value="XI">XI</option>
+                            <option value="XII">XII</option>
+                        </select>
+                        <p id="error_addTingkat" class="text-xs text-red-500 italic mt-0.5 hidden">silahkan isi data terlebih dahulu</p>
+                    </div>
+                    <div class="relative">
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama Kelas</label>
+                        <input type="text" id="addNamaKelas" placeholder="Cth: RPL" autocomplete="off" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition bg-white">
+                        <p id="error_addNamaKelas" class="text-xs text-red-500 italic mt-0.5 hidden">silahkan isi data terlebih dahulu</p>
+                        <div id="namaKelasDropdown" class="absolute left-0 right-0 mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-32 overflow-y-auto z-50 hidden"></div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nomor Kelas</label>
+                        <select id="addNomorKelas" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition bg-white cursor-pointer">
+                            <option value="">Pilih</option>
+                        </select>
+                        <p id="error_addNomorKelas" class="text-xs text-red-500 italic mt-0.5 hidden">silahkan isi data terlebih dahulu</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Password</label>
+                    <div class="relative">
+                        <input type="password" id="addPassword" autocomplete="new-password" class="w-full pl-3.5 pr-10 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                        <button type="button" id="toggleAddPasswordBtn" class="absolute inset-y-0 right-0 pr-3 flex items-center focus:outline-none"></button>
+                    </div>
+                    <p id="error_addPassword" class="text-xs text-red-500 italic mt-0.5 hidden">silahkan isi data terlebih dahulu</p>
+                    <p id="passwordValidationError" class="text-xs text-red-500 italic mt-1 hidden"></p>
+                </div>
+                <p id="addFormError" class="text-xs text-red-500 italic mt-1 hidden"></p>
+            </form>
+            <div class="bg-slate-50 px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 shrink-0">
+                <button type="button" id="btnCancelAddUser" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition">Batal</button>
+                <button type="button" id="btnTriggerAddStudentSave" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Edit User Siswa -->
+    <div id="editUserModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] relative">
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                <h3 class="font-bold text-base md:text-lg">Edit Data Tunggal Siswa</h3>
+                <button id="btnCloseEditUser" class="text-indigo-200 hover:text-white text-2xl font-bold">&times;</button>
+            </div>
+            <form id="formEditUser" class="p-6 space-y-3.5 overflow-y-auto flex-1">
+                <input type="hidden" id="editUserId">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Fullname (Readonly)</label>
+                    <input type="text" id="editFullname" readonly class="w-full px-3.5 py-2 rounded-lg bg-slate-100 border border-slate-300 text-slate-500 text-sm outline-none cursor-not-allowed">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">NIS</label>
+                        <input type="text" id="editNis" autocomplete="off" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                        <p id="editNisError" class="text-xs text-red-500 italic mt-1 hidden"></p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">NISN</label>
+                        <input type="text" id="editNisn" autocomplete="off" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                        <p id="editNisnError" class="text-xs text-red-500 italic mt-1 hidden"></p>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Username</label>
+                    <input type="text" id="editUsername" autocomplete="off" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                    <p id="error_editUsername" class="text-xs text-red-500 italic mt-0.5 hidden">silahkan isi data terlebih dahulu</p>
+                    <p id="editUsernameError" class="text-xs text-red-500 italic mt-1 hidden"></p>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Kelas</label>
+                        <select id="editTingkat" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition bg-white">
+                            <option value="">Pilih</option>
+                            <option value="X">X</option>
+                            <option value="XI">XI</option>
+                            <option value="XII">XII</option>
+                        </select>
+                        <p id="error_editTingkat" class="text-xs text-red-500 italic mt-0.5 hidden">silahkan isi data terlebih dahulu</p>
+                    </div>
+                    <div class="relative">
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama Kelas</label>
+                        <input type="text" id="editNamaKelas" placeholder="Cth: RPL" autocomplete="off" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition bg-white">
+                        <p id="error_editNamaKelas" class="text-xs text-red-500 italic mt-0.5 hidden">silahkan isi data terlebih dahulu</p>
+                        <div id="editNamaKelasDropdown" class="absolute left-0 right-0 mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-32 overflow-y-auto z-50 hidden"></div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nomor Kelas</label>
+                        <select id="editNomorKelas" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition bg-white cursor-pointer">
+                            <option value="">Pilih</option>
+                        </select>
+                        <p id="error_editNomorKelas" class="text-xs text-red-500 italic mt-0.5 hidden">silahkan isi data terlebih dahulu</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between border border-slate-200 p-3 rounded-xl bg-slate-50">
+                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">EMAIL</span>
+                    <button type="button" id="btnStudentInitChangeEmail" class="w-32 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm flex items-center justify-center">Ganti Email</button>
+                </div>
+
+                <div id="studentInitVerifyContainer" class="flex items-center justify-between border border-slate-200 p-3 rounded-xl bg-slate-50">
+                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">PASSWORD</span>
+                    <button type="button" id="btnStudentInitChangePassword" class="w-32 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm flex items-center justify-center">Ganti Password</button>
+                </div>
+
+                <div id="studentPasswordContainer" class="hidden space-y-1">
+                    <div class="flex items-center justify-between mb-1">
+                        <label for="editPassword" class="block text-xs font-bold text-slate-600 uppercase">PASSWORD BARU</label>
+                        <span class="text-[11px] text-indigo-600 font-semibold">OTP Terverifikasi</span>
+                    </div>
+                    <div class="relative">
+                        <input type="password" id="editPassword" autocomplete="new-password" placeholder="Biarkan kosong jika tidak diganti" class="w-full pl-3.5 pr-10 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                        <button type="button" id="toggleEditPasswordBtn" class="absolute inset-y-0 right-0 pr-3 flex items-center focus:outline-none"></button>
+                    </div>
+                    <p id="editPasswordValidationError" class="text-xs text-red-500 italic mt-1 hidden"></p>
+                </div>
+
+                <p id="editFormError" class="text-xs text-red-500 italic mt-1 hidden"></p>
+            </form>
+            <div class="bg-slate-50 px-6 py-3.5 flex items-center justify-between border-t border-slate-200 shrink-0">
+                <button type="button" id="btnExpelStudent" class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg text-xs md:text-sm font-bold transition flex items-center space-x-1.5 shadow-xs">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    <span>Keluarkan Siswa</span>
+                </button>
+                <div class="flex items-center space-x-2">
+                    <button type="button" id="btnCancelEditUser" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition">Batal</button>
+                    <button type="button" id="btnTriggerEditStudentSave" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Input Email Baru Siswa -->
+    <div id="studentEmailGuideModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col transform transition-all">
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                <h3 class="font-bold text-lg">Ganti Email Akun Siswa</h3>
+                <button id="btnCloseStudentEmailGuide" class="text-indigo-200 hover:text-white text-xl font-bold">&times;</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="space-y-2">
+                    <label class="block text-xs font-bold text-slate-700 uppercase">Masukkan Email Baru Siswa</label>
+                    <input type="email" id="inputStudentNewEmail" autocomplete="off" placeholder="contoh: user@gmail.com" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition">
+                    <p id="studentNewEmailError" class="text-xs text-red-500 italic mt-1 hidden"></p>
+                    <div class="flex justify-end pt-3">
+                        <button type="button" id="btnSubmitStudentNewEmail" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition shadow">
+                            Kirim Kode OTP Ke Email Waka
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/pw-waka.js"></script>
+
+    <script>
+        
+        const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+        const userData = JSON.parse(localStorage.getItem('user_data') || sessionStorage.getItem('user_data') || '{}');
+
+        if (!token || Number(userData.id_role) !== 1) {
+            alert('Akses ditolak! Silakan login sebagai Waka/Admin.');
+            window.location.href = '../login/login.html';
+        }
+
+        let currentCategory = 'all';
+        let allStudentsData = [];
+        let allSystemUsers = []; 
+        let schoolClassesList = [];
+
+        let editingStudentId = null;
+        let currentStudentEmail = '';
+        let pendingNewEmail = '';
+        let verifiedOtpCode = '';
+
+        let lastActiveSearchValue = '';
+        let isPromoteMode = false;
+        let pendingStudentSaveAction = null;
+
+        const catBtns = document.querySelectorAll('.cat-btn');
+        const searchInput = document.getElementById('searchInput');
+        const studentTableBody = document.getElementById('studentTableBody');
+        const thActionHeader = document.getElementById('thActionHeader');
+        const btnPromoteClasses = document.getElementById('btnPromoteClasses');
+        const btnOpenAddUser = document.getElementById('btnOpenAddUser');
+
+        const addUserModal = document.getElementById('addUserModal');
+        const editUserModal = document.getElementById('editUserModal');
+        
+        // Modal Konfirmasi Global
+        const confirmActionModal = document.getElementById('confirmActionModal');
+        const confirmActionTitle = document.getElementById('confirmActionTitle');
+        const confirmActionSubtext = document.getElementById('confirmActionSubtext');
+        const btnConfirmActionYes = document.getElementById('btnConfirmActionYes');
+        const btnConfirmActionNo = document.getElementById('btnConfirmActionNo');
+
+        const addFullnameInput = document.getElementById('addFullname');
+        const addNisInput = document.getElementById('addNis');
+        const addNisnInput = document.getElementById('addNisn');
+        const addUsernameInput = document.getElementById('addUsername');
+        const addEmailInput = document.getElementById('addEmail');
+        const addPasswordInput = document.getElementById('addPassword');
+
+        const addNisError = document.getElementById('addNisError');
+        const addNisnError = document.getElementById('addNisnError');
+        const addUsernameError = document.getElementById('addUsernameError');
+        const addEmailError = document.getElementById('addEmailError');
+
+        const addTingkat = document.getElementById('addTingkat');
+        const addNamaKelas = document.getElementById('addNamaKelas');
+        const namaKelasDropdown = document.getElementById('namaKelasDropdown');
+        const addNomorKelas = document.getElementById('addNomorKelas');
+
+        const editNisInput = document.getElementById('editNis');
+        const editNisnInput = document.getElementById('editNisn');
+        const editUsernameInput = document.getElementById('editUsername');
+        const editPasswordInput = document.getElementById('editPassword');
+
+        const editNisError = document.getElementById('editNisError');
+        const editNisnError = document.getElementById('editNisnError');
+        const editUsernameError = document.getElementById('editUsernameError');
+
+        const editTingkat = document.getElementById('editTingkat');
+        const editNamaKelas = document.getElementById('editNamaKelas');
+        const editNamaKelasDropdown = document.getElementById('editNamaKelasDropdown');
+        const editNomorKelas = document.getElementById('editNomorKelas');
+        
+        const btnStudentInitChangeEmail = document.getElementById('btnStudentInitChangeEmail');
+        const btnStudentInitChangePassword = document.getElementById('btnStudentInitChangePassword');
+        const studentInitVerifyContainer = document.getElementById('studentInitVerifyContainer');
+        const studentPasswordContainer = document.getElementById('studentPasswordContainer');
+
+        const studentEmailGuideModal = document.getElementById('studentEmailGuideModal');
+        const btnCloseStudentEmailGuide = document.getElementById('btnCloseStudentEmailGuide');
+        const inputStudentNewEmail = document.getElementById('inputStudentNewEmail');
+        const btnSubmitStudentNewEmail = document.getElementById('btnSubmitStudentNewEmail');
+        const studentNewEmailError = document.getElementById('studentNewEmailError');
+
+        const recentUpdatesContainer = document.getElementById('recentUpdatesContainer');
+        const recentList = document.getElementById('recentList');
+        const toggleRecentBox = document.getElementById('toggleRecentBox');
+        const recentBoxToggleText = document.getElementById('recentBoxToggleText');
+        const recentBoxArrow = document.getElementById('recentBoxArrow');
+
+        const btnTriggerExcelImport = document.getElementById('btnTriggerExcelImport');
+        const excelFileInput = document.getElementById('excelFileInput');
+        const btnDownloadStudentTemplate = document.getElementById('btnDownloadStudentTemplate');
+
+        searchInput.addEventListener('input', () => {
+            const isModalOpen = !studentEmailGuideModal.classList.contains('hidden') || 
+                                !editUserModal.classList.contains('hidden') || 
+                                !addUserModal.classList.contains('hidden') ||
+                                (document.getElementById('otpModal') && !document.getElementById('otpModal').classList.contains('hidden'));
+            if (isModalOpen) {
+                searchInput.value = lastActiveSearchValue;
+            } else {
+                lastActiveSearchValue = searchInput.value;
+                renderTable();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            localStorage.setItem('sidebar_kelola_user_active', 'true');
+            fetchClasses();
+            fetchStudents();
+            fetchAllSystemUsers();
+
+            if (window.initPwWaka) {
+                window.initPwWaka('addPassword', 'toggleAddPasswordBtn', 'passwordValidationError');
+                window.initPwWaka('editPassword', 'toggleEditPasswordBtn', 'editPasswordValidationError');
+            }
+        });
+
+        catBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (isPromoteMode) return;
+                catBtns.forEach(b => b.classList.remove('underline', 'text-indigo-600', 'font-bold'));
+                btn.classList.add('underline', 'text-indigo-600', 'font-bold');
+                currentCategory = btn.getAttribute('data-cat');
+                fetchStudents();
+            });
+        });
+
+        async function fetchClasses() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/classes`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const res = await response.json();
+                schoolClassesList = res.data || res || [];
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function fetchAllSystemUsers() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/waka/users`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const res = await response.json();
+                allSystemUsers = res.data || res || [];
+            } catch (err) {
+                console.error("Gagal memuat data user sistem", err);
+            }
+        }
+
+        addNisInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            const val = e.target.value.trim();
+            if (val && allStudentsData.some(st => st.nis === val)) {
+                addNisError.textContent = 'NIS sudah terdaftar!';
+                addNisError.classList.remove('hidden');
+            } else {
+                addNisError.textContent = '';
+                addNisError.classList.add('hidden');
+            }
+        });
+
+        addNisnInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            const val = e.target.value.trim();
+            if (val && allStudentsData.some(st => st.nisn === val)) {
+                addNisnError.textContent = 'NISN sudah terdaftar!';
+                addNisnError.classList.remove('hidden');
+            } else {
+                addNisnError.textContent = '';
+                addNisnError.classList.add('hidden');
+            }
+        });
+
+        addUsernameInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim().toLowerCase();
+            document.getElementById('error_addUsername').classList.add('hidden');
+            if (val && allStudentsData.some(st => (st.username || '').toLowerCase() === val)) {
+                addUsernameError.textContent = 'Username sudah digunakan!';
+                addUsernameError.classList.remove('hidden');
+            } else {
+                addUsernameError.textContent = '';
+                addUsernameError.classList.add('hidden');
+            }
+        });
+
+        addEmailInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim().toLowerCase();
+            document.getElementById('error_addEmail').classList.add('hidden');
+            const isTakenInSystem = allSystemUsers.some(u => (u.email || '').toLowerCase() === val);
+            if (val && (isTakenInSystem || allStudentsData.some(st => (st.email || '').toLowerCase() === val))) {
+                addEmailError.textContent = 'Email sudah digunakan oleh akun lain!';
+                addEmailError.classList.remove('hidden');
+            } else {
+                addEmailError.textContent = '';
+                addEmailError.classList.add('hidden');
+            }
+        });
+
+        editNisInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            const val = e.target.value.trim();
+            if (val && allStudentsData.some(st => st.id_user !== editingStudentId && st.nis === val)) {
+                editNisError.textContent = 'NIS sudah ada/terdaftar!';
+                editNisError.classList.remove('hidden');
+            } else {
+                editNisError.textContent = '';
+                editNisError.classList.add('hidden');
+            }
+        });
+
+        editNisnInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            const val = e.target.value.trim();
+            if (val && allStudentsData.some(st => st.id_user !== editingStudentId && st.nisn === val)) {
+                editNisnError.textContent = 'NISN sudah ada/terdaftar!';
+                editNisnError.classList.remove('hidden');
+            } else {
+                editNisnError.textContent = '';
+                editNisnError.classList.add('hidden');
+            }
+        });
+
+        editUsernameInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim().toLowerCase();
+            document.getElementById('error_editUsername').classList.add('hidden');
+            if (val && allStudentsData.some(st => st.id_user !== editingStudentId && (st.username || '').toLowerCase() === val)) {
+                editUsernameError.textContent = 'Username sudah digunakan!';
+                editUsernameError.classList.remove('hidden');
+            } else {
+                editUsernameError.textContent = '';
+                editUsernameError.classList.add('hidden');
+            }
+        });
+
+        inputStudentNewEmail.addEventListener('input', (e) => {
+            searchInput.value = lastActiveSearchValue;
+            const val = e.target.value.trim().toLowerCase();
+            const isTakenByOtherUser = allSystemUsers.some(u => u.id_user !== editingStudentId && (u.email || '').toLowerCase() === val);
+            const isTakenInStudents = allStudentsData.some(st => st.id_user !== editingStudentId && (st.email || '').toLowerCase() === val);
+
+            if (val && (isTakenByOtherUser || isTakenInStudents || val === currentStudentEmail.toLowerCase())) {
+                studentNewEmailError.textContent = 'Email sudah terdaftar/digunakan oleh akun lain!';
+                studentNewEmailError.classList.remove('hidden');
+            } else {
+                studentNewEmailError.textContent = '';
+                studentNewEmailError.classList.add('hidden');
+            }
+        });
+
+        btnStudentInitChangeEmail.addEventListener('click', (e) => {
+            e.stopPropagation();
+            lastActiveSearchValue = searchInput.value;
+            searchInput.readOnly = true;
+            inputStudentNewEmail.value = '';
+            studentNewEmailError.textContent = '';
+            studentNewEmailError.classList.add('hidden');
+            studentEmailGuideModal.classList.remove('hidden');
+            setTimeout(() => inputStudentNewEmail.focus(), 50);
+        });
+
+        btnCloseStudentEmailGuide.addEventListener('click', () => {
+            studentEmailGuideModal.classList.add('hidden');
+            searchInput.readOnly = false;
+            searchInput.value = lastActiveSearchValue;
+        });
+
+        btnSubmitStudentNewEmail.addEventListener('click', () => {
+            searchInput.value = lastActiveSearchValue;
+            const emailVal = inputStudentNewEmail.value.trim().toLowerCase();
+            studentNewEmailError.textContent = '';
+            studentNewEmailError.classList.add('hidden');
+
+            const emailFormatRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailFormatRegex.test(emailVal)) {
+                studentNewEmailError.textContent = 'Silahkan masukkan format email (@...) yang benar';
+                studentNewEmailError.classList.remove('hidden');
+                return;
+            }
+
+            studentEmailGuideModal.classList.add('hidden');
+            pendingNewEmail = emailVal;
+
+            if (window.openOtpWaka) {
+                window.openOtpWaka({
+                    apiBaseUrl: API_BASE_URL,
+                    token: token,
+                    currentUserId: editingStudentId,
+                    mode: 'new_email',
+                    email: emailVal,
+                    onSuccess: (code) => {
+                        verifiedOtpCode = String(code).trim();
+                        currentStudentEmail = pendingNewEmail;
+                        alert('Email siswa berhasil dikonfirmasi! Silakan klik tombol Simpan untuk menerapkan perubahan.');
+                        fetchAllSystemUsers();
+                        searchInput.readOnly = false;
+                        searchInput.value = lastActiveSearchValue;
+                    },
+                    onCancel: () => {
+                        searchInput.readOnly = false;
+                        searchInput.value = lastActiveSearchValue;
+                    }
+                });
+            }
+        });
+
+        btnStudentInitChangePassword.addEventListener('click', (e) => {
+            e.stopPropagation();
+            lastActiveSearchValue = searchInput.value;
+            searchInput.readOnly = true;
+
+            if (window.openOtpWaka) {
+                window.openOtpWaka({
+                    apiBaseUrl: API_BASE_URL,
+                    token: token,
+                    currentUserId: editingStudentId,
+                    mode: 'password',
+                    onSuccess: (code) => {
+                        verifiedOtpCode = String(code).trim();
+                        studentInitVerifyContainer.classList.add('hidden');
+                        studentPasswordContainer.classList.remove('hidden');
+                        editPasswordInput.value = '';
+                        if (window.resetPwField) {
+                            window.resetPwField('editPassword', 'toggleEditPasswordBtn', 'editPasswordValidationError');
+                        }
+                        editPasswordInput.focus();
+                        searchInput.readOnly = false;
+                        searchInput.value = lastActiveSearchValue;
+                    },
+                    onCancel: () => {
+                        searchInput.readOnly = false;
+                        searchInput.value = lastActiveSearchValue;
+                    }
+                });
+            }
+        });
+
+        function renderNamaKelasDropdown(query = '', dropdownEl, inputEl, tingkatEl, nomorSelectEl) {
+            const tingkat = tingkatEl.value;
+            if (!tingkat) {
+                dropdownEl.innerHTML = `<div class="px-3 py-1.5 text-xs text-slate-400 italic">Pilih tingkat kelas terlebih dahulu</div>`;
+                dropdownEl.classList.remove('hidden');
+                return;
+            }
+            let filtered = schoolClassesList.filter(cls => cls.kelas_nomor === tingkat);
+            
+            let uniqueNamaMap = new Map();
+            filtered.forEach(cls => {
+                const rawName = (cls.nama_kelas || '').replace(/\s*\d+$/, '').trim();
+                if (rawName) {
+                    const upperName = rawName.toUpperCase();
+                    if (!uniqueNamaMap.has(upperName)) {
+                        uniqueNamaMap.set(upperName, upperName);
+                    }
+                }
+            });
+
+            let uniqueNama = Array.from(uniqueNamaMap.values());
+            if (query) uniqueNama = uniqueNama.filter(n => n.toLowerCase().includes(query.toLowerCase()));
+
+            if (uniqueNama.length > 0) {
+                dropdownEl.innerHTML = uniqueNama.map(nama => `
+                    <div class="nama-kelas-item px-3 py-1.5 hover:bg-indigo-50 cursor-pointer text-xs font-medium text-slate-700" data-nama="${nama}">${nama}</div>
+                `).join('');
+                dropdownEl.classList.remove('hidden');
+                dropdownEl.querySelectorAll('.nama-kelas-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        inputEl.value = item.getAttribute('data-nama');
+                        dropdownEl.classList.add('hidden');
+                        document.getElementById('error_' + inputEl.id)?.classList.add('hidden');
+                        syncNomorKelasOptions(tingkatEl, inputEl, nomorSelectEl);
+                    });
+                });
+            } else {
+                dropdownEl.innerHTML = `<div class="px-3 py-1.5 text-xs text-slate-400 italic">Kelas tidak ditemukan</div>`;
+                dropdownEl.classList.remove('hidden');
+            }
+        }
+
+        function syncNomorKelasOptions(tingkatEl, namaKelasEl, nomorSelectEl, selectedVal = '') {
+            const tingkat = tingkatEl.value;
+            const namaKelas = namaKelasEl.value.trim().toLowerCase();
+
+            nomorSelectEl.innerHTML = '<option value="">Pilih</option>';
+
+            if (!tingkat || !namaKelas) {
+                return;
+            }
+
+            const matched = schoolClassesList.filter(cls => {
+                const matchTingkat = (cls.kelas_nomor || '').toUpperCase() === tingkat.toUpperCase();
+                const dbNama = (cls.nama_kelas || '').replace(/\s*\d+$/, '').trim().toLowerCase();
+                const exactDbNama = (cls.nama_kelas || '').trim().toLowerCase();
+                return matchTingkat && (dbNama === namaKelas || exactDbNama === namaKelas);
+            });
+
+            let numbers = [];
+            matched.forEach(cls => {
+                const n = cls.nomor_kelas || (cls.nama_kelas.match(/\d+$/)?.[0]);
+                if (n && !numbers.includes(String(n))) {
+                    numbers.push(String(n));
+                }
+            });
+
+            numbers.sort((a, b) => parseInt(a) - parseInt(b));
+
+            if (numbers.length === 0) {
+                nomorSelectEl.innerHTML = '<option value="">- Tanpa Nomor -</option>';
+                nomorSelectEl.dataset.hasNumbers = 'false';
+                const errId = nomorSelectEl.id === 'addNomorKelas' ? 'error_addNomorKelas' : 'error_editNomorKelas';
+                const errEl = document.getElementById(errId);
+                if (errEl) errEl.classList.add('hidden');
+            } else {
+                nomorSelectEl.dataset.hasNumbers = 'true';
+                numbers.forEach(num => {
+                    const opt = document.createElement('option');
+                    opt.value = num;
+                    opt.textContent = num;
+                    if (selectedVal && String(num) === String(selectedVal)) {
+                        opt.selected = true;
+                    }
+                    nomorSelectEl.appendChild(opt);
+                });
+            }
+        }
+
+        function guardNomorKelasFocus(tingkatEl, namaKelasEl, selectEl) {
+            selectEl.addEventListener('mousedown', (e) => {
+                if (selectEl.dataset.hasNumbers === 'false') {
+                    return;
+                }
+                if (!tingkatEl.value) {
+                    e.preventDefault();
+                    alert('Silakan pilih kolom Kelas terlebih dahulu!');
+                    tingkatEl.focus();
+                } else if (!namaKelasEl.value.trim()) {
+                    e.preventDefault();
+                    alert('Silakan isi kolom Nama Kelas terlebih dahulu!');
+                    namaKelasEl.focus();
+                }
+            });
+        }
+
+        guardNomorKelasFocus(addTingkat, addNamaKelas, addNomorKelas);
+        guardNomorKelasFocus(editTingkat, editNamaKelas, editNomorKelas);
+
+        addTingkat.addEventListener('change', () => {
+            addNamaKelas.value = '';
+            addNomorKelas.innerHTML = '<option value="">Pilih</option>';
+            namaKelasDropdown.classList.add('hidden');
+            document.getElementById('error_addTingkat').classList.add('hidden');
+        });
+        addNamaKelas.addEventListener('focus', () => {
+            renderNamaKelasDropdown(addNamaKelas.value, namaKelasDropdown, addNamaKelas, addTingkat, addNomorKelas);
+            document.getElementById('error_addNamaKelas').classList.add('hidden');
+        });
+        addNamaKelas.addEventListener('input', (e) => {
+            renderNamaKelasDropdown(e.target.value, namaKelasDropdown, addNamaKelas, addTingkat, addNomorKelas);
+            document.getElementById('error_addNamaKelas').classList.add('hidden');
+            syncNomorKelasOptions(addTingkat, addNamaKelas, addNomorKelas);
+        });
+        addNomorKelas.addEventListener('change', () => {
+            document.getElementById('error_addNomorKelas').classList.add('hidden');
+        });
+
+        editTingkat.addEventListener('change', () => {
+            editNamaKelas.value = '';
+            editNomorKelas.innerHTML = '<option value="">Pilih</option>';
+            editNamaKelasDropdown.classList.add('hidden');
+            document.getElementById('error_editTingkat').classList.add('hidden');
+        });
+        editNamaKelas.addEventListener('focus', () => {
+            renderNamaKelasDropdown(editNamaKelas.value, editNamaKelasDropdown, editNamaKelas, editTingkat, editNomorKelas);
+            document.getElementById('error_editNamaKelas').classList.add('hidden');
+        });
+        editNamaKelas.addEventListener('input', (e) => {
+            renderNamaKelasDropdown(e.target.value, editNamaKelasDropdown, editNamaKelas, editTingkat, editNomorKelas);
+            document.getElementById('error_editNamaKelas').classList.add('hidden');
+            syncNomorKelasOptions(editTingkat, editNamaKelas, editNomorKelas);
+        });
+        editNomorKelas.addEventListener('change', () => {
+            document.getElementById('error_editNomorKelas').classList.add('hidden');
+        });
+
+        addFullnameInput.addEventListener('input', () => document.getElementById('error_addFullname').classList.add('hidden'));
+        addUsernameInput.addEventListener('input', () => document.getElementById('error_addUsername').classList.add('hidden'));
+        addEmailInput.addEventListener('input', () => document.getElementById('error_addEmail').classList.add('hidden'));
+        addPasswordInput.addEventListener('input', () => document.getElementById('error_addPassword').classList.add('hidden'));
+        editUsernameInput.addEventListener('input', () => document.getElementById('error_editUsername').classList.add('hidden'));
+
+        document.addEventListener('click', (e) => {
+            if (!addNamaKelas.contains(e.target) && !namaKelasDropdown.contains(e.target)) namaKelasDropdown.classList.add('hidden');
+            if (!editNamaKelas.contains(e.target) && !editNamaKelasDropdown.contains(e.target)) editNamaKelasDropdown.classList.add('hidden');
+        });
+
+        async function fetchStudents() {
+            try {
+                studentTableBody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Memuat data...</td></tr>`;
+                const response = await fetch(`${API_BASE_URL}/waka/students?category=${currentCategory}&_t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const res = await response.json();
+                allStudentsData = res.data || [];
+                renderTable();
+            } catch (err) {
+                studentTableBody.innerHTML = `<tr><td colspan="9" class="py-6 text-center text-red-500">Gagal memuat data.</td></tr>`;
+            }
+        }
+
+        function highlightMatch(text, searchVal) {
+            if (!text) return '-';
+            if (!searchVal) return text;
+            const regex = new RegExp(`(${searchVal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            return text.toString().replace(regex, `<span class="bg-yellow-300 font-bold px-0.5 rounded">$1</span>`);
+        }
+
+        function getElapsedTime(timestamp) {
+            const seconds = Math.floor((Date.now() - timestamp) / 1000);
+            if (seconds < 60) return `${Math.max(1, seconds)} detik lalu`;
+            const minutes = Math.floor(seconds / 60);
+            return `${minutes} menit lalu`;
+        }
+
+        // Fungsi Master Select All Checkbox
+        window.toggleSelectAllPromote = function(masterCheckbox) {
+            const checkboxes = document.querySelectorAll('.promote-checkbox');
+            checkboxes.forEach(chk => {
+                chk.checked = masterCheckbox.checked;
+            });
+        };
+
+        function renderTable() {
+            const searchVal = searchInput.value.trim().toLowerCase();
+            const now = Date.now();
+            const THREE_MINUTES = 3 * 60 * 1000;
+
+            let filtered = allStudentsData.filter(st => {
+                const nis = (st.nis || '').toLowerCase();
+                const nisn = (st.nisn || '').toLowerCase();
+                const fullname = (st.fullname || '').toLowerCase();
+                const username = (st.username || '').toLowerCase();
+                const noTelp = (st.no_telp || '').toLowerCase();
+                const email = (st.email || '').toLowerCase();
+                const className = st.school_class ? `${st.school_class.kelas_nomor} ${st.school_class.nama_kelas}${st.school_class.nomor_kelas || ''}`.toLowerCase() : '';
+                const password = (st.password || '').toLowerCase();
+
+                return nis.includes(searchVal) || nisn.includes(searchVal) || fullname.includes(searchVal) ||
+                       username.includes(searchVal) || noTelp.includes(searchVal) || email.includes(searchVal) ||
+                       className.includes(searchVal) || password.includes(searchVal);
+            });
+
+            filtered.sort((a, b) => {
+                const classA = a.school_class ? `${a.school_class.kelas_nomor} ${a.school_class.nama_kelas}${a.school_class.nomor_kelas || ''}`.trim() : 'ZZZ';
+                const classB = b.school_class ? `${b.school_class.kelas_nomor} ${b.school_class.nama_kelas}${b.school_class.nomor_kelas || ''}`.trim() : 'ZZZ';
+                const classCmp = classA.localeCompare(classB, 'id', { sensitivity: 'base' });
+                if (classCmp !== 0) return classCmp;
+                return (a.fullname || '').localeCompare(b.fullname || '', 'id', { sensitivity: 'base' });
+            });
+
+            if (isPromoteMode) {
+                thActionHeader.innerHTML = `
+                    <div class="flex items-center justify-center space-x-1.5 cursor-pointer" title="Pilih Semua">
+                        <input type="checkbox" id="masterPromoteCheckbox" onchange="toggleSelectAllPromote(this)" checked class="w-4 h-4 text-indigo-600 rounded cursor-pointer">
+                        <span class="text-[11px] font-bold">SEMUA</span>
+                    </div>
+                `;
+            } else {
+                thActionHeader.textContent = "AKSI";
+            }
+
+            if (filtered.length === 0) {
+                const emptyText = currentCategory === 'orang_tua' ? 'Tidak ada data akun orang tua ditemukan.' : 'Tidak ada data siswa ditemukan.';
+                studentTableBody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">${emptyText}</td></tr>`;
+                renderRecentBox([]);
+                return;
+            }
+
+            let recentItems = [];
+
+            studentTableBody.innerHTML = filtered.map(st => {
+                let className = st.school_class ? `${st.school_class.kelas_nomor} ${st.school_class.nama_kelas}${st.school_class.nomor_kelas || ''}` : '-';
+                if (className === '-' && st.linked_students && st.linked_students.length > 0) {
+                    className = st.linked_students.map(ls => {
+                        const sc = ls.school_class || ls.schoolClass;
+                        const clsStr = sc ? `${sc.kelas_nomor} ${sc.nama_kelas}${sc.nomor_kelas || ''}` : '';
+                        return `${ls.fullname || ls.username}${clsStr ? ' (' + clsStr + ')' : ''}`;
+                    }).join(', ');
+                }
+                const createdTime = new Date(st.created_at).getTime();
+                const updatedTime = new Date(st.updated_at).getTime();
+
+                if ((now - updatedTime) <= THREE_MINUTES && (updatedTime - createdTime) > 2000) {
+                    recentItems.push({ type: 'UPDATE', data: st, time: updatedTime });
+                } else if ((now - createdTime) <= THREE_MINUTES) {
+                    recentItems.push({ type: 'NEW', data: st, time: createdTime });
+                }
+
+                let rawPwd = st.password || '********';
+                let maskedPwd = rawPwd.length > 8 ? rawPwd.substring(0, 8) + '...' : rawPwd;
+
+                let actionColumnContent = '';
+                if (isPromoteMode) {
+                    // DIUBAH: Otomatis checked saat mode naik kelas aktif
+                    actionColumnContent = `<input type="checkbox" class="promote-checkbox w-4 h-4 text-indigo-600 rounded cursor-pointer" data-id="${st.id_user}" checked>`;
+                } else {
+                    actionColumnContent = `
+                        <button onclick="openEditModal(${st.id_user})" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 p-1.5 rounded-lg font-semibold transition" title="Edit Data">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        </button>
+                    `;
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="py-3 px-3 text-center">${actionColumnContent}</td>
+                        <td class="py-3 px-3 font-semibold text-slate-800 text-center">${highlightMatch(className, searchVal)}</td>
+                        <td class="py-3 px-3 font-medium text-center">${highlightMatch(st.nis, searchVal)}</td>
+                        <td class="py-3 px-3 font-medium text-center">${highlightMatch(st.nisn, searchVal)}</td>
+                        <td class="py-3 px-3 font-semibold text-slate-800">${highlightMatch(st.fullname, searchVal)}</td>
+                        <td class="py-3 px-3 font-medium">${highlightMatch(st.username, searchVal)}</td>
+                        <td class="py-3 px-3 font-medium text-center">${highlightMatch(st.no_telp || '-', searchVal)}</td>
+                        <td class="py-3 px-3 font-medium text-center">${highlightMatch(st.email || '-', searchVal)}</td>
+                        <td class="py-3 px-3 font-mono text-xs text-slate-500 text-center truncate" title="${rawPwd}">${highlightMatch(maskedPwd, searchVal)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            recentItems.sort((a, b) => b.time - a.time);
+            renderRecentBox(recentItems);
+        }
+
+        function renderRecentBox(items) {
+            if (items.length === 0) {
+                recentUpdatesContainer.classList.add('hidden');
+                return;
+            }
+            recentUpdatesContainer.classList.remove('hidden');
+            recentList.innerHTML = items.map(item => {
+                const colorClass = item.type === 'UPDATE' ? 'text-blue-600' : 'text-emerald-600';
+                const timeAgo = getElapsedTime(item.time);
+                const className = item.data.school_class ? `${item.data.school_class.kelas_nomor} ${item.data.school_class.nama_kelas}${item.data.school_class.nomor_kelas || ''}`.trim() : '-';
+                
+                return `
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold ${colorClass}">- ${item.type}</span>
+                        <span>[NIS: ${item.data.nis || '-'}] ${item.data.fullname} (${className})</span>
+                        <span class="text-amber-700/70 font-normal">| (${timeAgo})</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        toggleRecentBox.addEventListener('click', () => {
+            recentList.classList.toggle('hidden');
+            const isHidden = recentList.classList.contains('hidden');
+            recentBoxToggleText.textContent = isHidden ? 'Tampilkan' : 'Sembunyikan';
+            recentBoxArrow.classList.toggle('rotate-180');
+        });
+
+        // =========================================================================
+        // FITUR TEMPLATE & IMPORT EXCEL SISWA
+        // =========================================================================
+        btnDownloadStudentTemplate.addEventListener('click', () => {
+            const sampleClass = schoolClassesList.length > 0 
+                ? `${schoolClassesList[0].kelas_nomor} ${schoolClassesList[0].nama_kelas}${schoolClassesList[0].nomor_kelas || ''}`.trim() 
+                : 'X RPL 1';
+
+            const templateData = [
+                {
+                    'Kelas': sampleClass,
+                    'NIS': '1001',
+                    'NISN': '0051234567',
+                    'Fullname': 'Budi Santoso',
+                    'Username': 'budis',
+                    'Email': 'budi@gmail.com',
+                    'Password': 'Password123#'
+                },
+                {
+                    'Kelas': sampleClass,
+                    'NIS': '1002',
+                    'NISN': '0051234568',
+                    'Fullname': 'Siti Aminah',
+                    'Username': 'sitia',
+                    'Email': 'siti@gmail.com',
+                    'Password': 'Rahasia456!'
+                }
+            ];
+
+            const ws = XLSX.utils.json_to_sheet(templateData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Template Siswa");
+
+            XLSX.writeFile(wb, "Template_Import_Siswa.xlsx");
+        });
+
+        btnTriggerExcelImport.addEventListener('click', () => {
+            excelFileInput.value = '';
+            excelFileInput.click();
+        });
+
+        excelFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+                    if (rows.length === 0) {
+                        alert('File Excel kosong atau tidak memiliki data!');
+                        return;
+                    }
+
+                    const payloadItems = [];
+
+                    for (const row of rows) {
+                        const findVal = (keyNames) => {
+                            for (const k in row) {
+                                for (const target of keyNames) {
+                                    if (k.trim().toLowerCase() === target.toLowerCase()) {
+                                        return String(row[k]).trim();
+                                    }
+                                }
+                            }
+                            return '';
+                        };
+
+                        const kelas = findVal(['Kelas', 'Class']);
+                        const nis = findVal(['NIS']);
+                        const nisn = findVal(['NISN']);
+                        const fullname = findVal(['Fullname', 'Nama', 'Nama Lengkap']);
+                        const username = findVal(['Username']);
+                        const email = findVal(['Email']);
+                        const password = findVal(['Password', 'Kata Sandi']);
+
+                        if (kelas && fullname && username && email && password) {
+                            payloadItems.push({
+                                kelas: kelas,
+                                nis: nis,
+                                nisn: nisn,
+                                fullname: fullname,
+                                username: username,
+                                email: email,
+                                password: password
+                            });
+                        }
+                    }
+
+                    if (payloadItems.length === 0) {
+                        alert('Tidak ada baris data siswa yang valid! Pastikan format kolom: Kelas, NIS, NISN, Fullname, Username, Email, Password.');
+                        return;
+                    }
+
+                    if (!confirm(`Ditemukan ${payloadItems.length} data siswa pada Excel. Lanjutkan proses impor ke database?`)) {
+                        return;
+                    }
+
+                    btnTriggerExcelImport.disabled = true;
+                    btnTriggerExcelImport.innerHTML = `<span>Mengimpor...</span>`;
+
+                    const res = await fetch(`${API_BASE_URL}/waka/students/import-batch`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ items: payloadItems })
+                    });
+
+                    const resJson = await res.json();
+
+                    if (res.ok) {
+                        let msg = resJson.message || 'Import data siswa berhasil!';
+                        if (resJson.errors && resJson.errors.length > 0) {
+                            msg += '\n\nCatatan baris dilewati (duplikat/kelas tidak ada):\n' + resJson.errors.slice(0, 5).join('\n');
+                            if (resJson.errors.length > 5) {
+                                msg += `\n...dan ${resJson.errors.length - 5} kendala lainnya.`;
+                            }
+                        }
+                        alert(msg);
+                        addUserModal.classList.add('hidden');
+                        fetchStudents();
+                        fetchAllSystemUsers();
+                    } else {
+                        let errorMsg = resJson.message || 'Gagal mengimpor file Excel.';
+                        if (resJson.errors && Array.isArray(resJson.errors)) {
+                            errorMsg += '\n' + resJson.errors.slice(0, 5).join('\n');
+                        }
+                        alert(errorMsg);
+                    }
+                } catch (err) {
+                    alert('Gagal memproses file Excel.');
+                } finally {
+                    btnTriggerExcelImport.disabled = false;
+                    btnTriggerExcelImport.innerHTML = `
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        <span>Import via Excel</span>
+                    `;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        btnOpenAddUser.addEventListener('click', () => {
+            if (isPromoteMode) {
+                isPromoteMode = false;
+                btnPromoteClasses.textContent = 'Naikkan Kelas';
+                btnPromoteClasses.className = 'bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition whitespace-nowrap shrink-0';
+                btnOpenAddUser.innerHTML = `
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    <span>Tambah User</span>
+                `;
+                btnOpenAddUser.className = 'bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5';
+                renderTable();
+                return;
+            }
+
+            lastActiveSearchValue = searchInput.value;
+            searchInput.readOnly = true;
+            document.getElementById('formAddUser').reset();
+            addNomorKelas.innerHTML = '<option value="">Pilih</option>';
+            
+            if (window.resetPwField) {
+                window.resetPwField('addPassword', 'toggleAddPasswordBtn', 'passwordValidationError');
+            }
+
+            document.querySelectorAll('#addUserModal p.text-red-500.italic').forEach(el => el.classList.add('hidden'));
+            addUserModal.classList.remove('hidden');
+        });
+
+        document.getElementById('btnCloseAddUser').addEventListener('click', () => {
+            addUserModal.classList.add('hidden');
+            searchInput.readOnly = false;
+            searchInput.value = lastActiveSearchValue;
+        });
+        document.getElementById('btnCancelAddUser').addEventListener('click', () => {
+            addUserModal.classList.add('hidden');
+            searchInput.readOnly = false;
+            searchInput.value = lastActiveSearchValue;
+        });
+
+        document.getElementById('btnTriggerAddStudentSave').addEventListener('click', () => {
+            let hasEmpty = false;
+
+            const fieldsToCheck = [
+                { input: addFullnameInput, error: document.getElementById('error_addFullname') },
+                { input: addUsernameInput, error: document.getElementById('error_addUsername') },
+                { input: addEmailInput, error: document.getElementById('error_addEmail') },
+                { input: addTingkat, error: document.getElementById('error_addTingkat') },
+                { input: addNamaKelas, error: document.getElementById('error_addNamaKelas') },
+                { input: addNomorKelas, error: document.getElementById('error_addNomorKelas') },
+                { input: addPasswordInput, error: document.getElementById('error_addPassword') },
+            ];
+
+            fieldsToCheck.forEach(item => {
+                if ((item.input === addNomorKelas || item.input === editNomorKelas) && item.input.dataset.hasNumbers === 'false') {
+                    item.error.classList.add('hidden');
+                    return;
+                }
+                if (!item.input.value.trim()) {
+                    item.error.classList.remove('hidden');
+                    hasEmpty = true;
+                } else {
+                    item.error.classList.add('hidden');
+                }
+            });
+
+            if (hasEmpty) return;
+
+            const errElem = document.getElementById('addFormError');
+            errElem.classList.add('hidden');
+
+            if (!addNisError.classList.contains('hidden') || 
+                !addNisnError.classList.contains('hidden') || 
+                !addUsernameError.classList.contains('hidden') ||
+                !addEmailError.classList.contains('hidden')) {
+                errElem.textContent = 'Harap perbaiki data input yang bentrok/sudah digunakan!';
+                errElem.classList.remove('hidden');
+                return;
+            }
+
+            const pwdValue = addPasswordInput.value;
+            if (window.validatePasswordRules && !window.validatePasswordRules(pwdValue)) {
+                document.getElementById('passwordValidationError').classList.remove('hidden');
+                return;
+            }
+
+            pendingStudentSaveAction = 'add';
+            confirmActionTitle.textContent = 'Konfirmasi Tambah Siswa';
+            confirmActionSubtext.textContent = 'Apakah Anda yakin ingin menyimpan data siswa baru ini?';
+            confirmActionModal.classList.remove('hidden');
+        });
+
+        document.getElementById('btnTriggerEditStudentSave').addEventListener('click', () => {
+            let hasEmpty = false;
+
+            const fieldsToCheck = [
+                { input: editUsernameInput, error: document.getElementById('error_editUsername') },
+                { input: editTingkat, error: document.getElementById('error_editTingkat') },
+                { input: editNamaKelas, error: document.getElementById('error_editNamaKelas') },
+                { input: editNomorKelas, error: document.getElementById('error_editNomorKelas') },
+            ];
+
+            fieldsToCheck.forEach(item => {
+                if ((item.input === addNomorKelas || item.input === editNomorKelas) && item.input.dataset.hasNumbers === 'false') {
+                    item.error.classList.add('hidden');
+                    return;
+                }
+                if (!item.input.value.trim()) {
+                    item.error.classList.remove('hidden');
+                    hasEmpty = true;
+                } else {
+                    item.error.classList.add('hidden');
+                }
+            });
+
+            if (hasEmpty) return;
+
+            const errElem = document.getElementById('editFormError');
+            errElem.classList.add('hidden');
+
+            if (!editNisError.classList.contains('hidden') || 
+                !editNisnError.classList.contains('hidden') || 
+                !editUsernameError.classList.contains('hidden')) {
+                errElem.textContent = 'Harap perbaiki data input yang bentrok/sudah digunakan!';
+                errElem.classList.remove('hidden');
+                return;
+            }
+
+            const pwdValue = editPasswordInput.value;
+            if (pwdValue.length > 0 && window.validatePasswordRules && !window.validatePasswordRules(pwdValue)) {
+                document.getElementById('editPasswordValidationError').classList.remove('hidden');
+                return;
+            }
+
+            pendingStudentSaveAction = 'edit';
+            confirmActionTitle.textContent = 'Konfirmasi Simpan Edit';
+            confirmActionSubtext.textContent = 'Apakah Anda yakin ingin menyimpan perubahan data siswa ini?';
+            confirmActionModal.classList.remove('hidden');
+        });
+
+        // Trigger Naikkan Kelas / Simpan Kenaikan Kelas
+        btnPromoteClasses.addEventListener('click', async () => {
+            if (!isPromoteMode) {
+                isPromoteMode = true;
+                btnPromoteClasses.textContent = 'Simpan';
+                btnPromoteClasses.className = 'bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition whitespace-nowrap shrink-0';
+                
+                btnOpenAddUser.textContent = 'Batal';
+                btnOpenAddUser.className = 'bg-slate-200 hover:bg-slate-300 text-slate-700 px-3.5 py-1.5 rounded-xl font-semibold shadow transition';
+                
+                // Me-render ulang tabel dengan seluruh checkbox langsung aktif (checked)
+                renderTable();
+            } else {
+                const checkedBoxes = document.querySelectorAll('.promote-checkbox:checked');
+
+                if (checkedBoxes.length === 0) {
+                    alert('Silakan centang minimal 1 siswa yang akan dinaikkan kelas!');
+                    return;
+                }
+
+                pendingStudentSaveAction = 'promote';
+                confirmActionTitle.textContent = 'Konfirmasi Naik Kelas';
+                confirmActionSubtext.textContent = `Apakah Anda yakin ingin memproses ${checkedBoxes.length} siswa yang dipilih? Siswa kelas XII yang dipilih akan otomatis berstatus Lulus dan masuk ke kelulusan.html.`;
+                confirmActionModal.classList.remove('hidden');
+            }
+        });
+
+        btnConfirmActionNo.addEventListener('click', () => {
+            confirmActionModal.classList.add('hidden');
+            pendingStudentSaveAction = null;
+        });
+
+        btnConfirmActionYes.addEventListener('click', async () => {
+            confirmActionModal.classList.add('hidden');
+            await executeStudentSave();
+            pendingStudentSaveAction = null;
+        });
+
+        const btnExpelStudent = document.getElementById('btnExpelStudent');
+        if (btnExpelStudent) {
+            btnExpelStudent.addEventListener('click', () => {
+                if (!editingStudentId) return;
+                const studentName = editUsernameInput.value || 'siswa ini';
+                pendingStudentSaveAction = 'expel';
+                confirmActionTitle.textContent = 'Konfirmasi Keluarkan Siswa';
+                confirmActionSubtext.textContent = `Apakah Anda yakin ingin mengeluarkan siswa "${studentName}" dari sekolah? Siswa akan dinonaktifkan dan dipindahkan ke Data Arsip Siswa (Siswa Dikeluarkan).`;
+                confirmActionModal.classList.remove('hidden');
+            });
+        }
+
+        async function executeStudentSave() {
+            if (pendingStudentSaveAction === 'expel') {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/waka/students/${editingStudentId}/expel`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    const res = await response.json();
+                    if (response.ok) {
+                        alert(res.message || 'Siswa berhasil dikeluarkan dan diarsipkan!');
+                        window.location.href = 'kelulusan.html?type=dikeluarkan';
+                    } else {
+                        alert(res.message || 'Gagal mengeluarkan siswa.');
+                    }
+                } catch (err) {
+                    alert('Terjadi kesalahan koneksi ke server saat mengeluarkan siswa.');
+                }
+                return;
+            }
+
+            if (pendingStudentSaveAction === 'add') {
+                const tingkatVal = addTingkat.value;
+                const namaVal = addNamaKelas.value.trim().toLowerCase();
+                const nomorVal = addNomorKelas.value.trim();
+
+                let matchedClass = schoolClassesList.find(cls => {
+                    const matchesTingkat = (cls.kelas_nomor || '').toUpperCase() === tingkatVal.toUpperCase();
+                    const dbNama = (cls.nama_kelas || '').replace(/\s*\d+$/, '').trim().toLowerCase();
+                    const exactDbNama = (cls.nama_kelas || '').trim().toLowerCase();
+                    const matchesNama = dbNama === namaVal || exactDbNama === namaVal;
+                    const dbNomor = cls.nomor_kelas ? cls.nomor_kelas.toString() : ((cls.nama_kelas || '').match(/\d+$/)?.[0] || '');
+                    const matchesNomor = !nomorVal ? (!dbNomor || dbNomor === '') : (dbNomor === nomorVal);
+                    return matchesTingkat && matchesNama && matchesNomor;
+                });
+
+                if (!matchedClass && (!nomorVal || addNomorKelas.dataset.hasNumbers === 'false')) {
+                    matchedClass = schoolClassesList.find(cls => {
+                        const matchesTingkat = (cls.kelas_nomor || '').toUpperCase() === tingkatVal.toUpperCase();
+                        const dbNama = (cls.nama_kelas || '').replace(/\s*\d+$/, '').trim().toLowerCase();
+                        const exactDbNama = (cls.nama_kelas || '').trim().toLowerCase();
+                        return matchesTingkat && (dbNama === namaVal || exactDbNama === namaVal);
+                    });
+                }
+
+                if (!matchedClass) {
+                    const errElem = document.getElementById('addFormError');
+                    errElem.textContent = 'Kombinasi Kelas dan Nama Kelas tidak ditemukan di database!';
+                    errElem.classList.remove('hidden');
+                    return;
+                }
+
+                const payload = {
+                    fullname: addFullnameInput.value.trim(),
+                    nis: addNisInput.value.trim(),
+                    nisn: addNisnInput.value.trim(),
+                    username: addUsernameInput.value.trim(),
+                    email: addEmailInput.value.trim(),
+                    password: addPasswordInput.value,
+                    id_class: matchedClass.id_class
+                };
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/waka/students`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const res = await response.json();
+
+                    if (response.ok) {
+                        alert('Data siswa baru berhasil ditambahkan!');
+                        addUserModal.classList.add('hidden');
+                        searchInput.readOnly = false;
+                        searchInput.value = lastActiveSearchValue;
+                        fetchStudents();
+                        fetchAllSystemUsers();
+                    } else {
+                        const errElem = document.getElementById('addFormError');
+                        errElem.textContent = res.message || 'Gagal menambahkan data siswa baru.';
+                        errElem.classList.remove('hidden');
+                    }
+                } catch (err) {
+                    alert('Terjadi kesalahan koneksi ke server.');
+                }
+            } else if (pendingStudentSaveAction === 'edit') {
+                const tingkatVal = editTingkat.value;
+                const namaVal = editNamaKelas.value.trim().toLowerCase();
+                const nomorVal = editNomorKelas.value.trim();
+
+                let matchedClass = schoolClassesList.find(cls => {
+                    const matchesTingkat = (cls.kelas_nomor || '').toUpperCase() === tingkatVal.toUpperCase();
+                    const dbNama = (cls.nama_kelas || '').replace(/\s*\d+$/, '').trim().toLowerCase();
+                    const exactDbNama = (cls.nama_kelas || '').trim().toLowerCase();
+                    const matchesNama = dbNama === namaVal || exactDbNama === namaVal;
+                    const dbNomor = cls.nomor_kelas ? cls.nomor_kelas.toString() : ((cls.nama_kelas || '').match(/\d+$/)?.[0] || '');
+                    const matchesNomor = !nomorVal ? (!dbNomor || dbNomor === '') : (dbNomor === nomorVal);
+                    return matchesTingkat && matchesNama && matchesNomor;
+                });
+
+                if (!matchedClass && (!nomorVal || editNomorKelas.dataset.hasNumbers === 'false')) {
+                    matchedClass = schoolClassesList.find(cls => {
+                        const matchesTingkat = (cls.kelas_nomor || '').toUpperCase() === tingkatVal.toUpperCase();
+                        const dbNama = (cls.nama_kelas || '').replace(/\s*\d+$/, '').trim().toLowerCase();
+                        const exactDbNama = (cls.nama_kelas || '').trim().toLowerCase();
+                        return matchesTingkat && (dbNama === namaVal || exactDbNama === namaVal);
+                    });
+                }
+
+                if (!matchedClass) {
+                    const errElem = document.getElementById('editFormError');
+                    errElem.textContent = 'Kombinasi Kelas dan Nama Kelas tidak ditemukan di database!';
+                    errElem.classList.remove('hidden');
+                    return;
+                }
+
+                const payload = {
+                    nis: editNisInput.value.trim(),
+                    nisn: editNisnInput.value.trim(),
+                    username: editUsernameInput.value.trim(),
+                    email: currentStudentEmail,
+                    id_class: matchedClass.id_class
+                };
+
+                if (verifiedOtpCode) {
+                    payload.otp = String(verifiedOtpCode).trim();
+                }
+
+                if (editPasswordInput.value.trim() !== '') {
+                    payload.password = editPasswordInput.value;
+                    if (verifiedOtpCode) {
+                        payload.otp = String(verifiedOtpCode).trim();
+                    }
+                }
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/waka/students/${editingStudentId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const res = await response.json();
+
+                    if (response.ok) {
+                        alert('Data siswa berhasil diperbarui!');
+                        editUserModal.classList.add('hidden');
+                        searchInput.readOnly = false;
+                        searchInput.value = lastActiveSearchValue;
+                        fetchStudents();
+                        fetchAllSystemUsers();
+                    } else {
+                        alert(res.message || 'Gagal memperbarui data siswa.');
+                    }
+                } catch (err) {
+                    alert('Terjadi kesalahan koneksi ke server.');
+                }
+            } else if (pendingStudentSaveAction === 'promote') {
+                const checkedBoxes = document.querySelectorAll('.promote-checkbox:checked');
+                let selectedStudentIds = [];
+
+                checkedBoxes.forEach(chk => {
+                    const sid = parseInt(chk.getAttribute('data-id'), 10);
+                    if (!isNaN(sid)) {
+                        selectedStudentIds.push(sid);
+                    }
+                });
+
+                if (selectedStudentIds.length === 0) {
+                    alert('Tidak ada siswa yang dipilih.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/waka/students/promote`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ 
+                            student_ids: selectedStudentIds,
+                            user_ids: selectedStudentIds 
+                        })
+                    });
+
+                    const res = await response.json();
+
+                    if (response.ok) {
+                        alert(res.message || 'Proses kenaikan kelas dan kelulusan berhasil!');
+                        isPromoteMode = false;
+                        btnPromoteClasses.textContent = 'Naikkan Kelas';
+                        btnPromoteClasses.className = 'bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition whitespace-nowrap shrink-0';
+                        
+                        btnOpenAddUser.innerHTML = `
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <span>Tambah User</span>
+                        `;
+                        btnOpenAddUser.className = 'bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5';
+
+                        await fetchStudents();
+                    } else {
+                        alert(res.message || 'Gagal menyimpan kenaikan kelas.');
+                    }
+                } catch (err) {
+                    alert('Terjadi kesalahan koneksi saat memproses kenaikan kelas.');
+                }
+            }
+        }
+
+        window.openEditModal = function(id) {
+            const st = allStudentsData.find(s => s.id_user === id);
+            if (!st) return;
+
+            lastActiveSearchValue = searchInput.value;
+            searchInput.readOnly = true;
+
+            editingStudentId = st.id_user;
+            currentStudentEmail = st.email || '';
+            verifiedOtpCode = '';
+
+            document.getElementById('editUserId').value = st.id_user;
+            document.getElementById('editFullname').value = st.fullname || '';
+            editNisInput.value = st.nis || '';
+            editNisnInput.value = st.nisn || '';
+            editUsernameInput.value = st.username || '';
+            editPasswordInput.value = '';
+
+            editNisError.classList.add('hidden');
+            editNisnError.classList.add('hidden');
+            editUsernameError.classList.add('hidden');
+
+            document.querySelectorAll('#editUserModal p.text-red-500.italic').forEach(el => el.classList.add('hidden'));
+
+            if (st.school_class) {
+                editTingkat.value = st.school_class.kelas_nomor || '';
+                const cleanNama = (st.school_class.nama_kelas || '').replace(/\s*\d+$/, '').trim();
+                editNamaKelas.value = cleanNama;
+                const nomorVal = st.school_class.nomor_kelas || (st.school_class.nama_kelas || '').match(/\d+$/)?.[0] || '';
+                syncNomorKelasOptions(editTingkat, editNamaKelas, editNomorKelas, nomorVal);
+            } else {
+                editTingkat.value = '';
+                editNamaKelas.value = '';
+                editNomorKelas.innerHTML = '<option value="">Pilih</option>';
+            }
+
+            studentPasswordContainer.classList.add('hidden');
+            studentInitVerifyContainer.classList.remove('hidden');
+            document.getElementById('editFormError').classList.add('hidden');
+            
+            if (window.resetPwField) {
+                window.resetPwField('editPassword', 'toggleEditPasswordBtn', 'editPasswordValidationError');
+            }
+
+            editUserModal.classList.remove('hidden');
+        };
+
+        document.getElementById('btnCloseEditUser').addEventListener('click', () => {
+            editUserModal.classList.add('hidden');
+            searchInput.readOnly = false;
+            searchInput.value = lastActiveSearchValue;
+        });
+        document.getElementById('btnCancelEditUser').addEventListener('click', () => {
+            editUserModal.classList.add('hidden');
+            searchInput.readOnly = false;
+            searchInput.value = lastActiveSearchValue;
+        });
+    </script>
+    <script src="../js/global-layout.js?v=20261109_8.0"></script>
+</body>
+</html>

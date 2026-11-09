@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Persetujuan Surat Izin - Sistem SCP</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col font-sans overflow-hidden">
+
+    <!-- Navbar Universal -->
+    <div id="app-navbar"></div>
+
+    <div class="flex flex-1 relative overflow-hidden h-[calc(100vh-57px)]">
+        <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-20 hidden md:hidden transition-opacity duration-300"></div>
+        <div id="app-sidebar"></div>
+
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
+            <div class="max-w-7xl mx-auto space-y-6">
+                
+                <!-- Header & Search -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-slate-800">Persetujuan Surat Izin</h2>
+                        <p id="pageSubTitle" class="text-slate-500 text-xs md:text-sm mt-0.5">Verifikasi dan persetujuan permohonan izin siswa sekolah.</p>
+                    </div>
+                    <div class="w-full md:w-80">
+                        <div class="relative">
+                            <input type="text" id="searchInputPersetujuan" autocomplete="off" placeholder="Cari tanggal, nama, kelas, alasan, status..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info Realtime jika memilih mode "Sesuai Jam Mengajar" -->
+                <div id="teachingStatusCard" class="bg-indigo-50/70 border border-indigo-200 p-4 rounded-2xl flex items-center space-x-2 text-xs md:text-sm hidden">
+                    <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                    <span class="font-bold text-indigo-900" id="teachingStatusText">Memeriksa jadwal KBM mengajar Anda...</span>
+                </div>
+
+                <!-- Card Tabel Riwayat Persetujuan Izin -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="font-bold text-slate-800 text-sm md:text-base whitespace-nowrap">
+                            Daftar Permohonan Izin Siswa
+                        </div>
+
+                        <!-- Dropdown Pilihan Kelas / Sesuai Jam Mengajar di Paling Kanan -->
+                        <div id="wrapperPresenceFilter" class="flex items-center space-x-2 shrink-0">
+                            <span class="text-xs font-semibold text-slate-500 whitespace-nowrap">Pilih Kelas:</span>
+                            <select id="selectPresenceViewMode" class="px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs md:text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-xs">
+                                <option value="">Memuat kelas...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[950px]">
+                            <thead>
+                                <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="py-3.5 px-4 font-semibold text-center w-28">Mulai</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-36">Selesai</th>
+                                    <th class="py-3.5 px-4 font-semibold">Nama Siswa</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center">Kelas</th>
+                                    <th class="py-3.5 px-4 font-semibold">Alasan</th>
+                                    <th class="py-3.5 px-4 font-semibold">Dokumen / File</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center">Status Approval</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-28">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="persetujuanTableBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
+                                <tr><td colspan="8" class="py-8 text-center text-slate-400">Memuat data permohonan izin...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Verifikasi Surat Izin -->
+    <div id="modalVerifikasiIzin" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] relative">
+            
+            <div id="confirmApprovalModal" class="absolute inset-0 bg-slate-900/70 z-[60] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+                    <h3 id="confirmApprovalTitle" class="text-lg font-bold text-slate-800 mb-2">Konfirmasi</h3>
+                    <p id="confirmApprovalText" class="text-xs text-slate-500 mb-6">Apakah Anda yakin ingin memproses izin ini?</p>
+                    <div class="flex justify-center space-x-3">
+                        <button type="button" id="btnConfirmApprovalNo" class="flex-1 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition">Tidak</button>
+                        <button type="button" id="btnConfirmApprovalYes" class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow">Yakin</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="modalInputReasonDitolak" class="absolute inset-0 bg-slate-900/70 z-[60] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col relative">
+                    <div id="confirmRejectReasonModal" class="absolute inset-0 bg-slate-900/80 z-[70] hidden flex items-center justify-center p-4 rounded-2xl">
+                        <div class="bg-white rounded-xl shadow-xl w-full max-w-xs p-5 text-center">
+                            <h4 class="text-base font-bold text-slate-800 mb-2">Konfirmasi Penolakan</h4>
+                            <p class="text-xs text-slate-500 mb-5">Apakah Anda yakin ingin menyimpan alasan penolakan ini?</p>
+                            <div class="flex justify-center space-x-2">
+                                <button type="button" id="btnConfirmRejectReasonNo" class="flex-1 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">Tidak</button>
+                                <button type="button" id="btnConfirmRejectReasonYes" class="flex-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold transition shadow">Yakin</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-base font-bold text-slate-800">Tambahkan Alasan Di Tolak</h3>
+                        <button type="button" id="btnCloseInputReasonDitolak" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-2">Harap cantumkan alasan penolakan surat permohonan izin ini:</p>
+                    <textarea id="textInputReasonDitolak" rows="3" placeholder="Tuliskan alasan penolakan..." class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-red-500 outline-none transition"></textarea>
+                    <p id="errorInputReasonDitolak" class="text-[11px] text-red-500 italic mt-1 hidden">Alasan penolakan wajib diisi!</p>
+                    <div class="flex justify-end space-x-2 mt-4">
+                        <button type="button" id="btnCancelInputReasonDitolak" class="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">Batal</button>
+                        <button type="button" id="btnSaveReasonDitolak" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition shadow">Simpan</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                <h3 class="font-bold text-base md:text-lg">Verifikasi Surat Izin</h3>
+                <button type="button" id="btnCloseModalVerifikasi" class="text-indigo-200 hover:text-white text-2xl font-bold">&times;</button>
+            </div>
+
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Nama Siswa</label>
+                        <input type="text" id="viewFullname" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-xs md:text-sm font-semibold outline-none cursor-not-allowed">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Kelas</label>
+                        <input type="text" id="viewKelas" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-xs md:text-sm font-semibold outline-none cursor-not-allowed">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Tanggal Mulai</label>
+                        <input type="text" id="viewStartDate" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-xs md:text-sm outline-none cursor-not-allowed">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Tanggal Selesai</label>
+                        <input type="text" id="viewEndDate" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-xs md:text-sm outline-none cursor-not-allowed">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Alasan / Keterangan</label>
+                    <textarea id="viewReason" rows="3" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-xs md:text-sm outline-none cursor-not-allowed"></textarea>
+                </div>
+
+                <div id="containerViewReasonDitolak" class="hidden">
+                    <label class="block text-xs font-bold text-red-600 uppercase mb-1">Alasan Di Tolak</label>
+                    <textarea id="viewReasonDitolakVal" rows="2" readonly class="w-full px-3 py-2 bg-red-50 border border-red-200 text-red-700 text-xs md:text-sm font-medium outline-none cursor-not-allowed rounded-lg"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">File yang Dilampirkan:</label>
+                    <div id="viewFileList" class="space-y-1.5 p-3 bg-slate-50 border border-slate-200 rounded-xl max-h-36 overflow-y-auto"></div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 shrink-0">
+                <button type="button" id="btnRejectLeave" class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition shadow">Tolak</button>
+                <button type="button" id="btnAcceptLeave" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition shadow">Terima</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Fullscreen Pratinjau Dokumen -->
+    <div id="fullViewerModal" class="fixed inset-0 bg-slate-950/90 z-[70] hidden flex flex-col">
+        <div class="bg-slate-900 text-white px-4 py-3 flex justify-between items-center shadow-md shrink-0">
+            <button type="button" id="btnBackViewer" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                <span>Kembali</span>
+            </button>
+            <h3 id="viewerTitle" class="font-bold text-sm md:text-base truncate max-w-xs md:max-w-md">Pratinjau Dokumen</h3>
+            <div class="flex items-center space-x-2">
+                <button type="button" id="btnZoomOut" class="bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold">- Zoom</button>
+                <button type="button" id="btnZoomIn" class="bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold">+ Zoom</button>
+            </div>
+        </div>
+        <div class="flex-1 overflow-auto p-4 flex items-center justify-center relative">
+            <div id="viewerContentWrapper" class="transition-transform duration-200 ease-out flex items-center justify-center">
+                <img id="viewerImage" src="" class="max-w-none shadow-2xl rounded-lg hidden" alt="Preview Dokumen">
+                <iframe id="viewerPdf" src="" class="w-[80vw] h-[80vh] bg-white rounded-lg shadow-2xl hidden" frameborder="0"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+        const token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
+        let userData = JSON.parse(sessionStorage.getItem('user_data') || localStorage.getItem('user_data') || '{}');
+
+        if (!token || Number(userData.id_role) !== 3) {
+            alert('Akses ditolak! Silakan login sebagai Wali Kelas atau Guru BK.');
+            window.location.href = '../login/login.html';
+        }
+
+        const userTitle = (userData.title || '').replace(/\s+/g, '').toLowerCase();
+        const isWaliKelas = userTitle === 'walikelas';
+        const isGuruBk = userTitle === 'gurubk' || userTitle === 'gurubkpengajar';
+
+        if (!isWaliKelas && !isGuruBk) {
+            alert('Akses ditolak! Title ini tidak memiliki izin akses ke halaman ini.');
+            window.location.href = '../login/login.html';
+        }
+
+        const persetujuanTableBody = document.getElementById('persetujuanTableBody');
+        const searchInputPersetujuan = document.getElementById('searchInputPersetujuan');
+        const selectPresenceViewMode = document.getElementById('selectPresenceViewMode');
+        const teachingStatusCard = document.getElementById('teachingStatusCard');
+        const teachingStatusText = document.getElementById('teachingStatusText');
+
+        const modalVerifikasiIzin = document.getElementById('modalVerifikasiIzin');
+        const btnCloseModalVerifikasi = document.getElementById('btnCloseModalVerifikasi');
+
+        const confirmApprovalModal = document.getElementById('confirmApprovalModal');
+        const confirmApprovalTitle = document.getElementById('confirmApprovalTitle');
+        const confirmApprovalText = document.getElementById('confirmApprovalText');
+        const btnConfirmApprovalYes = document.getElementById('btnConfirmApprovalYes');
+        const btnConfirmApprovalNo = document.getElementById('btnConfirmApprovalNo');
+
+        const modalInputReasonDitolak = document.getElementById('modalInputReasonDitolak');
+        const btnCloseInputReasonDitolak = document.getElementById('btnCloseInputReasonDitolak');
+        const btnCancelInputReasonDitolak = document.getElementById('btnCancelInputReasonDitolak');
+        const btnSaveReasonDitolak = document.getElementById('btnSaveReasonDitolak');
+        const textInputReasonDitolak = document.getElementById('textInputReasonDitolak');
+        const errorInputReasonDitolak = document.getElementById('errorInputReasonDitolak');
+
+        const confirmRejectReasonModal = document.getElementById('confirmRejectReasonModal');
+        const btnConfirmRejectReasonYes = document.getElementById('btnConfirmRejectReasonYes');
+        const btnConfirmRejectReasonNo = document.getElementById('btnConfirmRejectReasonNo');
+
+        const containerViewReasonDitolak = document.getElementById('containerViewReasonDitolak');
+        const viewReasonDitolakVal = document.getElementById('viewReasonDitolakVal');
+
+        const btnAcceptLeave = document.getElementById('btnAcceptLeave');
+        const btnRejectLeave = document.getElementById('btnRejectLeave');
+
+        const fullViewerModal = document.getElementById('fullViewerModal');
+        const btnBackViewer = document.getElementById('btnBackViewer');
+        const viewerTitle = document.getElementById('viewerTitle');
+        const viewerImage = document.getElementById('viewerImage');
+        const viewerPdf = document.getElementById('viewerPdf');
+        const viewerContentWrapper = document.getElementById('viewerContentWrapper');
+        const btnZoomIn = document.getElementById('btnZoomIn');
+        const btnZoomOut = document.getElementById('btnZoomOut');
+        let currentZoom = 1;
+
+        let activeLeaveRequests = [];
+        let allClasses = JSON.parse(localStorage.getItem('scp_classes_cache') || '[]');
+        let myAssignedClasses = [];
+        let currentSelectedClassId = null;
+        let realtimeTeachingClassId = null;
+        let verifyingRequestId = null;
+        let pendingDecision = null;
+        let pendingReasonDitolak = null;
+        let dropdownInitializedListener = false;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Inisialisasi dropdown kelas secara instan dari data lokal tanpa menunggu request berurutan
+            initDropdownPresenceView();
+
+            // 2. Jalankan pengambilan daftar izin secara paralel bersama sinkronisasi data terbaru
+            const initialClassId = currentSelectedClassId;
+            const izinPromise = (initialClassId && initialClassId !== 'none') ? fetchIzinList() : Promise.resolve();
+
+            await Promise.all([
+                syncLatestUserData(),
+                fetchClasses(),
+                izinPromise
+            ]);
+
+            // 3. Perbarui dropdown jika ada perubahan data kelas dari server
+            const prevSelected = (currentSelectedClassId && currentSelectedClassId !== 'none') ? currentSelectedClassId : null;
+            initDropdownPresenceView(prevSelected);
+            if (currentSelectedClassId !== initialClassId || initialClassId === 'none' || !initialClassId) {
+                await fetchIzinList();
+            }
+        });
+
+        async function syncLatestUserData() {
+            if (!userData.id_user) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/users/${userData.id_user}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                if (res.ok) {
+                    const json = await res.json();
+                    const latest = json.data || json;
+                    if (latest && latest.id_user) {
+                        userData = { ...userData, ...latest };
+                        localStorage.setItem('user_data', JSON.stringify(userData));
+                        if (sessionStorage.getItem('user_data')) {
+                            sessionStorage.setItem('user_data', JSON.stringify(userData));
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Gagal sinkron data profil guru:', err);
+            }
+        }
+
+        async function fetchClasses() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/classes`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                allClasses = json.data || json || [];
+                localStorage.setItem('scp_classes_cache', JSON.stringify(allClasses));
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function initDropdownPresenceView(preserveSelectedId = null) {
+            let rawAssignedClassIds = [];
+            let directClassObjects = [];
+
+            const counselorArr = userData.counselor_classes || userData.counselorClasses || [];
+            if (Array.isArray(counselorArr) && counselorArr.length > 0) {
+                rawAssignedClassIds = counselorArr.map(c => String(c.id_class || c));
+                directClassObjects = counselorArr.filter(c => typeof c === 'object' && c !== null && c.id_class);
+            }
+
+            if (rawAssignedClassIds.length === 0 && userData.id_class) {
+                rawAssignedClassIds = String(userData.id_class).split(',').map(s => s.trim()).filter(Boolean);
+            }
+
+            if (allClasses.length > 0) {
+                myAssignedClasses = allClasses.filter(c => rawAssignedClassIds.includes(String(c.id_class)));
+            } else if (directClassObjects.length > 0) {
+                myAssignedClasses = directClassObjects;
+            } else {
+                myAssignedClasses = [];
+            }
+
+            selectPresenceViewMode.innerHTML = '';
+
+            if (isWaliKelas) {
+                const waliClassId = userData.id_class || (userData.school_class ? userData.school_class.id_class : '');
+                let waliClassName = 'Kelas Binaan';
+                if (userData.school_class) {
+                    const sc = userData.school_class;
+                    waliClassName = `${sc.kelas_nomor} ${sc.nama_kelas} ${sc.nomor_kelas || ''}`.trim();
+                } else if (allClasses.length > 0 && waliClassId) {
+                    const foundSc = allClasses.find(c => String(c.id_class) === String(waliClassId));
+                    if (foundSc) {
+                        waliClassName = `${foundSc.kelas_nomor} ${foundSc.nama_kelas} ${foundSc.nomor_kelas || ''}`.trim();
+                    }
+                }
+
+                selectPresenceViewMode.innerHTML = `
+                    <option value="${waliClassId}">${waliClassName}</option>
+                    <option value="teaching_time">Sesuai Jam Mengajar</option>
+                `;
+                if (preserveSelectedId && (preserveSelectedId === String(waliClassId) || preserveSelectedId === 'teaching_time')) {
+                    selectPresenceViewMode.value = preserveSelectedId;
+                    currentSelectedClassId = preserveSelectedId;
+                } else {
+                    currentSelectedClassId = String(waliClassId);
+                }
+            } else if (isGuruBk) {
+                if (myAssignedClasses.length === 0) {
+                    selectPresenceViewMode.innerHTML = `
+                        <option value="none">-- Belum Ada Kelas Diampu --</option>
+                        <option value="teaching_time">Sesuai Jam Mengajar</option>
+                    `;
+                    currentSelectedClassId = 'none';
+                } else {
+                    myAssignedClasses.forEach((c, idx) => {
+                        const opt = document.createElement('option');
+                        opt.value = String(c.id_class);
+                        opt.textContent = `${c.kelas_nomor} ${c.nama_kelas} ${c.nomor_kelas || ''}`.trim();
+                        if (preserveSelectedId ? String(c.id_class) === String(preserveSelectedId) : idx === 0) {
+                            opt.selected = true;
+                        }
+                        selectPresenceViewMode.appendChild(opt);
+                    });
+
+                    const optTeaching = document.createElement('option');
+                    optTeaching.value = 'teaching_time';
+                    optTeaching.textContent = 'Sesuai Jam Mengajar';
+                    if (preserveSelectedId === 'teaching_time') optTeaching.selected = true;
+                    selectPresenceViewMode.appendChild(optTeaching);
+
+                    currentSelectedClassId = selectPresenceViewMode.value || String(myAssignedClasses[0].id_class);
+                }
+            }
+
+            if (!dropdownInitializedListener) {
+                selectPresenceViewMode.addEventListener('change', onPresenceViewModeChange);
+                dropdownInitializedListener = true;
+            }
+        }
+
+        async function onPresenceViewModeChange() {
+            const mode = selectPresenceViewMode.value;
+            if (mode === 'teaching_time') {
+                await detectRealtimeTeachingClass();
+                currentSelectedClassId = realtimeTeachingClassId;
+                teachingStatusCard.classList.remove('hidden');
+            } else {
+                currentSelectedClassId = mode;
+                teachingStatusCard.classList.add('hidden');
+            }
+            await fetchIzinList();
+        }
+
+        async function detectRealtimeTeachingClass() {
+            try {
+                const resConfig = await fetch(`${API_BASE_URL}/system-config/active-cycle`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const jsonConfig = await resConfig.json();
+                const activeCycle = jsonConfig.data?.active_cycle ? String(jsonConfig.data.active_cycle) : '1';
+
+                const daysIndo = { 0: 'Minggu', 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu' };
+                const now = new Date();
+                const todayName = daysIndo[now.getDay()] || 'Senin';
+                const currentTime = now.toTimeString().substring(0, 5);
+
+                const currentTeacherId = Number(userData.id_user || userData.id);
+
+                const resSched = await fetch(`${API_BASE_URL}/schedules?id_guru=${currentTeacherId}&cycle_type=${activeCycle}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const jsonSched = await resSched.json();
+                
+                // Pastikan filter hari dan id_guru benar-benar cocok dengan guru yang sedang login
+                const mySchedules = (jsonSched.data || []).filter(s => 
+                    s.day_of_week === todayName && 
+                    Number(s.id_guru) === currentTeacherId
+                );
+
+                // Cari jadwal KBM yang jamnya sedang aktif saat ini
+                let activeSched = mySchedules.find(s => {
+                    const start = (s.start_time || '').substring(0, 5);
+                    const end = (s.end_time || '').substring(0, 5);
+                    return currentTime >= start && currentTime <= end;
+                });
+
+                if (activeSched && activeSched.school_class) {
+                    realtimeTeachingClassId = String(activeSched.id_class);
+                    const c = activeSched.school_class;
+                    const cName = `${c.kelas_nomor} ${c.nama_kelas} ${c.nomor_kelas || ''}`.trim();
+                    const w = `${(activeSched.start_time || '').substring(0, 5)} - ${(activeSched.end_time || '').substring(0, 5)}`;
+                    teachingStatusText.textContent = `Sedang Mengajar di ${cName} (${w}) - Mapel: ${activeSched.mapel}`;
+                } else {
+                    realtimeTeachingClassId = 'none';
+                    teachingStatusText.textContent = `Tidak ada jadwal KBM mengajar aktif untuk Anda saat ini pada hari ${todayName}.`;
+                }
+            } catch (e) {
+                console.error(e);
+                realtimeTeachingClassId = 'none';
+                teachingStatusText.textContent = `Gagal memeriksa jadwal KBM mengajar.`;
+            }
+        }
+
+        async function fetchIzinList() {
+            try {
+                persetujuanTableBody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Memuat data permohonan izin...</td></tr>`;
+
+                if (!currentSelectedClassId || currentSelectedClassId === 'none') {
+                    persetujuanTableBody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Tidak ada data izin (Belum ada kelas yang dipilih atau tidak ada jadwal KBM aktif).</td></tr>`;
+                    return;
+                }
+
+                const url = `${API_BASE_URL}/leave-requests?id_class=${currentSelectedClassId}`;
+
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const result = await res.json();
+                activeLeaveRequests = result.data || result || [];
+                renderTable();
+            } catch(e) {
+                persetujuanTableBody.innerHTML = `<tr><td colspan="8" class="py-6 text-center text-red-500">Gagal memuat data.</td></tr>`;
+            }
+        }
+
+        function highlightMatch(text, query) {
+            if (!text) return '-';
+            if (!query) return text;
+            const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            return text.toString().replace(regex, `<span class="bg-yellow-300 font-bold px-0.5 rounded">$1</span>`);
+        }
+
+        function getDisplayFileName(cleanPath, idx) {
+            if (!cleanPath) return `file_${idx + 1}`;
+            let rawName = cleanPath.split('/').pop() || '';
+            if (rawName.includes('_')) {
+                const parts = rawName.split('_');
+                if (!isNaN(parts[0])) return parts.slice(1).join('_');
+            }
+            return rawName;
+        }
+
+        function formatReasonColumn(rawReason, query = '') {
+            if (!rawReason) return '-';
+            let clean = rawReason.replace(/\[(?:Jenis:\s*)?([^\]]+)\]/gi, '[$1]').trim();
+            const match = clean.match(/^(\[[^\]]+\])\s*(.*)$/s);
+            let display = '';
+            if (match) {
+                const tag = match[1];
+                const text = match[2].trim();
+                display = text.length > 6 ? `${tag} ${text.substring(0, 6)}...` : `${tag} ${text}`;
+            } else {
+                display = clean.length > 6 ? `${clean.substring(0, 6)}...` : clean;
+            }
+            return highlightMatch(display, query);
+        }
+
+        window.toggleExpandDocs = function(btn) {
+            const container = btn.closest('.docs-container');
+            const hiddenFiles = container.querySelectorAll('.hidden-doc');
+            const isExpanded = btn.getAttribute('data-expanded') === 'true';
+
+            if (isExpanded) {
+                hiddenFiles.forEach(el => el.classList.add('hidden'));
+                btn.textContent = '...';
+                btn.setAttribute('data-expanded', 'false');
+            } else {
+                hiddenFiles.forEach(el => el.classList.remove('hidden'));
+                btn.textContent = 'Sembunyikan';
+                btn.setAttribute('data-expanded', 'true');
+            }
+        };
+
+        function renderTable() {
+            const query = searchInputPersetujuan.value.trim().toLowerCase();
+            const today = new Date().toISOString().split('T')[0];
+
+            let filtered = activeLeaveRequests.filter(item => {
+                const sName = (item.student ? item.student.fullname : '').toLowerCase();
+                let cName = '';
+                if (item.student && item.student.school_class) {
+                    const sc = item.student.school_class;
+                    cName = `${sc.kelas_nomor} ${sc.nama_kelas} ${sc.nomor_kelas || ''}`.toLowerCase();
+                }
+                const startDate = (item.start_date || '').toLowerCase();
+                const endDate = (item.end_date || '').toLowerCase();
+                const reason = (item.reason || '').toLowerCase();
+                const status = (item.status_approval || 'pending').toLowerCase();
+
+                let docNames = '';
+                let docs = item.document_path || item.documents || [];
+                if (typeof docs === 'string') { try { docs = JSON.parse(docs); } catch(e) { docs = [docs]; } }
+                if (Array.isArray(docs)) {
+                    docNames = docs.map(d => (typeof d === 'string' ? d : (d.file_path || '')).toLowerCase()).join(' ');
+                }
+
+                return !query || sName.includes(query) || cName.includes(query) || startDate.includes(query) ||
+                       endDate.includes(query) || reason.includes(query) || status.includes(query) || docNames.includes(query);
+            });
+
+            if (filtered.length === 0) {
+                persetujuanTableBody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Tidak ada permohonan izin untuk kelas ini.</td></tr>`;
+                return;
+            }
+
+            persetujuanTableBody.innerHTML = filtered.map(item => {
+                const sName = item.student ? item.student.fullname : '-';
+                let cName = '-';
+                if (item.student && item.student.school_class) {
+                    const sc = item.student.school_class;
+                    cName = `${sc.kelas_nomor} ${sc.nama_kelas} ${sc.nomor_kelas || ''}`.trim();
+                }
+
+                const reqId = item.id_izin_keluar || item.id_leave_request || item.id;
+                const statusVal = item.status_approval || 'Pending';
+                const statusLower = statusVal.toLowerCase();
+
+                let statusBadge = '';
+                const isExpired = item.end_date < today && (statusLower === 'pending' || statusLower === 'aju banding');
+                
+                if (statusVal === 'Disetujui' || statusVal === 'Di Terima') {
+                    statusBadge = `<span class="bg-emerald-100 text-emerald-700 font-bold px-2.5 py-1 rounded-full text-xs">${highlightMatch('Di Terima', query)}</span>`;
+                } else if (statusVal === 'Ditolak' || statusVal === 'Di Tolak') {
+                    statusBadge = `<span class="bg-red-100 text-red-700 font-bold px-2.5 py-1 rounded-full text-xs">${highlightMatch('Di Tolak', query)}</span>`;
+                } else if (statusVal === 'Aju Banding') {
+                    statusBadge = `<span class="bg-amber-100 text-amber-700 font-bold px-2.5 py-1 rounded-full text-xs">${highlightMatch('Aju Banding', query)}</span>`;
+                } else {
+                    statusBadge = `<span class="bg-amber-100 text-amber-700 font-bold px-2.5 py-1 rounded-full text-xs">${highlightMatch('Pending', query)}</span>`;
+                }
+
+                const expiredNotice = isExpired ? `<span class="block text-[11px] font-bold text-amber-500 mt-1">• Tanggal Kadaluwarsa</span>` : '';
+
+                let docs = item.document_path || item.documents || [];
+                if (typeof docs === 'string') { try { docs = JSON.parse(docs); } catch(e) { docs = [docs]; } }
+                let docRender = `<span class="text-slate-400 text-xs italic">Tidak ada file</span>`;
+
+                if (Array.isArray(docs) && docs.length > 0) {
+                    const fileButtons = docs.map((docPath, idx) => {
+                        const cleanPath = typeof docPath === 'string' ? docPath : (docPath.file_path || '');
+                        const fileUrl = `${API_BASE_URL.replace('/api', '')}/storage/${cleanPath}?v=${Date.now()}`;
+                        const fileName = getDisplayFileName(cleanPath, idx);
+                        const hideClass = idx >= 2 ? 'hidden hidden-doc' : '';
+                        return `<button type="button" onclick="openFileViewer('${fileUrl}', '${fileName}')" class="text-blue-600 hover:underline text-xs font-semibold block truncate max-w-[140px] text-left ${hideClass}">${highlightMatch(fileName, query)}</button>`;
+                    }).join('');
+
+                    const toggleBtn = docs.length > 2 
+                        ? `<button type="button" onclick="toggleExpandDocs(this)" data-expanded="false" class="text-indigo-600 hover:underline text-xs font-bold text-left mt-0.5 block cursor-pointer">...</button>` 
+                        : '';
+
+                    docRender = `<div class="flex flex-col gap-1 docs-container">${fileButtons}${toggleBtn}</div>`;
+                }
+
+                let actionBtn = '';
+                const canVerify = statusLower === 'pending' || statusLower === 'aju banding';
+
+                if (canVerify) {
+                    actionBtn = `
+                        <button type="button" onclick="openVerifikasiModal(${reqId})" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm">
+                            Verifikasi
+                        </button>
+                    `;
+                } else {
+                    actionBtn = `<span class="text-slate-400 font-bold text-sm">-</span>`;
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="py-3.5 px-4 font-medium text-center">${highlightMatch(item.start_date, query)}</td>
+                        <td class="py-3.5 px-4 font-medium text-center">
+                            ${highlightMatch(item.end_date, query)}
+                            ${expiredNotice}
+                        </td>
+                        <td class="py-3.5 px-4 font-semibold text-slate-800">${highlightMatch(sName, query)}</td>
+                        <td class="py-3.5 px-4 font-medium text-center">${highlightMatch(cName, query)}</td>
+                        <td class="py-3.5 px-4">${formatReasonColumn(item.reason, query)}</td>
+                        <td class="py-3.5 px-4">${docRender}</td>
+                        <td class="py-3.5 px-4 text-center">${statusBadge}</td>
+                        <td class="py-3.5 px-4 text-center">${actionBtn}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        searchInputPersetujuan.addEventListener('input', () => renderTable());
+
+        window.openVerifikasiModal = function(id) {
+            const item = activeLeaveRequests.find(r => (r.id_izin_keluar || r.id_leave_request || r.id) == id);
+            if (!item) return;
+
+            const sNorm = (item.status_approval || '').trim().toLowerCase();
+            const currentUserId = Number(userData.id_user || userData.id);
+            if (item.verified_by && currentUserId && Number(item.verified_by) !== currentUserId && !['pending', 'aju banding'].includes(sNorm)) {
+                const verifierName = item.verifier?.fullname || item.verifier?.username || 'user lain';
+                alert(`Pemberitahuan: Surat izin ini telah diverifikasi oleh ${verifierName}.`);
+                return;
+            }
+
+            verifyingRequestId = id;
+
+            document.getElementById('viewFullname').value = item.student ? item.student.fullname : '-';
+            let cName = '-';
+            if (item.student && item.student.school_class) {
+                const sc = item.student.school_class;
+                cName = `${sc.kelas_nomor} ${sc.nama_kelas} ${sc.nomor_kelas || ''}`.trim();
+            }
+            document.getElementById('viewKelas').value = cName;
+            document.getElementById('viewStartDate').value = item.start_date;
+            document.getElementById('viewEndDate').value = item.end_date;
+            document.getElementById('viewReason').value = (item.reason || '-').replace(/\[(?:Jenis:\s*)?([^\]]+)\]/gi, '[$1]');
+
+            if ((sNorm === 'aju banding' || sNorm === 'di tolak' || sNorm === 'ditolak') && item.reason_ditolak) {
+                viewReasonDitolakVal.value = item.reason_ditolak;
+                containerViewReasonDitolak.classList.remove('hidden');
+            } else {
+                viewReasonDitolakVal.value = '';
+                containerViewReasonDitolak.classList.add('hidden');
+            }
+
+            const fileListContainer = document.getElementById('viewFileList');
+            fileListContainer.innerHTML = '';
+            let docs = item.document_path || item.documents || [];
+            if (typeof docs === 'string') { try { docs = JSON.parse(docs); } catch(e) { docs = [docs]; } }
+            if (Array.isArray(docs) && docs.length > 0) {
+                docs.forEach((docPath, idx) => {
+                    const cleanPath = typeof docPath === 'string' ? docPath : (docPath.file_path || '');
+                    const fileUrl = `${API_BASE_URL.replace('/api', '')}/storage/${cleanPath}?v=${Date.now()}`;
+                    const fileName = cleanPath.split('/').pop();
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'text-xs text-blue-600 font-semibold hover:underline block text-left';
+                    btn.textContent = `• ${fileName}`;
+                    btn.onclick = () => openFileViewer(fileUrl, fileName);
+                    fileListContainer.appendChild(btn);
+                });
+            } else {
+                fileListContainer.innerHTML = `<span class="text-xs text-slate-400 italic">Tidak ada dokumen terlampir.</span>`;
+            }
+
+            modalVerifikasiIzin.classList.remove('hidden');
+        };
+
+        btnCloseModalVerifikasi.addEventListener('click', () => modalVerifikasiIzin.classList.add('hidden'));
+
+        btnAcceptLeave.addEventListener('click', () => {
+            pendingDecision = 'Di Terima';
+            pendingReasonDitolak = null;
+            confirmApprovalTitle.textContent = 'Konfirmasi Terima Izin';
+            confirmApprovalText.textContent = 'Apakah Anda yakin ingin MENERIMA permohonan izin ini?';
+            confirmApprovalModal.classList.remove('hidden');
+        });
+
+        btnRejectLeave.addEventListener('click', () => {
+            textInputReasonDitolak.value = '';
+            errorInputReasonDitolak.classList.add('hidden');
+            modalInputReasonDitolak.classList.remove('hidden');
+        });
+
+        function closeRejectReasonModal() {
+            modalInputReasonDitolak.classList.add('hidden');
+            confirmRejectReasonModal.classList.add('hidden');
+            textInputReasonDitolak.value = '';
+            errorInputReasonDitolak.classList.add('hidden');
+        }
+
+        btnCloseInputReasonDitolak.addEventListener('click', closeRejectReasonModal);
+        btnCancelInputReasonDitolak.addEventListener('click', closeRejectReasonModal);
+
+        btnSaveReasonDitolak.addEventListener('click', () => {
+            const reasonVal = textInputReasonDitolak.value.trim();
+            if (!reasonVal) {
+                errorInputReasonDitolak.classList.remove('hidden');
+                return;
+            }
+            errorInputReasonDitolak.classList.add('hidden');
+            confirmRejectReasonModal.classList.remove('hidden');
+        });
+
+        btnConfirmRejectReasonNo.addEventListener('click', () => {
+            confirmRejectReasonModal.classList.add('hidden');
+        });
+
+        btnConfirmRejectReasonYes.addEventListener('click', () => {
+            confirmRejectReasonModal.classList.add('hidden');
+            modalInputReasonDitolak.classList.add('hidden');
+            pendingDecision = 'Di Tolak';
+            pendingReasonDitolak = textInputReasonDitolak.value.trim();
+            executeDecisionSave();
+        });
+
+        btnConfirmApprovalNo.addEventListener('click', () => confirmApprovalModal.classList.add('hidden'));
+
+        btnConfirmApprovalYes.addEventListener('click', () => {
+            confirmApprovalModal.classList.add('hidden');
+            executeDecisionSave();
+        });
+
+        async function executeDecisionSave() {
+            if (!verifyingRequestId || !pendingDecision) return;
+
+            try {
+                btnConfirmApprovalYes.disabled = true;
+                const verifierId = userData.id_user || userData.id;
+
+                const payload = {
+                    status_approval: pendingDecision,
+                    verified_by: verifierId
+                };
+
+                if (pendingDecision === 'Di Tolak' && pendingReasonDitolak) {
+                    payload.reason_ditolak = pendingReasonDitolak;
+                }
+
+                const res = await fetch(`${API_BASE_URL}/leave-requests/${verifyingRequestId}`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`, 
+                        'Content-Type': 'application/json', 
+                        'Accept': 'application/json' 
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await res.json().catch(() => ({}));
+
+                if (res.ok) {
+                    alert(`Permohonan izin berhasil diproses: ${pendingDecision}!`);
+                    modalVerifikasiIzin.classList.add('hidden');
+                    await fetchIzinList();
+                } else {
+                    alert(result.message || 'Gagal memproses permohonan.');
+                    if (res.status === 409) {
+                        modalVerifikasiIzin.classList.add('hidden');
+                        await fetchIzinList();
+                    }
+                }
+            } catch(e) {
+                alert('Terjadi kesalahan koneksi server.');
+            } finally {
+                btnConfirmApprovalYes.disabled = false;
+            }
+        }
+
+        window.openFileViewer = function(url, title) {
+            viewerTitle.textContent = title;
+            currentZoom = 1;
+            viewerContentWrapper.style.transform = `scale(${currentZoom})`;
+
+            if (url.toLowerCase().endsWith('.pdf')) {
+                viewerPdf.src = url;
+                viewerPdf.classList.remove('hidden');
+                viewerImage.classList.add('hidden');
+            } else {
+                viewerImage.src = url;
+                viewerImage.classList.remove('hidden');
+                viewerPdf.classList.add('hidden');
+            }
+            fullViewerModal.classList.remove('hidden');
+        };
+
+        btnBackViewer.addEventListener('click', () => {
+            fullViewerModal.classList.add('hidden');
+            viewerImage.src = '';
+            viewerPdf.src = '';
+        });
+
+        btnZoomIn.addEventListener('click', () => { if (currentZoom < 3) { currentZoom += 0.25; viewerContentWrapper.style.transform = `scale(${currentZoom})`; } });
+        btnZoomOut.addEventListener('click', () => { if (currentZoom > 0.5) { currentZoom -= 0.25; viewerContentWrapper.style.transform = `scale(${currentZoom})`; } });
+    </script>
+    <script src="../js/global-layout.js?v=20261109_8.0"></script>
+</body>
+</html>

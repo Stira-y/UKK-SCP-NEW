@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelola Data Ruangan - Sistem SCP</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col font-sans overflow-hidden">
+
+    <!-- Navbar Universal -->
+    <div id="app-navbar"></div>
+
+    <div class="flex flex-1 relative overflow-hidden h-[calc(100vh-57px)]">
+        <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-20 hidden md:hidden transition-opacity duration-300"></div>
+
+        <!-- Sidebar Universal -->
+        <div id="app-sidebar"></div>
+
+        <!-- Konten Utama -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
+            <div class="max-w-7xl mx-auto space-y-6">
+
+                <!-- Header -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-slate-800">Kelola Data Ruangan</h2>
+                        <p class="text-slate-500 text-xs md:text-sm mt-0.5">Tambah dan manajemen laboratorium serta ruang kelas sekolah.</p>
+                    </div>
+                    <button onclick="window.location.href='kelola jadwal.html'" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        <span>Kembali ke Kelola Jadwal</span>
+                    </button>
+                </div>
+
+                <!-- Form Tambah Ruangan Baru -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-slate-800 text-base mb-4">Tambah Room Baru</h3>
+                    
+                    <form id="roomForm" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                        <div id="colSelectType" class="sm:col-span-5">
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Room (Tipe)</label>
+                            <select id="inputNamaRoom" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs md:text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                                <option value="" disabled selected>-- Pilih Tipe Room --</option>
+                                <option value="Lab">Lab</option>
+                                <option value="Ruang">Ruang</option>
+                                <option value="custom">Buat nama</option>
+                            </select>
+                        </div>
+
+                        <!-- Input Nama Ruangan Khusus (Buat Nama) -->
+                        <div id="colCustomName" class="sm:col-span-5 hidden">
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama Room</label>
+                            <input type="text" id="inputCustomRoomName" placeholder="Masukkan nama ruangan (Cth: Aula, Musholla)..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                        </div>
+
+                        <!-- Input Nomor Awal -->
+                        <div id="colNomorAwal" class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nomor Awal</label>
+                            <input type="number" id="inputNomorRoomAwal" min="1" max="50" required placeholder="Cth: 1" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                        </div>
+
+                        <!-- Input Nomor Akhir (Opsional) -->
+                        <div id="colNomorAkhir" class="sm:col-span-3">
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nomor Akhir</label>
+                            <input type="number" id="inputNomorRoomAkhir" min="1" max="50" placeholder="Cth: 10 (Opsional)" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <button type="button" id="btnTriggerSaveRoom" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-xs md:text-sm shadow transition">
+                                Simpan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Card Tabel Lab & Ruang Terdaftar -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="font-bold text-slate-800 text-base">
+                            Tabel Lab & Ruang
+                        </div>
+
+                        <!-- Filter: Semua Room, Lab, Ruang, Lainnya -->
+                        <div class="flex items-center space-x-4 text-xs font-semibold text-slate-600">
+                            <button class="filter-room-btn underline text-indigo-600 font-bold" data-filter="all">Semua Room</button>
+                            <span class="text-slate-300">|</span>
+                            <button class="filter-room-btn" data-filter="Lab">Lab</button>
+                            <span class="text-slate-300">|</span>
+                            <button class="filter-room-btn" data-filter="Ruang">Ruang</button>
+                            <span class="text-slate-300">|</span>
+                            <button class="filter-room-btn" data-filter="Lainnya">Lainnya</button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[650px]">
+                            <thead>
+                                <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="py-3.5 px-6 font-semibold">Lab / Ruang</th>
+                                    <th class="py-3.5 px-6 font-semibold text-center w-48">Nomor</th>
+                                    <th class="py-3.5 px-6 font-semibold text-center w-48">
+                                        <div class="flex items-center justify-center space-x-2">
+                                            <input type="checkbox" id="checkAllRooms" title="Pilih Semua Ruangan" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                                            <span>Aksi</span>
+                                        </div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="roomTableBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
+                                <tr>
+                                    <td colspan="3" class="py-8 text-center text-slate-400">Memuat data ruangan...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- POP-UP KONFIRMASI CUSTOM (YAKIN & TIDAK) -->
+    <div id="confirmRoomModal" class="fixed inset-0 bg-slate-950/70 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center transform transition-all animate-in fade-in zoom-in duration-200">
+            <div id="confirmIconWrapper" class="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 mx-auto flex items-center justify-center mb-4">
+                <svg id="confirmSvgIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h3 id="confirmTitle" class="text-base font-bold text-slate-800 mb-1">Konfirmasi</h3>
+            <p id="confirmDesc" class="text-xs text-slate-500 mb-6 leading-relaxed">
+                Apakah Anda yakin?
+            </p>
+            <div class="flex items-center justify-center gap-3">
+                <button type="button" id="btnConfirmNo" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+                    Tidak
+                </button>
+                <button type="button" id="btnConfirmYes" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md">
+                    Yakin
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+        const token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
+        const userData = JSON.parse(sessionStorage.getItem('user_data') || localStorage.getItem('user_data') || '{}');
+
+        if (!token || Number(userData.id_role) !== 1) {
+            alert('Akses ditolak! Silakan login sebagai Waka/Admin.');
+            window.location.href = '../login/login.html';
+        }
+
+        let allRoomsList = [];
+        let currentFilter = 'all';
+
+        // State Action Modal
+        let pendingActionType = null; // 'save' | 'delete'
+        let pendingDeleteIds = [];
+
+        const roomTableBody = document.getElementById('roomTableBody');
+        const roomForm = document.getElementById('roomForm');
+        const inputNamaRoom = document.getElementById('inputNamaRoom');
+        const colCustomName = document.getElementById('colCustomName');
+        const inputCustomRoomName = document.getElementById('inputCustomRoomName');
+        const colNomorAwal = document.getElementById('colNomorAwal');
+        const inputNomorRoomAwal = document.getElementById('inputNomorRoomAwal');
+        const colNomorAkhir = document.getElementById('colNomorAkhir');
+        const inputNomorRoomAkhir = document.getElementById('inputNomorRoomAkhir');
+        const btnTriggerSaveRoom = document.getElementById('btnTriggerSaveRoom');
+        const checkAllRooms = document.getElementById('checkAllRooms');
+
+        // Komponen Pop-up Konfirmasi
+        const confirmRoomModal = document.getElementById('confirmRoomModal');
+        const confirmTitle = document.getElementById('confirmTitle');
+        const confirmDesc = document.getElementById('confirmDesc');
+        const confirmIconWrapper = document.getElementById('confirmIconWrapper');
+        const btnConfirmYes = document.getElementById('btnConfirmYes');
+        const btnConfirmNo = document.getElementById('btnConfirmNo');
+
+        // Toggle Tampilan Form jika memilih "Buat nama"
+        inputNamaRoom.addEventListener('change', () => {
+            if (inputNamaRoom.value === 'custom') {
+                colCustomName.classList.remove('hidden');
+                inputCustomRoomName.required = true;
+                inputCustomRoomName.focus();
+
+                colNomorAwal.classList.add('hidden');
+                colNomorAkhir.classList.add('hidden');
+                inputNomorRoomAwal.required = false;
+                inputNomorRoomAwal.value = '';
+                inputNomorRoomAkhir.value = '';
+            } else {
+                colCustomName.classList.add('hidden');
+                inputCustomRoomName.required = false;
+                inputCustomRoomName.value = '';
+
+                colNomorAwal.classList.remove('hidden');
+                colNomorAkhir.classList.remove('hidden');
+                inputNomorRoomAwal.required = true;
+            }
+        });
+
+        // Filter: Semua Room, Lab, Ruang, Lainnya
+        document.querySelectorAll('.filter-room-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-room-btn').forEach(b => b.classList.remove('underline', 'text-indigo-600', 'font-bold'));
+                btn.classList.add('underline', 'text-indigo-600', 'font-bold');
+                currentFilter = btn.getAttribute('data-filter');
+                if (checkAllRooms) checkAllRooms.checked = false;
+                renderTable();
+            });
+        });
+
+        // Check All Checkbox Handler
+        if (checkAllRooms) {
+            checkAllRooms.addEventListener('change', () => {
+                const isChecked = checkAllRooms.checked;
+                document.querySelectorAll('.room-checkbox').forEach(cb => {
+                    cb.checked = isChecked;
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchRooms();
+        });
+
+        async function fetchRooms() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/rooms`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                allRoomsList = json.data || [];
+                if (checkAllRooms) checkAllRooms.checked = false;
+                renderTable();
+            } catch (err) {
+                roomTableBody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-red-500">Gagal memuat data ruangan.</td></tr>`;
+            }
+        }
+
+        function renderTable() {
+            let filtered = allRoomsList;
+            if (currentFilter === 'Lab' || currentFilter === 'Ruang') {
+                filtered = allRoomsList.filter(r => (r.nama_room || '').toLowerCase() === currentFilter.toLowerCase());
+            } else if (currentFilter === 'Lainnya') {
+                filtered = allRoomsList.filter(r => {
+                    const n = (r.nama_room || '').toLowerCase();
+                    return n !== 'lab' && n !== 'ruang';
+                });
+            }
+
+            filtered.sort((a, b) => {
+                const typeA = (a.nama_room || '').toLowerCase();
+                const typeB = (b.nama_room || '').toLowerCase();
+                const typeComp = typeA.localeCompare(typeB);
+                if (typeComp !== 0) return typeComp;
+                return (parseInt(a.nomor_room) || 0) - (parseInt(b.nomor_room) || 0);
+            });
+
+            if (filtered.length === 0) {
+                roomTableBody.innerHTML = `<tr><td colspan="3" class="py-8 text-center text-slate-400">Tidak ada data ruangan (${currentFilter === 'all' ? 'Semua Room' : currentFilter}).</td></tr>`;
+                return;
+            }
+
+            roomTableBody.innerHTML = filtered.map(r => {
+                return `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="py-3.5 px-6 font-bold text-slate-800">${r.nama_room}</td>
+                        <td class="py-3.5 px-6 font-semibold text-center text-indigo-600">${r.nomor_room || '-'}</td>
+                        <td class="py-3.5 px-6 text-center">
+                            <div class="flex items-center justify-center space-x-2">
+                                <input type="checkbox" class="room-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer" data-id="${r.id_room}" data-name="${r.nama_room} ${r.nomor_room || ''}">
+                                <button onclick="deleteRoom(${r.id_room}, '${r.nama_room} ${r.nomor_room || ''}')" class="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3.5 py-1.5 rounded-lg text-xs font-bold transition">Hapus</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Pasang event change pada setiap checkbox baris
+            document.querySelectorAll('.room-checkbox').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const allBoxes = document.querySelectorAll('.room-checkbox');
+                    const checkedBoxes = document.querySelectorAll('.room-checkbox:checked');
+                    if (checkAllRooms) {
+                        checkAllRooms.checked = allBoxes.length > 0 && allBoxes.length === checkedBoxes.length;
+                    }
+                });
+            });
+        }
+
+        // =========================================================================
+        // LOGIKA KONFIRMASI SIMPAN RUANGAN
+        // =========================================================================
+        btnTriggerSaveRoom.addEventListener('click', () => {
+            if (!roomForm.checkValidity()) {
+                roomForm.reportValidity();
+                return;
+            }
+
+            const isCustom = inputNamaRoom.value === 'custom';
+
+            if (isCustom) {
+                const customName = inputCustomRoomName.value.trim();
+                if (!customName) {
+                    alert('Nama room wajib diisi!');
+                    inputCustomRoomName.focus();
+                    return;
+                }
+
+                pendingActionType = 'save';
+                confirmTitle.textContent = 'Konfirmasi Simpan Room';
+                confirmDesc.textContent = `Apakah Anda yakin ingin menambahkan ruangan "${customName}"?`;
+                confirmIconWrapper.className = 'w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 mx-auto flex items-center justify-center mb-4';
+                btnConfirmYes.className = 'w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md';
+                btnConfirmYes.textContent = 'Yakin';
+
+                confirmRoomModal.classList.remove('hidden');
+                return;
+            }
+
+            const awal = parseInt(inputNomorRoomAwal.value);
+            const akhirVal = inputNomorRoomAkhir.value.trim();
+            const akhir = akhirVal ? parseInt(akhirVal) : awal;
+
+            if (akhir < awal) {
+                alert('Nomor akhir tidak boleh lebih kecil dari nomor awal!');
+                return;
+            }
+
+            pendingActionType = 'save';
+            confirmTitle.textContent = 'Konfirmasi Simpan Room';
+            confirmDesc.textContent = `Apakah Anda yakin ingin menambahkan data ${inputNamaRoom.value} nomor ${awal}${akhirVal ? ' s/d ' + akhir : ''}?`;
+            confirmIconWrapper.className = 'w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 mx-auto flex items-center justify-center mb-4';
+            btnConfirmYes.className = 'w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md';
+            btnConfirmYes.textContent = 'Yakin';
+
+            confirmRoomModal.classList.remove('hidden');
+        });
+
+        // =========================================================================
+        // LOGIKA KONFIRMASI HAPUS RUANGAN (INDIVIDUAL & BULK CHECKBOX)
+        // =========================================================================
+        window.deleteRoom = function(id, roomName) {
+            pendingActionType = 'delete';
+
+            const checkedBoxes = Array.from(document.querySelectorAll('.room-checkbox:checked'));
+
+            if (checkedBoxes.length > 0) {
+                // Ada checkbox yang terselect -> Hapus semua yang terselect
+                pendingDeleteIds = checkedBoxes.map(cb => Number(cb.getAttribute('data-id')));
+                confirmTitle.textContent = 'Konfirmasi Hapus Ruangan';
+                confirmDesc.textContent = `Apakah Anda yakin ingin menghapus ${pendingDeleteIds.length} ruangan yang dipilih secara bersamaan?`;
+            } else {
+                // Tidak ada checkbox terselect -> Hapus 1 baris yang diklik tombol hapusnya
+                pendingDeleteIds = [id];
+                confirmTitle.textContent = 'Konfirmasi Hapus Room';
+                confirmDesc.textContent = `Apakah Anda yakin ingin menghapus ruangan "${roomName}"?`;
+            }
+
+            confirmIconWrapper.className = 'w-12 h-12 rounded-full bg-red-50 text-red-600 mx-auto flex items-center justify-center mb-4';
+            btnConfirmYes.className = 'w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-md';
+            btnConfirmYes.textContent = 'Yakin';
+
+            confirmRoomModal.classList.remove('hidden');
+        };
+
+        // Tombol TIDAK: Batalkan aksi dan tutup modal konfirmasi
+        btnConfirmNo.addEventListener('click', () => {
+            confirmRoomModal.classList.add('hidden');
+            pendingActionType = null;
+            pendingDeleteIds = [];
+        });
+
+        // Tombol YAKIN: Jalankan aksi yang tertunda
+        btnConfirmYes.addEventListener('click', async () => {
+            confirmRoomModal.classList.add('hidden');
+
+            if (pendingActionType === 'save') {
+                await executeSaveRoom();
+            } else if (pendingActionType === 'delete') {
+                await executeDeleteRooms(pendingDeleteIds);
+            }
+
+            pendingActionType = null;
+            pendingDeleteIds = [];
+        });
+
+        // Eksekusi Simpan ke Backend API
+        async function executeSaveRoom() {
+            const isCustom = inputNamaRoom.value === 'custom';
+            let payload = {};
+
+            if (isCustom) {
+                payload = {
+                    nama_room: inputCustomRoomName.value.trim()
+                };
+            } else {
+                const nama_room = inputNamaRoom.value;
+                const awal = parseInt(inputNomorRoomAwal.value);
+                const akhirVal = inputNomorRoomAkhir.value.trim();
+                const akhir = akhirVal ? parseInt(akhirVal) : awal;
+
+                payload = {
+                    nama_room: nama_room,
+                    nomor_room_awal: awal,
+                    nomor_room_akhir: akhirVal ? akhir : null,
+                };
+            }
+
+            try {
+                btnTriggerSaveRoom.disabled = true;
+                btnTriggerSaveRoom.textContent = 'Menyimpan...';
+
+                const res = await fetch(`${API_BASE_URL}/rooms`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+
+                if (res.ok) {
+                    alert(result.message || 'Ruangan berhasil ditambahkan!');
+                    roomForm.reset();
+                    // Reset custom inputs visibility
+                    colCustomName.classList.add('hidden');
+                    inputCustomRoomName.required = false;
+                    colNomorAwal.classList.remove('hidden');
+                    colNomorAkhir.classList.remove('hidden');
+                    inputNomorRoomAwal.required = true;
+
+                    await fetchRooms();
+                } else {
+                    alert(result.message || 'Gagal memproses data.');
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan koneksi ke server.');
+            } finally {
+                btnTriggerSaveRoom.disabled = false;
+                btnTriggerSaveRoom.textContent = 'Simpan';
+            }
+        }
+
+        // Eksekusi Hapus (Individual / Bulk) ke Backend API
+        async function executeDeleteRooms(ids) {
+            if (!ids || ids.length === 0) return;
+
+            try {
+                if (ids.length === 1) {
+                    const res = await fetch(`${API_BASE_URL}/rooms/${ids[0]}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    });
+                    if (res.ok) {
+                        alert('Ruangan berhasil dihapus!');
+                        await fetchRooms();
+                    } else {
+                        const result = await res.json();
+                        alert(result.message || 'Gagal menghapus ruangan.');
+                    }
+                } else {
+                    // Bulk Delete
+                    const res = await fetch(`${API_BASE_URL}/rooms/bulk-delete`, {
+                        method: 'POST',
+                        headers: { 
+                            'Authorization': `Bearer ${token}`, 
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json' 
+                        },
+                        body: JSON.stringify({ ids: ids })
+                    });
+                    const result = await res.json();
+                    if (res.ok) {
+                        alert(result.message || `${ids.length} ruangan berhasil dihapus!`);
+                        await fetchRooms();
+                    } else {
+                        alert(result.message || 'Gagal menghapus ruangan terpilih.');
+                    }
+                }
+            } catch (err) {
+                alert('Koneksi error ke server.');
+            }
+        }
+    </script>
+    <script src="../js/global-layout.js?v=20261109_8.0"></script>
+</body>
+</html>

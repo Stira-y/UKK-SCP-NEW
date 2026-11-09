@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presensi Siswa - Sistem SCP</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col font-sans overflow-hidden">
+
+    <div id="app-navbar"></div>
+
+    <div class="flex flex-1 relative overflow-hidden h-[calc(100vh-57px)]">
+        <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-20 hidden md:hidden transition-opacity duration-300"></div>
+        <div id="app-sidebar"></div>
+
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
+            <div class="max-w-5xl mx-auto space-y-6">
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-slate-800">Presensi Kehadiran Siswa</h2>
+                        <p class="text-slate-500 text-xs md:text-sm mt-0.5">Pilih kehadiran siswa. Siswa berizin resmi terkunci otomatis.</p>
+                    </div>
+                    <button onclick="window.location.href='jurnal2.html'" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shrink-0">
+                        <span>&larr; Kembali ke Jurnal</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+                        <span class="font-bold text-slate-700 text-sm">Daftar Kehadiran Siswa</span>
+                        <button type="button" id="btnSetAllHadir" onclick="setAllHadir()" class="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition shadow-xs">
+                            Set Hadir
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[700px]">
+                            <thead>
+                                <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="py-3.5 px-4 font-semibold text-center w-16">No</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-28">NIS</th>
+                                    <th class="py-3.5 px-4 font-semibold">Nama Lengkap Siswa</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-80">Status Kehadiran</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentAttendanceBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
+                                <tr><td colspan="4" class="py-8 text-center text-slate-400">Memuat data siswa...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="btnSaveAttendance" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs md:text-sm shadow transition">
+                        Simpan Presensi &amp; Selesai
+                    </button>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL POP UP SURAT IZIN (READ ONLY) -->
+    <div id="modalSuratIzinDetail" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-150">
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                <h3 class="font-bold text-base md:text-lg">Surat Izin</h3>
+                <button type="button" id="btnCloseSuratIzinX" class="text-indigo-200 hover:text-white text-2xl font-bold leading-none">&times;</button>
+            </div>
+
+            <div class="p-6 space-y-4 overflow-y-auto flex-1 text-slate-700 text-xs md:text-sm">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Jenis Surat / Izin</label>
+                    <input type="text" id="viewJenisIzin" readonly class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 border border-slate-300 font-semibold outline-none cursor-not-allowed text-slate-700">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Masa Berlaku Surat (Mulai s/d Selesai)</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <span class="text-[11px] text-slate-400 block mb-0.5">Tanggal Mulai</span>
+                            <input type="date" id="viewStartDate" readonly class="w-full px-3 py-2 rounded-xl bg-slate-100 border border-slate-300 outline-none cursor-not-allowed text-slate-700 font-medium">
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-slate-400 block mb-0.5">Tanggal Selesai</span>
+                            <input type="date" id="viewEndDate" readonly class="w-full px-3 py-2 rounded-xl bg-slate-100 border border-slate-300 outline-none cursor-not-allowed text-slate-700 font-medium">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Alasan / Keterangan</label>
+                    <textarea id="viewAlasanIzin" rows="3" readonly class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 border border-slate-300 outline-none cursor-not-allowed text-slate-700 font-medium resize-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">File Tersimpan Saat Ini:</label>
+                    <div id="viewFileWrapper" class="p-3 bg-slate-50 border border-slate-200 rounded-xl"></div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 px-6 py-3.5 flex justify-end border-t border-slate-200 shrink-0">
+                <button type="button" id="btnBackToPresensi" class="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                    <span>&larr; Kembali</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LIHAT BUKTI GAMBAR -->
+    <div id="modalLeaveLightbox" class="fixed inset-0 bg-[#070b19]/95 z-[70] hidden flex flex-col select-none">
+        <div class="w-full bg-[#0a1026] px-4 md:px-6 py-3 flex items-center justify-between border-b border-slate-800/80 shrink-0 text-white">
+            <button type="button" id="btnLeaveLightboxBack" class="px-3.5 py-1.5 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                <span>Kembali</span>
+            </button>
+            <h3 id="leaveLightboxTitle" class="font-bold text-xs md:text-sm tracking-wide text-slate-100 truncate max-w-[200px] sm:max-w-md text-center">Nama_File.png</h3>
+            <div class="flex items-center space-x-2">
+                <button type="button" id="btnLeaveLightboxZoomOut" class="px-3 py-1 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-xs font-semibold transition shadow-sm">- Zoom</button>
+                <button type="button" id="btnLeaveLightboxZoomIn" class="px-3 py-1 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-xs font-semibold transition shadow-sm">+ Zoom</button>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-auto p-4 md:p-8 flex items-center justify-center">
+            <img id="leaveLightboxImg" src="" alt="Bukti Surat Izin" class="max-h-[82vh] max-w-full rounded-2xl shadow-2xl object-contain transition-transform duration-200">
+            <iframe id="leaveLightboxIframe" class="w-full h-[82vh] rounded-2xl hidden bg-white shadow-2xl"></iframe>
+        </div>
+    </div>
+
+    <!-- MODAL POP UP KONFIRMASI YAKIN & TIDAK (SIMPAN PRESENSI) -->
+    <div id="confirmPresensiModal" class="fixed inset-0 bg-slate-950/70 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center transform transition-all animate-in fade-in zoom-in duration-200">
+            <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center mb-4">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h3 class="text-base font-bold text-slate-800 mb-1">Konfirmasi Selesaikan KBM</h3>
+            <p class="text-xs text-slate-500 mb-6 leading-relaxed">
+                Apakah Anda yakin ingin menyimpan presensi kehadiran seluruh siswa? Jurnal KBM pada jam ini akan dinyatakan <strong>Sudah Selesai</strong> di dashboard.
+            </p>
+            <div class="flex items-center justify-center gap-3">
+                <button type="button" id="btnConfirmNo" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+                    Tidak
+                </button>
+                <button type="button" id="btnConfirmYes" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-md">
+                    Yakin
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+        const token = localStorage.getItem('auth_token');
+        const journalId = sessionStorage.getItem('current_journal_id');
+        const classId = sessionStorage.getItem('current_class_id');
+        const attendanceDate = sessionStorage.getItem('current_date') || new Date().toISOString().split('T')[0];
+
+        if (!journalId || !classId) {
+            alert('Silakan isi jurnal mengajar terlebih dahulu.');
+            window.location.href = 'jurnal2.html';
+        }
+
+        let studentsList = [];
+        const studentAttendanceBody = document.getElementById('studentAttendanceBody');
+        const btnSaveAttendance = document.getElementById('btnSaveAttendance');
+
+        // Modal Surat Izin
+        const modalSuratIzinDetail = document.getElementById('modalSuratIzinDetail');
+        const btnCloseSuratIzinX = document.getElementById('btnCloseSuratIzinX');
+        const btnBackToPresensi = document.getElementById('btnBackToPresensi');
+        const viewJenisIzin = document.getElementById('viewJenisIzin');
+        const viewStartDate = document.getElementById('viewStartDate');
+        const viewEndDate = document.getElementById('viewEndDate');
+        const viewAlasanIzin = document.getElementById('viewAlasanIzin');
+        const viewFileWrapper = document.getElementById('viewFileWrapper');
+
+        // Modal Lightbox Preview Gambar
+        const modalLeaveLightbox = document.getElementById('modalLeaveLightbox');
+        const leaveLightboxTitle = document.getElementById('leaveLightboxTitle');
+        const leaveLightboxImg = document.getElementById('leaveLightboxImg');
+        const leaveLightboxIframe = document.getElementById('leaveLightboxIframe');
+        const btnLeaveLightboxBack = document.getElementById('btnLeaveLightboxBack');
+        const btnLeaveLightboxZoomIn = document.getElementById('btnLeaveLightboxZoomIn');
+        const btnLeaveLightboxZoomOut = document.getElementById('btnLeaveLightboxZoomOut');
+        let currentLightboxZoom = 1;
+
+        // Modal Konfirmasi Yakin & Tidak
+        const confirmPresensiModal = document.getElementById('confirmPresensiModal');
+        const btnConfirmNo = document.getElementById('btnConfirmNo');
+        const btnConfirmYes = document.getElementById('btnConfirmYes');
+
+        document.addEventListener('DOMContentLoaded', fetchStudents);
+
+        async function fetchStudents() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/attendances/students-list?id_class=${classId}&date=${attendanceDate}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                studentsList = json.data || [];
+                renderStudents();
+            } catch (err) {
+                studentAttendanceBody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-red-500">Gagal memuat data siswa.</td></tr>`;
+            }
+        }
+
+        function renderStudents() {
+            if (studentsList.length === 0) {
+                studentAttendanceBody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-400">Tidak ada siswa terdaftar di kelas ini.</td></tr>`;
+                return;
+            }
+
+            studentAttendanceBody.innerHTML = studentsList.map((st, i) => {
+                let optionsHtml = '';
+                if (st.locked_status === 'Izin') {
+                    optionsHtml = `
+                        <div class="flex items-center justify-center">
+                            <button type="button" onclick="openSuratIzinModal(${i})" title="Klik untuk melihat detail surat izin siswa" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-sm transition flex items-center space-x-1.5 cursor-pointer">
+                                <span>Izin Resmi Disetujui</span>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            </button>
+                            <input type="hidden" name="status_${st.id_user}" value="Izin">
+                        </div>
+                    `;
+                } else {
+                    optionsHtml = `
+                        <div class="flex items-center justify-center space-x-4">
+                            <label class="flex items-center space-x-1 cursor-pointer">
+                                <input type="radio" name="status_${st.id_user}" value="Hadir" class="text-emerald-600 focus:ring-emerald-500">
+                                <span class="text-xs font-semibold text-emerald-700">Hadir</span>
+                            </label>
+                            <label class="flex items-center space-x-1 cursor-pointer">
+                                <input type="radio" name="status_${st.id_user}" value="Terlambat" class="text-amber-600 focus:ring-amber-500">
+                                <span class="text-xs font-semibold text-amber-700">Terlambat</span>
+                            </label>
+                            <label class="flex items-center space-x-1 cursor-pointer">
+                                <input type="radio" name="status_${st.id_user}" value="Alpa" class="text-red-600 focus:ring-red-500">
+                                <span class="text-xs font-semibold text-red-700">Alpa</span>
+                            </label>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="py-3 px-4 text-center font-bold text-slate-500">${i + 1}</td>
+                        <td class="py-3 px-4 text-center font-medium text-slate-600">${st.nis}</td>
+                        <td class="py-3 px-4 font-bold text-slate-800">${st.fullname}</td>
+                        <td class="py-3 px-4 text-center">${optionsHtml}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        window.setAllHadir = function() {
+            for (const st of studentsList) {
+                if (st.locked_status !== 'Izin') {
+                    const radio = document.querySelector(`input[name="status_${st.id_user}"][value="Hadir"]`);
+                    if (radio) radio.checked = true;
+                }
+            }
+        };
+
+        window.openSuratIzinModal = function(index) {
+            const student = studentsList[index];
+            if (!student || !student.leave_details) {
+                alert('Detail surat izin tidak ditemukan.');
+                return;
+            }
+
+            const leave = student.leave_details;
+            viewJenisIzin.value = leave.type || 'Sakit';
+            viewStartDate.value = leave.start_date || '';
+            viewEndDate.value = leave.end_date || '';
+            viewAlasanIzin.value = leave.reason || '-';
+
+            if (leave.file_path) {
+                const fileName = leave.file_path.split('/').pop();
+                const fileUrl = `${API_BASE_URL.replace('/api', '')}/storage/${leave.file_path}`;
+                viewFileWrapper.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span onclick="openLeaveLightboxPreview('${fileName}', '${fileUrl}')" class="font-semibold text-indigo-600 hover:text-indigo-800 underline decoration-indigo-300 cursor-pointer truncate max-w-[240px]" title="Klik untuk melihat bukti">${fileName}</span>
+                        <button type="button" onclick="openLeaveLightboxPreview('${fileName}', '${fileUrl}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-xs flex items-center space-x-1 transition hover:underline">
+                            <span>Lihat Bukti</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        </button>
+                    </div>
+                `;
+            } else {
+                viewFileWrapper.innerHTML = `<span class="text-slate-400 italic text-xs">Tidak ada file bukti yang dilampirkan.</span>`;
+            }
+
+            modalSuratIzinDetail.classList.remove('hidden');
+        };
+
+        function closeSuratIzinModal() {
+            modalSuratIzinDetail.classList.add('hidden');
+        }
+
+        btnCloseSuratIzinX.addEventListener('click', closeSuratIzinModal);
+        btnBackToPresensi.addEventListener('click', closeSuratIzinModal);
+
+        window.openLeaveLightboxPreview = function(fileName, fileUrl) {
+            leaveLightboxTitle.textContent = fileName;
+            currentLightboxZoom = 1;
+
+            const isPdf = fileName.toLowerCase().endsWith('.pdf');
+            if (isPdf) {
+                leaveLightboxImg.classList.add('hidden');
+                leaveLightboxIframe.classList.remove('hidden');
+                leaveLightboxIframe.src = fileUrl;
+            } else {
+                leaveLightboxIframe.classList.add('hidden');
+                leaveLightboxImg.classList.remove('hidden');
+                leaveLightboxImg.style.transform = `scale(${currentLightboxZoom})`;
+                leaveLightboxImg.src = fileUrl;
+            }
+
+            modalLeaveLightbox.classList.remove('hidden');
+        };
+
+        btnLeaveLightboxBack.addEventListener('click', () => {
+            modalLeaveLightbox.classList.add('hidden');
+            leaveLightboxImg.src = '';
+            leaveLightboxIframe.src = '';
+        });
+
+        btnLeaveLightboxZoomIn.addEventListener('click', () => {
+            if (currentLightboxZoom < 3) {
+                currentLightboxZoom += 0.25;
+                leaveLightboxImg.style.transform = `scale(${currentLightboxZoom})`;
+            }
+        });
+
+        btnLeaveLightboxZoomOut.addEventListener('click', () => {
+            if (currentLightboxZoom > 0.5) {
+                currentLightboxZoom -= 0.25;
+                leaveLightboxImg.style.transform = `scale(${currentLightboxZoom})`;
+            }
+        });
+
+        btnSaveAttendance.addEventListener('click', () => {
+            let unselectedCount = 0;
+
+            for (const st of studentsList) {
+                if (st.locked_status !== 'Izin') {
+                    const selected = document.querySelector(`input[name="status_${st.id_user}"]:checked`);
+                    if (!selected) {
+                        unselectedCount++;
+                    }
+                }
+            }
+
+            if (unselectedCount > 0) {
+                alert(`Masih ada ${unselectedCount} siswa yang belum ditentukan kehadirannya! Pastikan seluruh siswa terisi.`);
+                return;
+            }
+
+            confirmPresensiModal.classList.remove('hidden');
+        });
+
+        btnConfirmNo.addEventListener('click', () => {
+            confirmPresensiModal.classList.add('hidden');
+        });
+
+        btnConfirmYes.addEventListener('click', async () => {
+            confirmPresensiModal.classList.add('hidden');
+            await executeSaveAttendance();
+        });
+
+        async function executeSaveAttendance() {
+            const items = [];
+
+            for (const st of studentsList) {
+                if (st.locked_status === 'Izin') {
+                    items.push({ id_siswa: st.id_user, status: 'Izin' });
+                } else {
+                    const selected = document.querySelector(`input[name="status_${st.id_user}"]:checked`);
+                    if (selected) {
+                        items.push({ id_siswa: st.id_user, status: selected.value });
+                    }
+                }
+            }
+
+            try {
+                btnSaveAttendance.disabled = true;
+                btnSaveAttendance.textContent = 'Menyimpan...';
+
+                const res = await fetch(`${API_BASE_URL}/attendances/store-batch`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id_jurnal: journalId,
+                        date: attendanceDate,
+                        items: items
+                    })
+                });
+
+                if (res.ok) {
+                    alert('Presensi siswa berhasil disimpan dan KBM dinyatakan selesai!');
+                    sessionStorage.removeItem('current_journal_id');
+                    sessionStorage.removeItem('current_class_id');
+                    sessionStorage.removeItem('current_date');
+                    window.location.href = 'dashboard3.html';
+                } else {
+                    const err = await res.json();
+                    alert(err.message || 'Gagal menyimpan presensi.');
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan koneksi.');
+            } finally {
+                btnSaveAttendance.disabled = false;
+                btnSaveAttendance.textContent = 'Simpan Presensi & Selesai';
+            }
+        }
+    </script>
+    <script src="../js/global-layout.js?v=20261109_8.0"></script>
+</body>
+</html>

@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Wali Kelas & BK - Sistem SCP</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col font-sans overflow-hidden">
+
+    <!-- Navbar Universal -->
+    <div id="app-navbar"></div>
+
+    <div class="flex flex-1 relative overflow-hidden h-[calc(100vh-57px)]">
+        <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-20 hidden md:hidden transition-opacity duration-300"></div>
+        <div id="app-sidebar"></div>
+
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
+            <div class="max-w-6xl mx-auto space-y-6">
+
+                <!-- BANNER NOTIFIKASI TERLAMBAT ISI JURNAL (> 15 MENIT) -->
+                <div id="lateJournalAlertBox" class="hidden bg-gradient-to-r from-red-600 to-rose-600 text-white p-4 rounded-2xl shadow-lg border border-red-500 animate-pulse transition-all">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-sm md:text-base tracking-wide flex items-center gap-2">
+                                    <span>Peringatan: Jurnal KBM Belum Diisi!</span>
+                                    <span class="text-[10px] bg-white text-red-700 px-2 py-0.5 rounded-full font-black uppercase">Melebihi 15 Menit</span>
+                                </h4>
+                                <p id="lateJournalAlertText" class="text-xs text-red-100 mt-0.5 leading-relaxed">
+                                    Anda belum mengisi jurnal pada jadwal KBM yang sedang berlangsung hari ini.
+                                </p>
+                            </div>
+                        </div>
+                        <a href="jurnal2.html" class="bg-white hover:bg-red-50 text-red-700 px-4 py-2 rounded-xl text-xs font-black shadow transition shrink-0 flex items-center space-x-1">
+                            <span>Isi Sekarang</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Banner Putaran Aktif Universal -->
+                <div id="cycleBanner" class="w-full py-3 px-6 rounded-2xl shadow-sm flex items-center justify-between transition-all duration-300 font-extrabold text-base md:text-lg tracking-wide uppercase bg-emerald-500 text-white">
+                    <div class="flex items-center space-x-2.5">
+                        <svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <span id="cycleBannerText">Putaran 1</span>
+                    </div>
+                    <span class="text-xs bg-white/20 backdrop-blur-xs px-3 py-1 rounded-full font-bold normal-case tracking-normal">Sedang Aktif</span>
+                </div>
+
+                <!-- Header Ucapan & Shortcut -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-slate-800">
+                            Selamat Datang, <span id="userName" class="text-indigo-600">User</span>!
+                        </h2>
+                        <p class="text-slate-500 text-xs md:text-sm mt-0.5" id="userRoleSubtext">Panel Manajemen Wali Kelas & Bimbingan Konseling.</p>
+                    </div>
+
+                    <!-- Shortcut Cepat -->
+                    <div id="topShortcutWrapper" class="flex flex-wrap items-center gap-2.5">
+                    </div>
+                </div>
+
+                <!-- SECTION IZIN KHUSUS SESUAI JADWAL HARI INI & KELAS YANG SEDANG DIAJAR -->
+                <div id="specialLeaveSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+                        <div>
+                            <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                <span>Izin Khusus Siswa KBM Hari Ini</span>
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-0.5" id="specialLeaveTargetClassText">Menghubungkan ke kelas yang sedang diajar...</p>
+                        </div>
+                        <span id="specialLeaveDateBadge" class="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-700 rounded-full self-start sm:self-auto">-</span>
+                    </div>
+
+                    <!-- Form Create / Edit Izin Khusus -->
+                    <div id="specialLeaveFormContainer">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                            <div class="md:col-span-4">
+                                <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Pilih Siswa (Sesuai Kelas Diajar)</label>
+                                <select id="selectSpecialLeaveStudent" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                                    <option value="">-- Pilih Siswa --</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-6">
+                                <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Alasan Izin Khusus</label>
+                                <input type="text" id="inputSpecialLeaveReason" placeholder="Contoh: Dispensasi Lomba / Tugas Sekolah / Sakit di UKS" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div class="md:col-span-2 flex items-center gap-2">
+                                <button type="button" id="btnSubmitSpecialLeave" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow">
+                                    Simpan
+                                </button>
+                                <button type="button" id="btnCancelEditSpecialLeave" class="hidden px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition">
+                                    Batal
+                                </button>
+                            </div>
+                        </div>
+                        <p id="specialLeaveErrorText" class="text-[11px] text-red-500 font-semibold mt-1.5 hidden"></p>
+                    </div>
+
+                    <!-- Tabel Daftar Izin Khusus yang Telah Diisi Pada Kelas Ini -->
+                    <div class="pt-2">
+                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Daftar Izin Khusus Kelas Ini Hari Ini</h4>
+                        <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-600 border-b border-slate-100">
+                                        <th class="py-2.5 px-3 font-semibold text-center w-28">NISN / NIS</th>
+                                        <th class="py-2.5 px-4 font-semibold">Nama Siswa</th>
+                                        <th class="py-2.5 px-4 font-semibold">Alasan Izin</th>
+                                        <th class="py-2.5 px-4 font-semibold">Pencatat</th>
+                                        <th class="py-2.5 px-3 font-semibold text-center w-24">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="specialLeaveTableBody" class="divide-y divide-slate-100 text-slate-700">
+                                    <tr>
+                                        <td colspan="5" class="py-4 text-center text-slate-400">Belum ada izin khusus yang dicatat untuk kelas ini hari ini.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAMPILAN JADWAL KBM & PRESENSI SISWA TERLAMBAT -->
+                <div id="teachingSection" class="space-y-6">
+                    <!-- 1. JADWAL KBM HARI INI (TANPA KOLOM JAM KE) -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold text-slate-800 text-sm md:text-base">Jadwal Mengajar Saya Hari Ini</span>
+                                <span id="todayBadge" class="text-xs font-bold text-indigo-700 bg-indigo-100 px-2.5 py-0.5 rounded-full">Memuat...</span>
+                            </div>
+                            <span id="cycleBadge" class="text-xs font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-3 py-1 rounded-full">Putaran: -</span>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[700px]">
+                                <thead>
+                                    <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                        <th class="py-3 px-4 font-semibold text-center w-36">Waktu</th>
+                                        <th class="py-3 px-4 font-semibold text-center w-36">Kelas</th>
+                                        <th class="py-3 px-4 font-semibold">Mata Pelajaran</th>
+                                        <th class="py-3 px-4 font-semibold text-center w-28">Ruangan</th>
+                                        <th class="py-3 px-4 font-semibold text-center w-36">Status Jurnal</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="myTodayScheduleBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
+                                    <tr>
+                                        <td colspan="5" class="py-8 text-center text-slate-400">Memuat jadwal KBM...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 2. RIWAYAT SISWA TERLAMBAT HARI INI & AKSI UBAH KE HADIR -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold text-slate-800 text-sm md:text-base">Siswa Berstatus Terlambat Hari Ini</span>
+                                <span class="text-xs text-slate-500 font-medium">(Bisa diubah ke Hadir)</span>
+                            </div>
+                            <span id="lateCountBadge" class="text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 px-2.5 py-0.5 rounded-full">0 Siswa</span>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[700px]">
+                                <thead>
+                                    <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                        <th class="py-3 px-4 font-semibold text-center w-28">NISN</th>
+                                        <th class="py-3 px-4 font-semibold text-center w-24">NIS</th>
+                                        <th class="py-3 px-4 font-semibold">Nama Siswa</th>
+                                        <th class="py-3 px-4 font-semibold text-center w-32">Kelas</th>
+                                        <th class="py-3 px-4 font-semibold">Mata Pelajaran</th>
+                                        <th class="py-3 px-4 font-semibold text-center w-28">Status</th>
+                                        <th class="py-3 px-4 font-semibold text-center w-36">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lateStudentsBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
+                                    <tr>
+                                        <td colspan="7" class="py-8 text-center text-slate-400">Memeriksa siswa terlambat...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL POP UP KONFIRMASI SIMPAN IZIN KHUSUS -->
+    <div id="confirmSpecialLeaveModal" class="fixed inset-0 bg-slate-900/70 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col p-6 text-center transform transition-all animate-in fade-in zoom-in duration-150">
+            <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 mx-auto flex items-center justify-center mb-4">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800 mb-2" id="confirmSpecialLeaveTitle">Konfirmasi Izin Khusus</h3>
+            <p id="confirmSpecialLeaveDesc" class="text-xs text-slate-500 mb-6">Apakah Anda yakin ingin menyimpan data izin khusus siswa ini?</p>
+            <div class="flex justify-center space-x-3">
+                <button type="button" id="btnConfirmSpecialLeaveNo" class="flex-1 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition cursor-pointer">Tidak</button>
+                <button type="button" id="btnConfirmSpecialLeaveYes" class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow cursor-pointer">Yakin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL POP UP KONFIRMASI UBAH KE HADIR -->
+    <div id="confirmHadirModal" class="fixed inset-0 bg-slate-900/70 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col p-6 text-center transform transition-all animate-in fade-in zoom-in duration-150">
+            <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center mb-4">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800 mb-2">Konfirmasi Ubah Kehadiran</h3>
+            <p id="confirmHadirDesc" class="text-xs text-slate-500 mb-6">Apakah Anda yakin ingin mengubah status siswa ini dari Terlambat menjadi Hadir?</p>
+            <div class="flex justify-center space-x-3">
+                <button type="button" id="btnConfirmHadirNo" class="flex-1 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition cursor-pointer">Tidak</button>
+                <button type="button" id="btnConfirmHadirYes" class="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition shadow cursor-pointer">Yakin</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://ukk-scp-yudhis.my.id/api';
+        const authToken = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+        const userObj = JSON.parse(localStorage.getItem('user_data') || sessionStorage.getItem('user_data') || '{}');
+        const currentUserId = Number(userObj.id_user || userObj.id);
+
+        const userTitle = (userObj.title || '').replace(/\s+/g, '').toLowerCase();
+        const isWaliKelas = userTitle === 'walikelas';
+        const isGuruBk = userTitle === 'gurubk' || userTitle === 'gurubkpengajar';
+
+        // Validasi: Tolak jika bukan Wali Kelas dan bukan Guru BK
+        if (!isWaliKelas && !isGuruBk) {
+            alert('Akses ditolak! Akun ini bukan Wali Kelas atau Guru BK.');
+            window.location.href = '../login/login.html';
+        }
+
+        const topShortcutWrapper = document.getElementById('topShortcutWrapper');
+        const teachingSection = document.getElementById('teachingSection');
+        const myTodayScheduleBody = document.getElementById('myTodayScheduleBody');
+        const lateStudentsBody = document.getElementById('lateStudentsBody');
+        const todayBadge = document.getElementById('todayBadge');
+        const cycleBadge = document.getElementById('cycleBadge');
+        const lateCountBadge = document.getElementById('lateCountBadge');
+        const userRoleSubtext = document.getElementById('userRoleSubtext');
+
+        const lateJournalAlertBox = document.getElementById('lateJournalAlertBox');
+        const lateJournalAlertText = document.getElementById('lateJournalAlertText');
+
+        const confirmHadirModal = document.getElementById('confirmHadirModal');
+        const confirmHadirDesc = document.getElementById('confirmHadirDesc');
+        const btnConfirmHadirYes = document.getElementById('btnConfirmHadirYes');
+        const btnConfirmHadirNo = document.getElementById('btnConfirmHadirNo');
+
+        const specialLeaveTargetClassText = document.getElementById('specialLeaveTargetClassText');
+        const specialLeaveDateBadge = document.getElementById('specialLeaveDateBadge');
+        const selectSpecialLeaveStudent = document.getElementById('selectSpecialLeaveStudent');
+        const inputSpecialLeaveReason = document.getElementById('inputSpecialLeaveReason');
+        const btnSubmitSpecialLeave = document.getElementById('btnSubmitSpecialLeave');
+        const btnCancelEditSpecialLeave = document.getElementById('btnCancelEditSpecialLeave');
+        const specialLeaveErrorText = document.getElementById('specialLeaveErrorText');
+        const specialLeaveTableBody = document.getElementById('specialLeaveTableBody');
+
+        const confirmSpecialLeaveModal = document.getElementById('confirmSpecialLeaveModal');
+        const confirmSpecialLeaveTitle = document.getElementById('confirmSpecialLeaveTitle');
+        const confirmSpecialLeaveDesc = document.getElementById('confirmSpecialLeaveDesc');
+        const btnConfirmSpecialLeaveYes = document.getElementById('btnConfirmSpecialLeaveYes');
+        const btnConfirmSpecialLeaveNo = document.getElementById('btnConfirmSpecialLeaveNo');
+
+        let pendingAttendanceId = null;
+        let activeTeachingClassId = null;
+        let editingSpecialLeaveId = null;
+        let actionType = 'save';
+        let currentClassStudents = [];
+
+        function renderCycleBanner(cycle) {
+            const banner = document.getElementById('cycleBanner');
+            const textEl = document.getElementById('cycleBannerText');
+            if (!banner || !textEl) return;
+            const c = String(cycle);
+            if (c === '2') {
+                banner.className = 'w-full py-3 px-6 rounded-2xl shadow-sm flex items-center justify-between transition-all duration-300 font-extrabold text-base md:text-lg tracking-wide uppercase bg-sky-400 text-white';
+                textEl.textContent = 'Putaran 2';
+            } else {
+                banner.className = 'w-full py-3 px-6 rounded-2xl shadow-sm flex items-center justify-between transition-all duration-300 font-extrabold text-base md:text-lg tracking-wide uppercase bg-emerald-500 text-white';
+                textEl.textContent = 'Putaran 1';
+            }
+        }
+        renderCycleBanner(localStorage.getItem('active_cycle') || '1');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            initTopShortcuts();
+            userRoleSubtext.textContent = isWaliKelas ? 'Panel Wali Kelas & Guru Pengajar.' : 'Panel Guru BK.';
+            teachingSection.classList.remove('hidden');
+            await loadTeachingData();
+            setInterval(async () => {
+                await loadTeachingData();
+            }, 30000);
+        });
+
+        function initTopShortcuts() {
+            topShortcutWrapper.innerHTML = `
+                <a href="rekap jurnal2.html" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow flex items-center space-x-1.5">
+                    <span>Rekap Jurnal</span>
+                </a>
+                <a href="persetujuan-izin.html" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow flex items-center space-x-1.5">
+                    <span>Persetujuan Izin</span>
+                </a>
+                <a href="jurnal2.html" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow flex items-center space-x-1.5">
+                    <span>Upload Jurnal</span>
+                </a>
+            `;
+        }
+
+        function timeStrToMinutes(timeStr) {
+            if (!timeStr) return 0;
+            const parts = timeStr.substring(0, 5).split(':');
+            return (parseInt(parts[0], 10) * 60) + parseInt(parts[1], 10);
+        }
+
+        async function loadTeachingData() {
+            const daysIndo = { 0: 'Minggu', 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu' };
+            const now = new Date();
+            const todayName = daysIndo[now.getDay()] || 'Senin';
+            const todayStr = now.toISOString().split('T')[0];
+            const currentTotalMinutes = (now.getHours() * 60) + now.getMinutes();
+
+            todayBadge.textContent = `${todayName}, ${todayStr}`;
+            specialLeaveDateBadge.textContent = `${todayName}, ${todayStr}`;
+
+            let activeCycle = '1';
+            try {
+                const resConfig = await fetch(`${API_BASE}/system-config/active-cycle`, {
+                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                });
+                const jsonConfig = await resConfig.json();
+                activeCycle = jsonConfig.data?.active_cycle ? String(jsonConfig.data.active_cycle) : '1';
+                cycleBadge.textContent = `Putaran Aktif: ${activeCycle}`;
+                localStorage.setItem('active_cycle', activeCycle);
+            } catch (e) {
+                cycleBadge.textContent = 'Putaran Aktif: 1';
+            }
+            renderCycleBanner(activeCycle);
+
+            let filledJournalScheduleIds = [];
+            let allJournalsToday = [];
+            try {
+                const resJournals = await fetch(`${API_BASE}/journals?date=${todayStr}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                });
+                const jsonJ = await resJournals.json();
+                allJournalsToday = jsonJ.data || [];
+                filledJournalScheduleIds = allJournalsToday.map(j => Number(j.id_schedule));
+            } catch (e) {}
+
+            let mySchedulesToday = [];
+            try {
+                const resSched = await fetch(`${API_BASE}/schedules?cycle_type=${activeCycle}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                });
+                const jsonSched = await resSched.json();
+                const allScheds = jsonSched.data || [];
+
+                mySchedulesToday = allScheds.filter(s => 
+                    Number(s.id_guru) === currentUserId && 
+                    s.day_of_week === todayName
+                );
+            } catch (e) {}
+
+            mySchedulesToday.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+
+            let activeSched = mySchedulesToday.find(s => {
+                const startM = timeStrToMinutes(s.start_time);
+                const endM = timeStrToMinutes(s.end_time);
+                return currentTotalMinutes >= startM && currentTotalMinutes <= endM;
+            });
+
+            if (!activeSched && mySchedulesToday.length > 0) {
+                activeSched = mySchedulesToday[0];
+            }
+
+            if (activeSched && activeSched.school_class) {
+                activeTeachingClassId = Number(activeSched.id_class);
+                const sc = activeSched.school_class;
+                const className = `${sc.kelas_nomor} ${sc.nama_kelas} ${sc.nomor_kelas || ''}`.trim();
+                specialLeaveTargetClassText.textContent = `Kelas Diajar: ${className} (Mapel: ${activeSched.mapel})`;
+                await loadClassStudentsForSpecialLeave(activeTeachingClassId);
+                await loadSpecialLeavesForClass(activeTeachingClassId, todayStr);
+            } else if (isWaliKelas && userObj.id_class) {
+                activeTeachingClassId = Number(userObj.id_class);
+                const sc = userObj.school_class;
+                const className = sc ? `${sc.kelas_nomor} ${sc.nama_kelas} ${sc.nomor_kelas || ''}`.trim() : 'Kelas Binaan';
+                specialLeaveTargetClassText.textContent = `Kelas Binaan: ${className}`;
+                await loadClassStudentsForSpecialLeave(activeTeachingClassId);
+                await loadSpecialLeavesForClass(activeTeachingClassId, todayStr);
+            } else {
+                activeTeachingClassId = null;
+                specialLeaveTargetClassText.textContent = `Tidak ada jadwal KBM mengajar aktif untuk Anda hari ini.`;
+                selectSpecialLeaveStudent.innerHTML = `<option value="">-- Tidak ada kelas aktif --</option>`;
+                specialLeaveTableBody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-400">Tidak ada jadwal KBM kelas mengajar hari ini.</td></tr>`;
+            }
+
+            let lateJournalAlerts = [];
+
+            if (mySchedulesToday.length === 0) {
+                myTodayScheduleBody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">Tidak ada jadwal KBM mengajar untuk Anda hari ini (${todayName}).</td></tr>`;
+                lateJournalAlertBox.classList.add('hidden');
+            } else {
+                myTodayScheduleBody.innerHTML = mySchedulesToday.map(s => {
+                    const isFilled = filledJournalScheduleIds.includes(Number(s.id_schedule));
+                    const start = (s.start_time || '').substring(0, 5);
+                    const end = (s.end_time || '').substring(0, 5);
+                    const className = s.school_class ? `${s.school_class.kelas_nomor} ${s.school_class.nama_kelas} ${s.school_class.nomor_kelas || ''}`.trim() : '-';
+                    const room = s.room ? `${s.room.nama_room || ''} ${s.room.nomor_room ? '('+s.room.nomor_room+')' : ''}`.trim() : '-';
+
+                    const startMinutes = timeStrToMinutes(s.start_time);
+                    const isLateMoreThan15Min = !isFilled && (currentTotalMinutes >= (startMinutes + 15));
+
+                    let statusBadge = '';
+                    if (isFilled) {
+                        statusBadge = `<span class="bg-emerald-100 text-emerald-700 font-bold px-2.5 py-1 rounded-full text-xs">Sudah Diisi</span>`;
+                    } else if (isLateMoreThan15Min) {
+                        statusBadge = `<span class="bg-red-100 text-red-700 border border-red-300 font-black px-2.5 py-1 rounded-full text-xs animate-pulse">Terlambat Mengisi</span>`;
+                        lateJournalAlerts.push(`${s.mapel} di ${className}`);
+                    } else {
+                        statusBadge = `<span class="bg-slate-100 text-slate-600 font-bold px-2.5 py-1 rounded-full text-xs">Belum Diisi</span>`;
+                    }
+
+                    return `
+                        <tr class="hover:bg-slate-50 transition border-b border-slate-100 ${isLateMoreThan15Min ? 'bg-red-50/40' : ''}">
+                            <td class="py-3 px-4 text-center font-mono text-xs text-slate-600">${start} - ${end}</td>
+                            <td class="py-3 px-4 text-center font-bold text-indigo-700">${className}</td>
+                            <td class="py-3 px-4 font-semibold text-slate-800">${s.mapel}</td>
+                            <td class="py-3 px-4 text-center font-medium text-slate-600">${room}</td>
+                            <td class="py-3 px-4 text-center">${statusBadge}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                if (lateJournalAlerts.length > 0) {
+                    lateJournalAlertText.innerHTML = `Peringatan: Anda belum mengisi jurnal KBM lebih dari 15 menit sejak jadwal dimulai pada: <strong>${lateJournalAlerts.join(', ')}</strong>. Harap segera lengkapi jurnal mengajar Anda!`;
+                    lateJournalAlertBox.classList.remove('hidden');
+                } else {
+                    lateJournalAlertBox.classList.add('hidden');
+                }
+            }
+
+            await loadLateStudents(mySchedulesToday, todayStr);
+        }
+
+        async function loadClassStudentsForSpecialLeave(classId) {
+            try {
+                const resUsers = await fetch(`${API_BASE}/users`, {
+                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                });
+                const jsonUsers = await resUsers.json();
+                const allUsers = jsonUsers.data || jsonUsers || [];
+
+                currentClassStudents = allUsers.filter(u => Number(u.id_role) === 4 && Number(u.id_class) === Number(classId));
+                currentClassStudents.sort((a, b) => (a.fullname || a.username || '').localeCompare(b.fullname || b.username || ''));
+
+                const currentSelectedVal = selectSpecialLeaveStudent.value;
+                selectSpecialLeaveStudent.innerHTML = `<option value="">-- Pilih Siswa --</option>` + currentClassStudents.map(st => `
+                    <option value="${st.id_user}">${st.fullname || st.username} (NISN: ${st.nisn || '-'})</option>
+                `).join('');
+
+                if (currentSelectedVal) {
+                    selectSpecialLeaveStudent.value = currentSelectedVal;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadSpecialLeavesForClass(classId, dateStr) {
+            try {
+                const res = await fetch(`${API_BASE}/leave-requests?id_class=${classId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                const leaves = json.data || json || [];
+
+                const todayLeaves = leaves.filter(l => {
+                    const start = (l.start_date || '').substring(0, 10);
+                    const end = (l.end_date || l.start_date || '').substring(0, 10);
+                    const isToday = dateStr >= start && dateStr <= end;
+                    const isSpecial = (l.reason || '').startsWith('[Izin Khusus]');
+                    return isToday && isSpecial;
+                });
+
+                if (todayLeaves.length === 0) {
+                    specialLeaveTableBody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-400">Belum ada izin khusus yang dicatat untuk kelas ini hari ini.</td></tr>`;
+                    return;
+                }
+
+                specialLeaveTableBody.innerHTML = todayLeaves.map(l => {
+                    const st = l.student || {};
+                    const applicant = l.applicant || {};
+                    const cleanReason = (l.reason || '').replace(/^\[Izin Khusus\]\s*/i, '');
+                    const leaveId = l.id_leave || l.id_izin_keluar || l.id;
+
+                    return `
+                        <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                            <td class="py-2.5 px-3 text-center font-mono text-slate-600">${st.nisn || st.nis || '-'}</td>
+                            <td class="py-2.5 px-4 font-bold text-slate-800">${st.fullname || st.username || '-'}</td>
+                            <td class="py-2.5 px-4 text-slate-700">${cleanReason}</td>
+                            <td class="py-2.5 px-4 text-slate-600 font-medium">${applicant.fullname || applicant.username || 'Guru'}</td>
+                            <td class="py-2.5 px-3 text-center">
+                                <div class="flex items-center justify-center space-x-1.5">
+                                    <button type="button" onclick="startEditSpecialLeave(${leaveId}, ${st.id_user}, '${cleanReason.replace(/'/g, "\\'")}')" title="Edit Izin Khusus" class="p-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-lg transition shadow-xs cursor-pointer inline-flex items-center justify-center">
+                                        <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                    </button>
+                                    <button type="button" onclick="promptDeleteSpecialLeave(${leaveId})" title="Hapus Izin Khusus" class="p-1.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-lg transition shadow-xs cursor-pointer inline-flex items-center justify-center">
+                                        <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                specialLeaveTableBody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-red-500">Gagal memuat izin khusus.</td></tr>`;
+            }
+        }
+
+        window.startEditSpecialLeave = function(id, studentId, reason) {
+            editingSpecialLeaveId = id;
+            selectSpecialLeaveStudent.value = studentId;
+            inputSpecialLeaveReason.value = reason;
+            
+            btnSubmitSpecialLeave.textContent = 'Update';
+            btnSubmitSpecialLeave.className = 'w-full py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow';
+
+            btnCancelEditSpecialLeave.classList.remove('hidden');
+            specialLeaveErrorText.classList.add('hidden');
+        };
+
+        btnCancelEditSpecialLeave.addEventListener('click', () => {
+            editingSpecialLeaveId = null;
+            selectSpecialLeaveStudent.value = '';
+            inputSpecialLeaveReason.value = '';
+            
+            btnSubmitSpecialLeave.textContent = 'Simpan';
+            btnSubmitSpecialLeave.className = 'w-full py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow';
+
+            btnCancelEditSpecialLeave.classList.add('hidden');
+            specialLeaveErrorText.classList.add('hidden');
+        });
+
+        btnSubmitSpecialLeave.addEventListener('click', () => {
+            specialLeaveErrorText.classList.add('hidden');
+            const studentId = selectSpecialLeaveStudent.value;
+            const reason = inputSpecialLeaveReason.value.trim();
+
+            if (!activeTeachingClassId) {
+                specialLeaveErrorText.textContent = 'Tidak ada jadwal kelas KBM aktif yang sedang diajar!';
+                specialLeaveErrorText.classList.remove('hidden');
+                return;
+            }
+
+            if (!studentId) {
+                specialLeaveErrorText.textContent = 'Pilih siswa terlebih dahulu (tidak boleh kosong)!';
+                specialLeaveErrorText.classList.remove('hidden');
+                return;
+            }
+
+            if (!reason) {
+                specialLeaveErrorText.textContent = 'Kolom alasan izin khusus tidak boleh kosong!';
+                specialLeaveErrorText.classList.remove('hidden');
+                return;
+            }
+
+            actionType = 'save';
+            confirmSpecialLeaveTitle.textContent = editingSpecialLeaveId ? 'Konfirmasi Perubahan Izin Khusus' : 'Konfirmasi Simpan Izin Khusus';
+            confirmSpecialLeaveDesc.textContent = `Apakah Anda yakin ingin ${editingSpecialLeaveId ? 'memperbarui' : 'menyimpan'} izin khusus untuk siswa yang dipilih?`;
+            confirmSpecialLeaveModal.classList.remove('hidden');
+        });
+
+        window.promptDeleteSpecialLeave = function(id) {
+            editingSpecialLeaveId = id;
+            actionType = 'delete';
+            confirmSpecialLeaveTitle.textContent = 'Konfirmasi Hapus Izin Khusus';
+            confirmSpecialLeaveDesc.textContent = 'Apakah Anda yakin ingin menghapus surat izin khusus siswa ini?';
+            confirmSpecialLeaveModal.classList.remove('hidden');
+        };
+
+        btnConfirmSpecialLeaveNo.addEventListener('click', () => {
+            confirmSpecialLeaveModal.classList.add('hidden');
+            if (actionType === 'delete') {
+                editingSpecialLeaveId = null;
+            }
+        });
+
+        btnConfirmSpecialLeaveYes.addEventListener('click', async () => {
+            confirmSpecialLeaveModal.classList.add('hidden');
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            if (actionType === 'save') {
+                const studentId = selectSpecialLeaveStudent.value;
+                const reason = inputSpecialLeaveReason.value.trim();
+                const payload = {
+                    id_siswa: studentId,
+                    id_pengaju: currentUserId,
+                    start_date: todayStr,
+                    end_date: todayStr,
+                    reason: `[Izin Khusus] ${reason}`,
+                    status_approval: 'Disetujui'
+                };
+
+                try {
+                    let res;
+                    if (editingSpecialLeaveId) {
+                        res = await fetch(`${API_BASE}/leave-requests/${editingSpecialLeaveId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                    } else {
+                        res = await fetch(`${API_BASE}/leave-requests`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                    }
+
+                    if (res.ok) {
+                        alert(`Izin khusus berhasil ${editingSpecialLeaveId ? 'diperbarui' : 'disimpan'}!`);
+                        btnCancelEditSpecialLeave.click();
+                        await loadSpecialLeavesForClass(activeTeachingClassId, todayStr);
+                    } else {
+                        const errJson = await res.json();
+                        alert(errJson.message || 'Gagal menyimpan izin khusus.');
+                    }
+                } catch (e) {
+                    alert('Terjadi kesalahan koneksi server.');
+                }
+            } else if (actionType === 'delete') {
+                try {
+                    const res = await fetch(`${API_BASE}/leave-requests/${editingSpecialLeaveId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    if (res.ok) {
+                        alert('Izin khusus berhasil dihapus!');
+                        editingSpecialLeaveId = null;
+                        await loadSpecialLeavesForClass(activeTeachingClassId, todayStr);
+                    } else {
+                        alert('Gagal menghapus izin khusus.');
+                    }
+                } catch (e) {
+                    alert('Terjadi kesalahan koneksi server.');
+                }
+            }
+        });
+
+        async function loadLateStudents(schedules, dateStr) {
+            try {
+                const resAtt = await fetch(`${API_BASE}/attendances?date=${dateStr}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                });
+                const jsonAtt = await resAtt.json();
+                const allAtt = jsonAtt.data || [];
+
+                const myScheduleIds = schedules.map(s => Number(s.id_schedule));
+                const lateList = allAtt.filter(att => {
+                    const isLate = String(att.status).toLowerCase() === 'terlambat';
+                    const isMyJournal = att.journal && myScheduleIds.includes(Number(att.journal.id_schedule));
+                    return isLate && isMyJournal;
+                });
+
+                lateCountBadge.textContent = `${lateList.length} Siswa`;
+
+                if (lateList.length === 0) {
+                    lateStudentsBody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Tidak ada siswa berstatus Terlambat pada KBM Anda hari ini.</td></tr>`;
+                    return;
+                }
+
+                lateStudentsBody.innerHTML = lateList.map(att => {
+                    const student = att.student || {};
+                    const sc = student.school_class || {};
+                    const className = `${sc.kelas_nomor || ''} ${sc.nama_kelas || ''} ${sc.nomor_kelas || ''}`.trim() || '-';
+                    const mapel = att.journal?.schedule?.mapel || '-';
+                    const validId = att.id_presensi ?? att.id ?? att.id_attendance;
+                    const studentName = (student.fullname || student.username || 'Siswa').replace(/'/g, "\\'");
+
+                    return `
+                        <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                            <td class="py-3 px-4 font-mono text-center text-slate-700">${student.nisn || '-'}</td>
+                            <td class="py-3 px-4 font-mono text-center text-slate-600">${student.nis || '-'}</td>
+                            <td class="py-3 px-4 font-bold text-slate-800">${student.fullname || student.username || '-'}</td>
+                            <td class="py-3 px-4 text-center font-semibold text-indigo-700">${className}</td>
+                            <td class="py-3 px-4 text-slate-700">${mapel}</td>
+                            <td class="py-3 px-4 text-center"><span class="bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-bold text-xs">Terlambat</span></td>
+                            <td class="py-3 px-4 text-center">
+                                <button type="button" onclick="openHadirModal(${validId}, '${studentName}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer">
+                                    Ubah ke Hadir
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                lateStudentsBody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-red-500">Gagal memuat daftar siswa terlambat.</td></tr>`;
+            }
+        }
+
+        window.openHadirModal = function(id, name) {
+            pendingAttendanceId = id;
+            confirmHadirDesc.textContent = `Apakah Anda yakin ingin mengubah status kehadiran ${name} dari Terlambat menjadi Hadir?`;
+            confirmHadirModal.classList.remove('hidden');
+        };
+
+        btnConfirmHadirNo.addEventListener('click', () => {
+            confirmHadirModal.classList.add('hidden');
+            pendingAttendanceId = null;
+        });
+
+        btnConfirmHadirYes.addEventListener('click', async () => {
+            if (!pendingAttendanceId) return;
+            const idToUpdate = pendingAttendanceId;
+            confirmHadirModal.classList.add('hidden');
+
+            try {
+                const res = await fetch(`${API_BASE}/attendances/${idToUpdate}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ status: 'Hadir' })
+                });
+
+                const resJson = await res.json();
+
+                if (res.ok) {
+                    alert('Status presensi siswa berhasil diubah ke Hadir!');
+                    await loadTeachingData();
+                } else {
+                    alert(resJson.message || 'Gagal memperbarui status presensi.');
+                }
+            } catch (e) {
+                alert('Terjadi kesalahan koneksi server.');
+            } finally {
+                pendingAttendanceId = null;
+            }
+        });
+    </script>
+    <script src="../js/global-layout.js?v=20261109_8.0"></script>
+</body>
+</html>

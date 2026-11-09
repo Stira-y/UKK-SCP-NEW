@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; object-src 'none';">
+    <title>Kelola Kelas - Sistem SCP</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .category-scroll::-webkit-scrollbar {
+            height: 4px;
+        }
+        .category-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col font-sans overflow-hidden">
+
+    <!-- 1. Navbar Universal -->
+    <div id="app-navbar"></div>
+
+    <!-- Layout Utama -->
+    <div class="flex flex-1 relative overflow-hidden h-[calc(100vh-57px)]">
+        <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-20 hidden md:hidden transition-opacity duration-300"></div>
+
+        <!-- 2. Sidebar Universal -->
+        <div id="app-sidebar"></div>
+
+        <!-- Konten Utama (Scrollable Vertikal) -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto h-full w-full">
+            <div class="max-w-7xl mx-auto space-y-6">
+                
+                <!-- Header -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-slate-800">Kelola Data Kelas</h2>
+                        <p class="text-slate-500 text-xs md:text-sm mt-0.5">Tambah dan manajemen tingkat serta nomor kelas sekolah.</p>
+                    </div>
+                    <div>
+                        <a href="kelola data user.html" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-xs md:text-sm font-semibold transition flex items-center space-x-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                            <span>Kembali ke Kelola User</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Form Tambah Kelas -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-base font-bold text-slate-800 mb-4">Tambah Kelas Baru</h3>
+                    <form id="formAddClass" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Kelas</label>
+                            <input type="text" value="X, XI, XII (Otomatis)" disabled class="w-full px-3.5 py-2 rounded-lg bg-slate-100 border border-slate-300 text-slate-500 text-xs md:text-sm cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama Kelas</label>
+                            <input type="text" id="inputNamaKelas" placeholder="Cth: TKJ, RPL" autocomplete="off" required class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-xs md:text-sm transition uppercase">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nomor Kelas Awal</label>
+                            <input type="text" id="inputNomorAwal" placeholder="Cth: 1 (Opsional)" autocomplete="off" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-xs md:text-sm transition">
+                        </div>
+                        <div class="flex items-end gap-2">
+                            <div class="flex-1">
+                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nomor Kelas Akhir</label>
+                                <input type="text" id="inputNomorAkhir" placeholder="Cth: 2 (Opsional)" autocomplete="off" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-xs md:text-sm transition">
+                            </div>
+                            <button type="button" id="btnTriggerAddClassSave" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-xs md:text-sm font-semibold transition shadow shrink-0 h-[38px]">
+                                Simpan
+                            </button>
+                        </div>
+                    </form>
+                    <p id="formClassError" class="text-xs text-red-500 italic mt-2 hidden"></p>
+                </div>
+
+                <!-- Tabel Daftar Kelas -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 font-bold text-slate-800 text-sm md:text-base">
+                        Daftar Kelas Terdaftar di Database
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[650px]">
+                            <thead>
+                                <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="py-3.5 px-4 font-semibold text-center w-36">Kelas</th>
+                                    <th class="py-3.5 px-4 font-semibold">Nama Kelas</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-36">Nomor Kelas</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-48">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="classTableBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
+                                <tr>
+                                    <td colspan="4" class="py-8 text-center text-slate-400">Memuat data kelas...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Konfirmasi Simpan Kelas -->
+    <div id="confirmSaveClassModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col p-6 text-center">
+            <h3 class="text-lg font-bold text-slate-800 mb-2">Konfirmasi Simpan Kelas</h3>
+            <p class="text-xs text-slate-500 mb-6">Apakah Anda yakin ingin menyimpan kelas baru ini?</p>
+            <div class="flex justify-center space-x-3">
+                <button type="button" id="btnConfirmClassNo" class="flex-1 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition">Tidak</button>
+                <button type="button" id="btnConfirmClassYes" class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow">Yakin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Konfirmasi Hapus Kelas -->
+    <div id="confirmDeleteClassModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col p-6 text-center">
+            <h3 class="text-lg font-bold text-slate-800 mb-2">Konfirmasi Hapus</h3>
+            <p id="deleteClassModalText" class="text-xs text-slate-500 mb-6">Apakah Anda yakin ingin menghapus kelas ini?</p>
+            <div class="flex justify-center space-x-3">
+                <button type="button" id="btnConfirmDeleteClassNo" class="flex-1 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition">Tidak</button>
+                <button type="button" id="btnConfirmDeleteClassYes" class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition shadow">Yakin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script JavaScript Halaman Kelola Kelas -->
+    <script>
+        
+        const token = localStorage.getItem('auth_token');
+        const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
+
+        if (!token || userData.id_role !== 1) {
+            alert('Akses ditolak! Silakan login sebagai Waka/Admin.');
+            window.location.href = '../login/login.html';
+        }
+
+        const inputNomorAwal = document.getElementById('inputNomorAwal');
+        const inputNomorAkhir = document.getElementById('inputNomorAkhir');
+        const inputNamaKelas = document.getElementById('inputNamaKelas');
+        const formAddClass = document.getElementById('formAddClass');
+        const formClassError = document.getElementById('formClassError');
+        const classTableBody = document.getElementById('classTableBody');
+
+        const confirmSaveClassModal = document.getElementById('confirmSaveClassModal');
+        const btnConfirmClassYes = document.getElementById('btnConfirmClassYes');
+        const btnConfirmClassNo = document.getElementById('btnConfirmClassNo');
+
+        const confirmDeleteClassModal = document.getElementById('confirmDeleteClassModal');
+        const btnConfirmDeleteClassYes = document.getElementById('btnConfirmDeleteClassYes');
+        const btnConfirmDeleteClassNo = document.getElementById('btnConfirmDeleteClassNo');
+        const deleteClassModalText = document.getElementById('deleteClassModalText');
+
+        let rawClassesData = [];
+        let expandedGroups = {};
+        let pendingDeleteAction = null;
+
+        // Otomatis ubah input nama kelas menjadi huruf kapital saat diketik
+        inputNamaKelas.addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase();
+        });
+
+        inputNomorAwal.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        });
+        inputNomorAkhir.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchClassesList();
+        });
+
+        async function fetchClassesList() {
+            try {
+                classTableBody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-400">Memuat data kelas...</td></tr>`;
+                const response = await fetch(`${API_BASE_URL}/classes`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const res = await response.json();
+                rawClassesData = (res.data || res || []).filter(c => {
+                    const nk = (c.nama_kelas || '').trim().toUpperCase();
+                    return nk !== 'RPL 1' && nk !== 'RPL1';
+                });
+                renderClassGroupTable();
+            } catch (err) {
+                classTableBody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-red-500">Gagal memuat data kelas.</td></tr>`;
+            }
+        }
+
+        function renderClassGroupTable() {
+            if (rawClassesData.length === 0) {
+                classTableBody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-400">Belum ada data kelas.</td></tr>`;
+                return;
+            }
+
+            const grouped = {};
+            rawClassesData.forEach(item => {
+                const namaOriginal = (item.nama_kelas || '').trim();
+                const namaKey = namaOriginal.toUpperCase();
+                if (!grouped[namaKey]) {
+                    grouped[namaKey] = { displayName: namaKey, items: [] };
+                }
+                grouped[namaKey].items.push(item);
+            });
+
+            const sortedKeys = Object.keys(grouped).sort((a, b) => grouped[a].displayName.localeCompare(grouped[b].displayName, 'id', { sensitivity: 'base' }));
+
+            let html = '';
+
+            sortedKeys.forEach(key => {
+                const groupObj = grouped[key];
+                const nama = groupObj.displayName;
+                const items = groupObj.items;
+
+                const numbers = items.map(i => parseInt(i.nomor_kelas)).filter(n => !isNaN(n)).sort((a, b) => a - b);
+                let rangeStr = '-';
+                if (numbers.length > 0) {
+                    const uniqueNumbers = [...new Set(numbers)];
+                    let ranges = [];
+                    let start = uniqueNumbers[0];
+                    let prev = start;
+
+                    for (let i = 1; i < uniqueNumbers.length; i++) {
+                        if (uniqueNumbers[i] === prev + 1) {
+                            prev = uniqueNumbers[i];
+                        } else {
+                            ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
+                            start = uniqueNumbers[i];
+                            prev = start;
+                        }
+                    }
+                    ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
+                    rangeStr = ranges.join(', ');
+                }
+
+                const isExpanded = !!expandedGroups[nama];
+
+                html += `
+                    <tr class="bg-slate-50/70 border-b border-slate-200">
+                        <td class="py-3 px-4 text-center font-bold text-slate-800">X, XI, XII</td>
+                        <td class="py-3 px-4 font-bold text-indigo-600 cursor-pointer hover:underline text-sm select-none" onclick="toggleGroup('${nama}')">
+                            ${nama}
+                        </td>
+                        <td class="py-3 px-4 text-center font-semibold text-slate-700">${rangeStr}</td>
+                        <td class="py-3 px-4 text-center">
+                            <div class="flex items-center justify-center space-x-2">
+                                ${isExpanded ? `
+                                    <input type="checkbox" id="chkGroup_${nama}" onclick="toggleSelectAllGroup('${nama}', this.checked)" class="w-4 h-4 text-indigo-600 rounded cursor-pointer" title="Select All">
+                                ` : ''}
+                                <button onclick="triggerDeleteGroup('${nama}')" class="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded-lg font-semibold transition text-xs">
+                                    Hapus
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+
+                if (isExpanded) {
+                    items.sort((a, b) => {
+                        const tingkatOrder = { 'X': 1, 'XI': 2, 'XII': 3 };
+                        const orderA = tingkatOrder[a.kelas_nomor] || 0;
+                        const orderB = tingkatOrder[b.kelas_nomor] || 0;
+                        if (orderA !== orderB) return orderA - orderB;
+                        return parseInt(a.nomor_kelas || 0) - parseInt(b.nomor_kelas || 0);
+                    });
+
+                    items.forEach(child => {
+                        const isXi = child.kelas_nomor === 'XI';
+                        const classColorStyle = isXi ? 'text-amber-500 font-extrabold' : 'text-slate-600 font-bold';
+
+                        html += `
+                            <tr class="bg-white border-b border-slate-100 hover:bg-indigo-50/30 transition">
+                                <td class="py-2.5 px-4 text-center ${classColorStyle}">${child.kelas_nomor}</td>
+                                <td class="py-2.5 px-4 font-semibold text-slate-700">${(child.nama_kelas || '').toUpperCase()}</td>
+                                <td class="py-2.5 px-4 text-center font-medium text-slate-600">${child.nomor_kelas || '-'}</td>
+                                <td class="py-2.5 px-4 text-center">
+                                    <input type="checkbox" data-group="${nama}" data-nomor="${child.nomor_kelas || ''}" value="${child.id_class}" onchange="handleChildCheckboxChange('${nama}', '${child.nomor_kelas || ''}', this.checked)" class="child-chk-${nama} w-4 h-4 text-indigo-600 rounded cursor-pointer">
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            });
+
+            classTableBody.innerHTML = html;
+        }
+
+        window.toggleGroup = function(nama) {
+            expandedGroups[nama] = !expandedGroups[nama];
+            renderClassGroupTable();
+        };
+
+        window.toggleSelectAllGroup = function(nama, isChecked) {
+            const childCheckboxes = document.querySelectorAll(`.child-chk-${nama}`);
+            childCheckboxes.forEach(chk => {
+                chk.checked = isChecked;
+            });
+        };
+
+        window.handleChildCheckboxChange = function(nama, nomorKelas, isChecked) {
+            const childCheckboxes = document.querySelectorAll(`.child-chk-${nama}`);
+            childCheckboxes.forEach(chk => {
+                if (chk.getAttribute('data-nomor') === nomorKelas) {
+                    chk.checked = isChecked;
+                }
+            });
+        };
+
+        window.triggerDeleteGroup = function(nama) {
+            const groupItems = rawClassesData.filter(i => (i.nama_kelas || '').trim().toUpperCase() === nama.toUpperCase());
+            if (groupItems.length === 0) return;
+
+            const childCheckboxes = document.querySelectorAll(`.child-chk-${nama}`);
+            let idsToDelete = [];
+
+            if (childCheckboxes.length > 0) {
+                childCheckboxes.forEach(chk => {
+                    if (chk.checked) {
+                        idsToDelete.push(parseInt(chk.value));
+                    }
+                });
+            }
+
+            if (idsToDelete.length === 0) {
+                idsToDelete = groupItems.map(i => i.id_class);
+                deleteClassModalText.textContent = `Apakah Anda yakin ingin menghapus seluruh kelas ${nama}?`;
+            } else {
+                deleteClassModalText.textContent = `Apakah Anda yakin ingin menghapus ${idsToDelete.length} kelas ${nama} yang dipilih?`;
+            }
+
+            pendingDeleteAction = idsToDelete;
+            confirmDeleteClassModal.classList.remove('hidden');
+        };
+
+        btnConfirmDeleteClassNo.addEventListener('click', () => {
+            confirmDeleteClassModal.classList.add('hidden');
+            pendingDeleteAction = null;
+        });
+
+        btnConfirmDeleteClassYes.addEventListener('click', async () => {
+            confirmDeleteClassModal.classList.add('hidden');
+            if (!pendingDeleteAction || pendingDeleteAction.length === 0) return;
+
+            try {
+                for (const id of pendingDeleteAction) {
+                    await fetch(`${API_BASE_URL}/classes/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+                }
+
+                alert('Data kelas berhasil dihapus.');
+                fetchClassesList();
+            } catch (err) {
+                alert('Terjadi kesalahan saat menghapus kelas.');
+            } finally {
+                pendingDeleteAction = null;
+            }
+        });
+
+        document.getElementById('btnTriggerAddClassSave').addEventListener('click', () => {
+            formClassError.classList.add('hidden');
+            const namaKelasInput = inputNamaKelas.value.trim().toUpperCase();
+
+            if (!namaKelasInput) {
+                formClassError.textContent = 'Nama kelas harus diisi!';
+                formClassError.classList.remove('hidden');
+                return;
+            }
+
+            confirmSaveClassModal.classList.remove('hidden');
+        });
+
+        btnConfirmClassNo.addEventListener('click', () => {
+            confirmSaveClassModal.classList.add('hidden');
+        });
+
+        btnConfirmClassYes.addEventListener('click', async () => {
+            confirmSaveClassModal.classList.add('hidden');
+
+            // Selalu simpan dengan huruf kapital penuh
+            const namaKelasInput = inputNamaKelas.value.trim().toUpperCase();
+            const awalStr = inputNomorAwal.value.trim();
+            const akhirStr = inputNomorAkhir.value.trim();
+
+            const tingkatList = ['X', 'XI', 'XII'];
+            let requests = [];
+
+            if (awalStr === '' && akhirStr === '') {
+                for (const tingkat of tingkatList) {
+                    const alreadyExists = rawClassesData.some(cls => 
+                        (cls.kelas_nomor || '').toUpperCase() === tingkat.toUpperCase() &&
+                        (cls.nama_kelas || '').trim().toUpperCase() === namaKelasInput &&
+                        (!cls.nomor_kelas || cls.nomor_kelas === '')
+                    );
+                    if (!alreadyExists) {
+                        requests.push({
+                            kelas_nomor: tingkat,
+                            nama_kelas: namaKelasInput,
+                            nomor_kelas: null
+                        });
+                    }
+                }
+            } else {
+                const awal = awalStr !== '' ? parseInt(awalStr) : 1;
+                const akhir = akhirStr !== '' ? parseInt(akhirStr) : awal;
+                const minNum = Math.min(awal, akhir);
+                const maxNum = Math.max(awal, akhir);
+
+                for (const tingkat of tingkatList) {
+                    for (let i = minNum; i <= maxNum; i++) {
+                        const numStr = String(i);
+
+                        const alreadyExists = rawClassesData.some(cls => {
+                            const matchTingkat = (cls.kelas_nomor || '').toUpperCase() === tingkat.toUpperCase();
+                            const dbNama = (cls.nama_kelas || '').replace(/\s*\d+$/, '').trim().toUpperCase();
+                            const matchNama = dbNama === namaKelasInput || (cls.nama_kelas || '').trim().toUpperCase() === namaKelasInput;
+                            const dbNomor = cls.nomor_kelas ? String(cls.nomor_kelas).trim() : ((cls.nama_kelas || '').match(/\d+$/)?.[0] || '');
+                            return matchTingkat && matchNama && dbNomor === numStr;
+                        });
+
+                        if (!alreadyExists) {
+                            requests.push({
+                                kelas_nomor: tingkat,
+                                nama_kelas: namaKelasInput,
+                                nomor_kelas: numStr
+                            });
+                        }
+                    }
+                }
+            }
+
+            if (requests.length === 0) {
+                alert('Semua nomor kelas yang dimasukkan sudah ada di kelas ini, tidak ada penambahan nomor duplikat.');
+                return;
+            }
+
+            try {
+                const btnSubmit = document.getElementById('btnTriggerAddClassSave');
+                btnSubmit.disabled = true;
+                btnSubmit.textContent = 'Menyimpan...';
+
+                for (const payload of requests) {
+                    await fetch(`${API_BASE_URL}/classes`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                alert('Kelas baru berhasil ditambahkan tanpa duplikasi!');
+                formAddClass.reset();
+                fetchClassesList();
+            } catch (err) {
+                formClassError.textContent = 'Terjadi kesalahan saat menyimpan kelas.';
+                formClassError.classList.remove('hidden');
+            } finally {
+                const btnSubmit = document.getElementById('btnTriggerAddClassSave');
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = 'Simpan';
+            }
+        });
+    </script>
+    <script src="../js/global-layout.js?v=20261109_8.0"></script>
+</body>
+</html>
