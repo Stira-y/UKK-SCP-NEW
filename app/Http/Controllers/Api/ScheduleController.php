@@ -443,6 +443,7 @@ class ScheduleController extends Controller
             $rawRoom = trim($item['ruangan']);
             [$normName, $normNum] = $normalizeRoom($rawRoom);
             $matchedRoom = null;
+            $rawStripped = strtolower(preg_replace('/[^a-z0-9]/i', '', $rawRoom));
 
             foreach ($rooms as $r) {
                 $rFormat1 = trim($r->nama_room . ' ' . $r->nomor_room);
@@ -463,6 +464,21 @@ class ScheduleController extends Controller
                             break;
                         }
                     }
+                }
+                // Keyword / Fuzzy matching (e.g. "Lapangan OR1" vs "or1")
+                $dbStripped1 = strtolower(preg_replace('/[^a-z0-9]/i', '', $r->nama_room . $r->nomor_room));
+                $dbStripped2 = strtolower(preg_replace('/[^a-z0-9]/i', '', $r->nama_room));
+                if (!empty($rawStripped) && ($rawStripped === $dbStripped1 || $rawStripped === $dbStripped2)) {
+                    $matchedRoom = $r;
+                    break;
+                }
+                if (!empty($dbStripped1) && strlen($dbStripped1) >= 2 && str_contains($rawStripped, $dbStripped1)) {
+                    $matchedRoom = $r;
+                    break;
+                }
+                if (!empty($rawStripped) && strlen($rawStripped) >= 2 && str_contains($dbStripped1, $rawStripped)) {
+                    $matchedRoom = $r;
+                    break;
                 }
             }
 
@@ -552,6 +568,78 @@ class ScheduleController extends Controller
             'message'        => "Berhasil mengimpor {$importedCount} data jadwal pelajaran.",
             'imported_count' => $importedCount,
             'errors'         => $errors
+        ], 200);
+    }
+
+    public function mergeImportPdf(Request $request)
+    {
+        $request->validate([
+            'file_jadwal' => 'required|file|mimes:pdf',
+            'file_ruang'  => 'required|file|mimes:pdf',
+            'cycle_type'  => 'nullable|in:1,2',
+            'is_upacara'  => 'nullable',
+        ]);
+
+        $cycleType = $request->input('cycle_type', '2');
+        $isUpacara = filter_var($request->input('is_upacara', false), FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
+
+        $tempDir = storage_path('app/temp_pdf');
+        if (!file_exists($tempDir)) {
+            mkdir($tempDir, 0777, true);
+        }
+
+        $timeTag = time() . '_' . rand(100, 999);
+        $pathJadwal = $tempDir . DIRECTORY_SEPARATOR . "jadwal_{$timeTag}.pdf";
+        $pathRuang  = $tempDir . DIRECTORY_SEPARATOR . "ruang_{$timeTag}.pdf";
+        $pathJson   = $tempDir . DIRECTORY_SEPARATOR . "out_{$timeTag}.json";
+
+        $request->file('file_jadwal')->move($tempDir, "jadwal_{$timeTag}.pdf");
+        $request->file('file_ruang')->move($tempDir, "ruang_{$timeTag}.pdf");
+
+        $scriptPath = base_path('app/Services/pdf_schedule_parser.py');
+        $cmd = "python " . escapeshellarg($scriptPath) . " " . escapeshellarg($pathJadwal) . " " . escapeshellarg($pathRuang) . " " . escapeshellarg($cycleType) . " " . escapeshellarg($isUpacara) . " " . escapeshellarg($pathJson);
+
+        $out = [];
+        $ret = 0;
+        exec($cmd, $out, $ret);
+
+        if ($ret !== 0 || !file_exists($pathJson)) {
+            @unlink($pathJadwal);
+            @unlink($pathRuang);
+            @unlink($pathJson);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal memproses file PDF melalui parser: ' . implode(' ', $out)
+            ], 500);
+        }
+
+        $jsonData = json_decode(file_get_contents($pathJson), true);
+
+        @unlink($pathJadwal);
+        @unlink($pathRuang);
+        @unlink($pathJson);
+
+        if (!$jsonData || empty($jsonData['db_items'])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data jadwal dari PDF tidak dapat diekstrak atau kosong.'
+            ], 422);
+        }
+
+        // Hapus jadwal putaran target terlebih dahulu agar fresh
+        Schedule::where('cycle_type', $cycleType)->delete();
+
+        // Panggil importBatch logic menggunakan db_items yang dihasilkan
+        $fakeRequest = new Request(['items' => $jsonData['db_items']]);
+        $importResult = $this->importBatch($fakeRequest);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Berhasil memproses dan mengimpor {$jsonData['classes_count']} kelas ({$jsonData['total_db_items']} jam pelajaran) pada Putaran {$cycleType}!",
+            'classes_count' => $jsonData['classes_count'],
+            'total_items' => $jsonData['total_db_items'],
+            'preview_url' => '/role 1 waka/jadwal_gabungan_preview.html',
+            'pdf_url' => '/JADWAL_GABUNGAN_PUTARAN_2.pdf'
         ], 200);
     }
 }

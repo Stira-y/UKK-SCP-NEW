@@ -72,6 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/waka/teachers/send-otp', [UserController::class, 'sendWakaOtp']);
     Route::post('/waka/teachers/verify-otp', [UserController::class, 'verifyWakaOtp']);
     Route::put('/waka/teachers/{id}', [UserController::class, 'updateTeacherByWaka']);
+    Route::post('/waka/teachers/{id}/retire', [UserController::class, 'retireTeacher']);
     Route::delete('/waka/teachers/{id}', [UserController::class, 'destroy']);
 
     Route::get('/user', function (Request $request) {
@@ -231,6 +232,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Route Import Excel/PDF Batch & Bulk Delete Jadwal
     Route::post('schedules/import-batch', [ScheduleController::class, 'importBatch']);
+    Route::post('schedules/merge-import-pdf', [ScheduleController::class, 'mergeImportPdf']);
     Route::post('schedules/bulk-delete', [ScheduleController::class, 'bulkDelete']);
     Route::apiResource('schedules', ScheduleController::class);
 });

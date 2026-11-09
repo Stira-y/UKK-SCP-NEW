@@ -114,9 +114,50 @@ class UserController extends Controller
         ], 200);
     }
 
+    public function retireTeacher($id)
+    {
+        $teacher = User::whereIn('id_role', [1, 2, 3])->findOrFail($id);
+        $teacher->id_class = null;
+        $teacher->title = 'Pensiun';
+        $teacher->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Guru {$teacher->fullname} berhasil dipensiunkan dan dipindahkan ke Data Arsip."
+        ], 200);
+    }
+
     public function getGraduations(Request $request)
     {
         $type = $request->query('type');
+
+        if ($type === 'guru_pensiun' || $type === 'pensiun') {
+            $retiredTeachers = User::whereIn('id_role', [1, 2, 3])
+                ->where('title', 'Pensiun')
+                ->orderBy('fullname', 'asc')
+                ->get();
+
+            $result = $retiredTeachers->map(function ($t) {
+                return [
+                    'id_user'        => $t->id_user,
+                    'nisn'           => '-',
+                    'nis'            => '-',
+                    'nip'            => $t->nip ?? '-',
+                    'fullname'       => $t->fullname ?? $t->username,
+                    'status_arsip'   => 'guru_pensiun',
+                    'status_label'   => 'Guru Pensiun',
+                    'total_izin'     => '-',
+                    'total_presensi' => '-',
+                    'tanggal_arsip'  => $t->updated_at ? date('d/m/Y', strtotime($t->updated_at)) : '-',
+                    'tahun_lulus'    => $t->updated_at ? date('Y', strtotime($t->updated_at)) : date('Y'),
+                ];
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'data'   => $result
+            ], 200);
+        }
 
         $query = User::where('id_role', 4)
             ->whereNull('id_class')
@@ -161,6 +202,7 @@ class UserController extends Controller
                 'id_user'        => $st->id_user,
                 'nisn'           => $st->nisn ?? '-',
                 'nis'            => $st->nis ?? '-',
+                'nip'            => '-',
                 'fullname'       => $st->fullname ?? $st->username,
                 'status_arsip'   => $isExpelled ? 'dikeluarkan' : 'alumni',
                 'status_label'   => $isExpelled ? 'Dikeluarkan' : 'Lulus / Alumni',
@@ -170,6 +212,29 @@ class UserController extends Controller
                 'tahun_lulus'    => $st->updated_at ? date('Y', strtotime($st->updated_at)) : date('Y'),
             ];
         });
+
+        // Jika tidak memfilter secara spesifik type, sertakan juga guru pensiun
+        if (!$type) {
+            $retiredTeachers = User::whereIn('id_role', [1, 2, 3])
+                ->where('title', 'Pensiun')
+                ->orderBy('fullname', 'asc')
+                ->get();
+            foreach ($retiredTeachers as $t) {
+                $result->push([
+                    'id_user'        => $t->id_user,
+                    'nisn'           => '-',
+                    'nis'            => '-',
+                    'nip'            => $t->nip ?? '-',
+                    'fullname'       => $t->fullname ?? $t->username,
+                    'status_arsip'   => 'guru_pensiun',
+                    'status_label'   => 'Guru Pensiun',
+                    'total_izin'     => '-',
+                    'total_presensi' => '-',
+                    'tanggal_arsip'  => $t->updated_at ? date('d/m/Y', strtotime($t->updated_at)) : '-',
+                    'tahun_lulus'    => $t->updated_at ? date('Y', strtotime($t->updated_at)) : date('Y'),
+                ]);
+            }
+        }
 
         return response()->json([
             'status' => 'success',
@@ -182,8 +247,14 @@ class UserController extends Controller
         $category = $request->query('category', 'all');
 
         $query = User::with(['role', 'schoolClass', 'counselorClasses'])
-            ->whereIn('id_role', [1, 2, 3])
-            ->orWhereNotNull('nip');
+            ->where(function ($q) {
+                $q->whereIn('id_role', [1, 2, 3])
+                  ->orWhereNotNull('nip');
+            })
+            ->where(function ($q) {
+                $q->whereNull('title')
+                  ->orWhere('title', '!=', 'Pensiun');
+            });
 
         if ($category !== 'all') {
             if ($category === 'Waka') {

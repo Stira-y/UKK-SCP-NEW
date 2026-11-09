@@ -65,16 +65,16 @@
                             <span class="text-slate-300">|</span>
                             <button class="cat-btn" data-cat="orang_tua">Akun Orang Tua</button>
                         </div>
-                        <div class="flex flex-wrap items-center gap-3">
-                            <button id="btnOpenAddClass" onclick="window.location.href='kelola kelas.html'" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5">
+                        <div class="flex items-center gap-2.5 shrink-0 whitespace-nowrap overflow-x-auto">
+                            <button id="btnOpenAddClass" onclick="window.location.href='kelola kelas.html'" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5 whitespace-nowrap shrink-0">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                                 <span>Kelas</span>
                             </button>
-                            <button id="btnOpenAddUser" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5">
+                            <button id="btnOpenAddUser" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition flex items-center space-x-1.5 whitespace-nowrap shrink-0">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                                 <span>Tambah User</span>
                             </button>
-                            <button id="btnPromoteClasses" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition">
+                            <button id="btnPromoteClasses" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition whitespace-nowrap shrink-0">
                                 Naikkan Kelas
                             </button>
                         </div>
@@ -1164,7 +1164,7 @@
             if (isPromoteMode) {
                 isPromoteMode = false;
                 btnPromoteClasses.textContent = 'Naikkan Kelas';
-                btnPromoteClasses.className = 'bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition';
+                btnPromoteClasses.className = 'bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition whitespace-nowrap shrink-0';
                 btnOpenAddUser.innerHTML = `
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     <span>Tambah User</span>
@@ -1303,7 +1303,7 @@
             if (!isPromoteMode) {
                 isPromoteMode = true;
                 btnPromoteClasses.textContent = 'Simpan';
-                btnPromoteClasses.className = 'bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition';
+                btnPromoteClasses.className = 'bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition whitespace-nowrap shrink-0';
                 
                 btnOpenAddUser.textContent = 'Batal';
                 btnOpenAddUser.className = 'bg-slate-200 hover:bg-slate-300 text-slate-700 px-3.5 py-1.5 rounded-xl font-semibold shadow transition';
@@ -1553,7 +1553,7 @@
                         alert(res.message || 'Proses kenaikan kelas dan kelulusan berhasil!');
                         isPromoteMode = false;
                         btnPromoteClasses.textContent = 'Naikkan Kelas';
-                        btnPromoteClasses.className = 'bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition';
+                        btnPromoteClasses.className = 'bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl font-semibold shadow transition whitespace-nowrap shrink-0';
                         
                         btnOpenAddUser.innerHTML = `
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>

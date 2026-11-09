@@ -119,6 +119,16 @@
 
                         <!-- Filter Putaran & Download PDF -->
                         <div class="flex items-center space-x-3">
+                            <!-- Toggle Upacara (Senin) -->
+                            <div class="flex items-center space-x-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl shadow-xs">
+                                <span class="text-xs font-bold text-slate-700">Upacara:</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="toggleUpacaraSchedule" class="sr-only peer">
+                                    <div class="w-8 h-4 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-indigo-600"></div>
+                                </label>
+                                <span id="labelUpacaraToggleStatus" class="text-[11px] font-bold text-slate-500">Mati</span>
+                            </div>
+
                             <div class="flex items-center space-x-2">
                                 <span class="text-xs font-semibold text-slate-500">Putaran:</span>
                                 <select id="selectCycle" class="bg-white border border-slate-300 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
@@ -232,32 +242,21 @@
                             <option value="Rabu">Rabu</option>
                             <option value="Kamis">Kamis</option>
                             <option value="Jumat">Jumat</option>
-                            <option value="Sabtu">Sabtu</option>
-                            <option value="Minggu">Minggu</option>
                         </select>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Waktu Tambahan</label>
-                        <select id="editFormExtraTime" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-                            <option value="none">Tidak ada (default)</option>
-                            <option value="upacara">Upacara (Senin)</option>
-                            <option value="literasi">Literasi (Selasa)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Pengurangan Waktu</label>
-                        <select id="editFormTimeReduction" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-                            <option value="0">Tidak ada (default)</option>
-                            <option value="5">-5 menit (ramadhan)</option>
-                            <option value="10">-10 menit</option>
-                            <option value="15">-15 menit</option>
-                            <option value="20">-20 menit</option>
-                            <option value="25">-25 menit</option>
-                        </select>
-                    </div>
+                <input type="hidden" id="editFormExtraTime" value="none">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Pengurangan Waktu</label>
+                    <select id="editFormTimeReduction" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                        <option value="0">Tidak ada (default)</option>
+                        <option value="5">-5 menit (ramadhan)</option>
+                        <option value="10">-10 menit</option>
+                        <option value="15">-15 menit</option>
+                        <option value="20">-20 menit</option>
+                        <option value="25">-25 menit</option>
+                    </select>
                 </div>
 
                 <!-- Grid Waktu: Dropdown Jam Ke (Mulai & Selesai) -->
@@ -361,32 +360,21 @@
                             <option value="Rabu">Rabu</option>
                             <option value="Kamis">Kamis</option>
                             <option value="Jumat">Jumat</option>
-                            <option value="Sabtu">Sabtu</option>
-                            <option value="Minggu">Minggu</option>
                         </select>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Waktu Tambahan</label>
-                        <select id="formExtraTime" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-                            <option value="none">Tidak ada (default)</option>
-                            <option value="upacara">Upacara (Senin)</option>
-                            <option value="literasi">Literasi (Selasa)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Pengurangan Waktu</label>
-                        <select id="formTimeReduction" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-                            <option value="0">Tidak ada (default)</option>
-                            <option value="5">-5 menit (ramadhan)</option>
-                            <option value="10">-10 menit</option>
-                            <option value="15">-15 menit</option>
-                            <option value="20">-20 menit</option>
-                            <option value="25">-25 menit</option>
-                        </select>
-                    </div>
+                <input type="hidden" id="formExtraTime" value="none">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Pengurangan Waktu</label>
+                    <select id="formTimeReduction" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs md:text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                        <option value="0">Tidak ada (default)</option>
+                        <option value="5">-5 menit (ramadhan)</option>
+                        <option value="10">-10 menit</option>
+                        <option value="15">-15 menit</option>
+                        <option value="20">-20 menit</option>
+                        <option value="25">-25 menit</option>
+                    </select>
                 </div>
 
                 <!-- Grid Waktu: Dropdown Jam Ke (Mulai & Selesai) -->
@@ -1064,7 +1052,7 @@
                     { jam: 7, label: 'Jam Ke 7', dur: 40, isBreak: false, start: '12:45', end: '13:25' },
                     { jam: 8, label: 'Jam Ke 8', dur: 35, isBreak: false, start: '13:25', end: '14:00' },
                     { jam: 9, label: 'Jam Ke 9', dur: 35, isBreak: false, start: '14:00', end: '14:35' },
-                    { jam: 10, label: 'Jam Ke 10', dur: 35, isBreak: false, start: '14:35', end: '23:59' },
+                    { jam: 10, label: 'Jam Ke 10', dur: 35, isBreak: false, start: '14:35', end: '15:10' },
                 ];
             } else if (extraTime === 'literasi') {
                 baseSlots = [
@@ -1079,7 +1067,7 @@
                     { jam: 7, label: 'Jam Ke 7', dur: 40, isBreak: false, start: '12:45', end: '13:25' },
                     { jam: 8, label: 'Jam Ke 8', dur: 35, isBreak: false, start: '13:25', end: '14:00' },
                     { jam: 9, label: 'Jam Ke 9', dur: 35, isBreak: false, start: '14:00', end: '14:35' },
-                    { jam: 10, label: 'Jam Ke 10', dur: 35, isBreak: false, start: '14:35', end: '23:59' },
+                    { jam: 10, label: 'Jam Ke 10', dur: 35, isBreak: false, start: '14:35', end: '15:10' },
                 ];
             } else {
                 baseSlots = [
@@ -1094,7 +1082,7 @@
                     { jam: 7, label: 'Jam Ke 7', dur: 40, isBreak: false, start: '12:30', end: '13:10' },
                     { jam: 8, label: 'Jam Ke 8', dur: 40, isBreak: false, start: '13:10', end: '13:50' },
                     { jam: 9, label: 'Jam Ke 9', dur: 40, isBreak: false, start: '13:50', end: '14:30' },
-                    { jam: 10, label: 'Jam Ke 10', dur: 40, isBreak: false, start: '14:30', end: '23:59' },
+                    { jam: 10, label: 'Jam Ke 10', dur: 40, isBreak: false, start: '14:30', end: '15:10' },
                 ];
             }
 
@@ -1128,7 +1116,7 @@
                     label: s.label,
                     isBreak: s.isBreak,
                     startTime: formatTime(sMin),
-                    endTime: (s.jam === 10) ? '23:59' : formatTime(eMin)
+                    endTime: formatTime(eMin)
                 });
             }
             return adjusted;
@@ -1779,15 +1767,98 @@
             confirmScheduleActionModal.classList.remove('hidden');
         });
 
+        const toggleUpacaraSchedule = document.getElementById('toggleUpacaraSchedule');
+        const labelUpacaraToggleStatus = document.getElementById('labelUpacaraToggleStatus');
+
+        if (toggleUpacaraSchedule) {
+            const savedUpacara = localStorage.getItem('upacara_schedule_active') === 'true';
+            toggleUpacaraSchedule.checked = savedUpacara;
+            if (labelUpacaraToggleStatus) {
+                labelUpacaraToggleStatus.textContent = savedUpacara ? 'Aktif' : 'Mati';
+                labelUpacaraToggleStatus.className = savedUpacara ? 'text-[11px] font-bold text-indigo-600' : 'text-[11px] font-bold text-slate-500';
+            }
+            toggleUpacaraSchedule.addEventListener('change', () => {
+                const active = toggleUpacaraSchedule.checked;
+                localStorage.setItem('upacara_schedule_active', active);
+                if (labelUpacaraToggleStatus) {
+                    labelUpacaraToggleStatus.textContent = active ? 'Aktif' : 'Mati';
+                    labelUpacaraToggleStatus.className = active ? 'text-[11px] font-bold text-indigo-600' : 'text-[11px] font-bold text-slate-500';
+                }
+                renderClassTable();
+            });
+        }
+
         async function executeImportPdfModal() {
             const fileJadwal = inputPdfJadwal.files[0];
             const fileRuang = inputPdfRuang.files[0];
             if (!fileJadwal || !fileRuang) return;
 
             importPdfProgressBox.classList.remove('hidden');
-            importPdfProgressBar.style.width = '10%';
-            importPdfProgressPct.textContent = '10%';
-            importPdfProgressLabel.textContent = 'Membaca berkas PDF Jadwal & Ruang...';
+            importPdfProgressBar.style.width = '20%';
+            importPdfProgressPct.textContent = '20%';
+            importPdfProgressLabel.textContent = 'Mengunggah & memproses penggabungan PDF...';
+
+            let targetCycle = String(currentCycle || '1');
+            if (/PUT[_\s\-]*2/i.test(fileJadwal.name) || /PUT[_\s\-]*2/i.test(fileRuang.name)) {
+                targetCycle = '2';
+            } else if (/PUT[_\s\-]*1/i.test(fileJadwal.name) || /PUT[_\s\-]*1/i.test(fileRuang.name)) {
+                targetCycle = '1';
+            }
+
+            const isUpacara = toggleUpacaraSchedule ? toggleUpacaraSchedule.checked : false;
+
+            try {
+                // 1. Eksekusi melalui backend parser otomatis yang sudah teruji 100%
+                const formData = new FormData();
+                formData.append('file_jadwal', fileJadwal);
+                formData.append('file_ruang', fileRuang);
+                formData.append('cycle_type', targetCycle);
+                formData.append('is_upacara', isUpacara ? '1' : '0');
+
+                importPdfProgressBar.style.width = '50%';
+                importPdfProgressPct.textContent = '50%';
+                importPdfProgressLabel.textContent = 'Mengekstrak 48 kelas & alokasi ruangan dengan Dynamic Parser...';
+
+                const response = await fetch(`${API_BASE_URL}/schedules/merge-import-pdf`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                });
+
+                importPdfProgressBar.style.width = '85%';
+                importPdfProgressPct.textContent = '85%';
+                importPdfProgressLabel.textContent = 'Menyimpan jadwal pelajaran ke database...';
+
+                const res = await response.json().catch(() => ({}));
+
+                if (response.ok && res.status === 'success') {
+                    importPdfProgressBar.style.width = '100%';
+                    importPdfProgressPct.textContent = '100%';
+                    importPdfProgressLabel.textContent = 'Selesai!';
+
+                    alert(`${res.message}\n\nJadwal telah berhasil tersimpan ke sistem database!`);
+                    modalImportPdf.classList.add('hidden');
+                    formScheduleModal.classList.add('hidden');
+                    currentCycle = targetCycle;
+                    selectCycle.value = currentCycle;
+                    applyCycleVisualStatus();
+                    await fetchSchedules();
+                    renderClassTable();
+
+                    if (confirm('Buka halaman Pratinjau Tabel Jadwal Hasil Penggabungan (Tabel Biru)?')) {
+                        window.open('jadwal_gabungan_preview.html', '_blank');
+                    }
+                    return;
+                } else {
+                    console.warn('Backend merge response error:', res);
+                    throw new Error(res.message || 'Gagal memproses via server parser');
+                }
+            } catch (backendErr) {
+                console.warn('Beralih ke fallback client-side...', backendErr);
+            }
 
             try {
                 const abJadwal = await fileJadwal.arrayBuffer();

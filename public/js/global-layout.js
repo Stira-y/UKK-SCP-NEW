@@ -137,7 +137,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             Kelola User Guru
                         </a>
                         <a href="../role 1 waka/kelulusan.html" class="block px-3 py-2 text-xs ${lulusSubActive} rounded-lg transition">
-                            Data Arsip Siswa
+                            Data Arsip
                         </a>
                     </div>
                 </div>
