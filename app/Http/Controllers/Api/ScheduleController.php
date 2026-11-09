@@ -11,8 +11,37 @@ use Illuminate\Http\Request;
 
 class ScheduleController extends Controller
 {
+    public static function cleanupDummyTeachers(): void
+    {
+        try {
+            $dummyIds = User::where('id_role', 2)
+                ->where(function ($q) {
+                    $q->whereNull('nip')
+                      ->orWhere('nip', '')
+                      ->orWhere('nip', '-');
+                })
+                ->where(function ($q) {
+                    $q->where('email', 'like', '%@school.id')
+                      ->orWhere('username', 'like', 'guru_%')
+                      ->orWhere('title', 'Guru')
+                      ->orWhereNull('title')
+                      ->orWhere('fullname', '-');
+                })
+                ->pluck('id_user');
+
+            if ($dummyIds->count() > 0) {
+                Schedule::whereIn('id_guru', $dummyIds)->delete();
+                User::whereIn('id_user', $dummyIds)->delete();
+            }
+        } catch (\Throwable $e) {
+            // Ignore cleanup errors
+        }
+    }
+
     public function index(Request $request)
     {
+        self::cleanupDummyTeachers();
+
         $query = Schedule::with(['teacher', 'schoolClass', 'room']);
 
         if ($request->has('id_class')) {
@@ -341,14 +370,31 @@ class ScheduleController extends Controller
             'items.*.cycle_type'    => 'required|in:1,2',
         ]);
 
+        // Pastikan id_guru pada tabel schedules dapat bernilai NULL (untuk Istirahat / Literasi / Upacara)
+        try {
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE schedules MODIFY id_guru BIGINT UNSIGNED NULL');
+        } catch (\Throwable $e) {
+            // Abaikan jika sudah nullable
+        }
+
+        // Bersihkan guru dummy tanpa NIP sebelum import
+        self::cleanupDummyTeachers();
+
         $classes = SchoolClass::all();
-        $teachers = User::whereIn('id_role', [2, 3])->get();
+        $teachers = User::whereIn('id_role', [1, 2, 3])->get();
         $rooms = Room::all();
 
         $importedCount = 0;
         $errors = [];
         $now = now();
         $insertRows = [];
+
+        $stripTitles = function ($name) {
+            $s = preg_replace('/\b(LAB|RUANG)\s*\d+\b/i', '', (string)$name);
+            $s = preg_replace('/\b(Drs|Dra|Ir|H|Hj|S\.Pd\.Si|S\.Pd\.I|S\.Pd|M\.Pd|M\.Acc|S\.Kom|S\.Si|S\.T|S\.Ag|S\.Sos|S\.S|S\.E|S\.Or|M\.Si|M\.Kom|Gr|SS|SPd|MPd)\b\.?/i', '', $s);
+            $s = preg_replace('/[^a-zA-Z\s]/', ' ', $s);
+            return strtolower(trim(preg_replace('/\s+/', ' ', $s)));
+        };
 
         // Helper untuk normalisasi ruangan
         $normalizeRoom = function ($raw) {
@@ -399,45 +445,43 @@ class ScheduleController extends Controller
                 continue;
             }
 
+            $mapelName = trim($item['mapel']);
+            if ($mapelName === '-x-' || empty($mapelName)) {
+                continue;
+            }
+
             $rawGuru = trim($item['guru']);
             $cleanGuruStr = preg_replace('/^"|\d+[\.,]\s*|"$/', '', $rawGuru);
+            $cleanGuruStr = preg_replace('/\s+LAB\s+\d+$/i', '', $cleanGuruStr);
             $cleanGuruStr = trim($cleanGuruStr, '" \t\n\r');
             if (empty($cleanGuruStr)) $cleanGuruStr = $rawGuru;
 
-            $matchedGuru = $teachers->first(function ($t) use ($cleanGuruStr) {
-                if (strcasecmp(trim($t->fullname), $cleanGuruStr) === 0 || strcasecmp(trim($t->username), $cleanGuruStr) === 0) {
-                    return true;
-                }
-                $tLower = strtolower(trim($t->fullname));
-                $gLower = strtolower($cleanGuruStr);
-                if (!empty($gLower) && (str_contains($tLower, $gLower) || str_contains($gLower, $tLower))) {
-                    return true;
-                }
-                $parts = explode(' ', $gLower);
-                if (count($parts) >= 2 && str_contains($tLower, $parts[0] . ' ' . $parts[1])) {
-                    return true;
-                }
-                return false;
-            });
+            $matchedGuru = null;
+            $isNonGuruSlot = ($cleanGuruStr === '-' || empty($cleanGuruStr) || in_array(strtoupper($mapelName), ['ISTIRAHAT', 'ISTIRAHAT I', 'ISTIRAHAT II', 'LITERASI', 'UPACARA', 'UPACARA BENDERA']));
 
-            if (!$matchedGuru) {
-                $cleanUser = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', explode(',', $cleanGuruStr)[0]));
-                if (empty($cleanUser)) $cleanUser = 'guru_' . time() . '_' . rand(10, 99);
-                $baseU = $cleanUser;
-                $counter = 1;
-                $existingUsernames = $teachers->pluck('username')->filter()->toArray();
-                while (in_array($cleanUser, $existingUsernames)) {
-                    $cleanUser = $baseU . $counter++;
-                }
-                $matchedGuru = User::create([
-                    'username' => $cleanUser,
-                    'fullname' => $cleanGuruStr,
-                    'email'    => $cleanUser . '@school.id',
-                    'password' => 'Peh_1234',
-                    'id_role'  => 2,
-                    'title'    => 'Guru',
-                ]);
-                $teachers->push($matchedGuru);
+            if (!$isNonGuruSlot) {
+                $gPure = $stripTitles($cleanGuruStr);
+                $gWords = array_values(array_filter(explode(' ', $gPure)));
+
+                $matchedGuru = $teachers->first(function ($t) use ($cleanGuruStr, $gPure, $gWords, $stripTitles) {
+                    if (strcasecmp(trim($t->fullname), $cleanGuruStr) === 0 || strcasecmp(trim($t->username), $cleanGuruStr) === 0) {
+                        return true;
+                    }
+                    $tPure = $stripTitles($t->fullname);
+                    if (!empty($gPure) && !empty($tPure)) {
+                        if ($tPure === $gPure) return true;
+                        if (strlen($gPure) >= 4 && (str_contains($tPure, $gPure) || str_contains($gPure, $tPure))) {
+                            return true;
+                        }
+                        if (count($gWords) >= 2 && str_contains($tPure, $gWords[0] . ' ' . $gWords[1])) {
+                            return true;
+                        }
+                        if (count($gWords) >= 1 && strlen($gWords[0]) >= 5 && str_contains($tPure, $gWords[0])) {
+                            return true;
+                        }
+                    }
+                    return false;
+                });
             }
 
             $rawRoom = trim($item['ruangan']);
@@ -525,7 +569,7 @@ class ScheduleController extends Controller
 
             $insertRows[] = [
                 'id_class'    => $matchedClass->id_class,
-                'id_guru'     => $matchedGuru->id_user,
+                'id_guru'     => $matchedGuru ? $matchedGuru->id_user : null,
                 'id_room'     => $matchedRoom->id_room,
                 'mapel'       => $mapelName,
                 'day_of_week' => $day,

@@ -244,6 +244,8 @@ class UserController extends Controller
 
     public function getTeachersGrouped(Request $request)
     {
+        \App\Http\Controllers\Api\ScheduleController::cleanupDummyTeachers();
+
         $category = $request->query('category', 'all');
 
         $query = User::with(['role', 'schoolClass', 'counselorClasses'])
@@ -251,6 +253,11 @@ class UserController extends Controller
                 $q->whereIn('id_role', [1, 2, 3])
                   ->orWhereNotNull('nip');
             })
+            ->where(function ($q) {
+                $q->whereNull('email')
+                  ->orWhere('email', 'not like', '%@school.id');
+            })
+            ->where('fullname', '!=', '-')
             ->where(function ($q) {
                 $q->whereNull('title')
                   ->orWhere('title', '!=', 'Pensiun');
