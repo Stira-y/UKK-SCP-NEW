@@ -146,9 +146,17 @@
                             <span class="font-bold text-slate-800 text-sm md:text-base">Monitoring KBM Hari Ini</span>
                             <span id="labelTodayText" class="text-xs font-bold text-indigo-700 bg-indigo-100 px-2.5 py-0.5 rounded-full">Memuat...</span>
                         </div>
-                        <a href="kelola jurnal.html" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline">
-                            Lihat Kelola Jurnal Selengkapnya &rarr;
-                        </a>
+                        <div class="flex items-center space-x-3">
+                            <a href="kelola jurnal.html" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline">
+                                Lihat Kelola Jurnal Selengkapnya &rarr;
+                            </a>
+                            <select id="filterTingkatMonitoring" class="text-xs font-bold bg-white text-slate-700 border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs cursor-pointer hover:border-slate-400 transition">
+                                <option value="all">Semua Kelas</option>
+                                <option value="X">Kelas X</option>
+                                <option value="XI">Kelas XI</option>
+                                <option value="XII">Kelas XII</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -422,7 +430,93 @@
             }
         }
 
-        // 5. Muat Monitoring KBM Hari Ini
+        // 5. Muat Monitoring KBM Hari Ini & Filtering Kelas
+        let currentTodaySchedules = [];
+        let currentFilledScheduleIds = [];
+        let currentMonitoringTime = '';
+        let currentTodayName = '';
+        let selectedTingkatMonitoring = 'all';
+
+        const filterTingkatMonitoring = document.getElementById('filterTingkatMonitoring');
+        if (filterTingkatMonitoring) {
+            filterTingkatMonitoring.addEventListener('change', (e) => {
+                selectedTingkatMonitoring = e.target.value;
+                renderTodayMonitoringTable();
+            });
+        }
+
+        function getTingkatFromSchedule(s) {
+            if (s.school_class && s.school_class.kelas_nomor) {
+                return String(s.school_class.kelas_nomor).trim().toUpperCase();
+            }
+            const rawClass = (s.school_class ? `${s.school_class.kelas_nomor || ''} ${s.school_class.nama_kelas || ''}` : '').trim().toUpperCase();
+            if (rawClass.startsWith('XII') || rawClass.includes('XII')) return 'XII';
+            if (rawClass.startsWith('XI') || rawClass.includes('XI')) return 'XI';
+            if (rawClass.startsWith('X') || rawClass.includes('X')) return 'X';
+            return '';
+        }
+
+        function getJamKe(start) {
+            const mapReguler = {
+                '07:15': 1, '07:55': 2, '08:35': 3,
+                '09:30': 4, '10:10': 5, '10:50': 6,
+                '12:30': 7, '13:10': 8, '13:50': 9, '14:30': 10
+            };
+            const mapUpacara = {
+                '08:00': 1, '08:35': 2, '09:10': 3,
+                '10:00': 4, '10:35': 5, '11:10': 6,
+                '12:45': 7, '13:25': 8, '14:00': 9, '14:35': 10
+            };
+            const mapJumat = {
+                '07:15': 1, '07:55': 2, '08:35': 3,
+                '09:30': 4, '10:10': 5, '10:45': 6
+            };
+            return mapReguler[start] || mapUpacara[start] || mapJumat[start] || '-';
+        }
+
+        function renderTodayMonitoringTable() {
+            let filtered = currentTodaySchedules;
+            if (selectedTingkatMonitoring !== 'all') {
+                filtered = currentTodaySchedules.filter(s => getTingkatFromSchedule(s) === selectedTingkatMonitoring);
+            }
+
+            if (filtered.length === 0) {
+                todayMonitoringBody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Tidak ada jadwal KBM untuk ${selectedTingkatMonitoring === 'all' ? 'hari ' + currentTodayName : 'Kelas ' + selectedTingkatMonitoring + ' hari ' + currentTodayName}.</td></tr>`;
+                return;
+            }
+
+            todayMonitoringBody.innerHTML = filtered.map(s => {
+                const isFilled = currentFilledScheduleIds.includes(Number(s.id_schedule));
+                const start = (s.start_time || '').substring(0, 5);
+                const end = (s.end_time || '').substring(0, 5);
+                const jamKe = s.jam_ke || getJamKe(start);
+                const className = s.school_class ? `${s.school_class.kelas_nomor} ${s.school_class.nama_kelas} ${s.school_class.nomor_kelas || ''}`.trim() : '-';
+                const guruName = s.teacher ? (s.teacher.fullname || s.teacher.username) : '-';
+                const room = s.room ? `${s.room.nama_room || ''} ${s.room.nomor_room ? '('+s.room.nomor_room+')' : ''}`.trim() : '-';
+
+                let statusBadge = '';
+                if (isFilled) {
+                    statusBadge = `<span class="bg-emerald-100 text-emerald-700 font-bold px-2.5 py-1 rounded-full text-xs">Jurnal Terisi</span>`;
+                } else if (currentMonitoringTime >= start && currentMonitoringTime <= end) {
+                    statusBadge = `<span class="bg-blue-100 text-blue-700 font-bold px-2.5 py-1 rounded-full text-xs">Sedang KBM</span>`;
+                } else {
+                    statusBadge = `<span class="bg-amber-100 text-amber-700 font-bold px-2.5 py-1 rounded-full text-xs">Menunggu</span>`;
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="py-3 px-4 text-center font-bold text-slate-700">${jamKe}</td>
+                        <td class="py-3 px-4 text-center font-mono text-xs text-slate-600">${start} - ${end}</td>
+                        <td class="py-3 px-4 text-center font-bold text-indigo-700">${className}</td>
+                        <td class="py-3 px-4 font-semibold text-slate-800">${s.mapel}</td>
+                        <td class="py-3 px-4 text-slate-700">${guruName}</td>
+                        <td class="py-3 px-4 text-center text-slate-600 font-medium">${room}</td>
+                        <td class="py-3 px-4 text-center">${statusBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
         async function loadTodayKbmMonitoring() {
             const daysIndo = { 0: 'Minggu', 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu' };
             const now = new Date();
@@ -457,51 +551,31 @@
                 let countSedang = 0;
                 let countBelum = 0;
 
-                if (todaySchedules.length === 0) {
-                    todayMonitoringBody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Tidak ada jadwal KBM pada hari ${todayName} di Putaran ${lockedActiveCycle}.</td></tr>`;
-                } else {
-                    todayMonitoringBody.innerHTML = todaySchedules.map(s => {
-                        const isFilled = filledScheduleIds.includes(Number(s.id_schedule));
-                        const start = (s.start_time || '').substring(0, 5);
-                        const end = (s.end_time || '').substring(0, 5);
-                        const className = s.school_class ? `${s.school_class.kelas_nomor} ${s.school_class.nama_kelas} ${s.school_class.nomor_kelas || ''}`.trim() : '-';
-                        const guruName = s.teacher ? (s.teacher.fullname || s.teacher.username) : '-';
-                        const room = s.room ? `${s.room.nama_room || ''} ${s.room.nomor_room ? '('+s.room.nomor_room+')' : ''}`.trim() : '-';
-
-                        let statusBadge = '';
-                        if (isFilled) {
-                            countTerisi++;
-                            statusBadge = `<span class="bg-emerald-100 text-emerald-700 font-bold px-2.5 py-1 rounded-full text-xs">Jurnal Terisi</span>`;
-                        } else if (currentTime >= start && currentTime <= end) {
-                            countSedang++;
-                            statusBadge = `<span class="bg-blue-100 text-blue-700 font-bold px-2.5 py-1 rounded-full text-xs">Sedang KBM</span>`;
-                        } else {
-                            countBelum++;
-                            statusBadge = `<span class="bg-amber-100 text-amber-700 font-bold px-2.5 py-1 rounded-full text-xs">Menunggu</span>`;
-                        }
-
-                        return `
-                            <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-                                <td class="py-3 px-4 text-center font-mono text-xs text-slate-600">${start} - ${end}</td>
-                                <td class="py-3 px-4 text-center font-bold text-indigo-700">${className}</td>
-                                <td class="py-3 px-4 font-semibold text-slate-800">${s.mapel}</td>
-                                <td class="py-3 px-4 text-slate-700">${guruName}</td>
-                                <td class="py-3 px-4 text-center text-slate-600 font-medium">${room}</td>
-                                <td class="py-3 px-4 text-center">${statusBadge}</td>
-                            </tr>
-                        `;
-                    }).join('');
-                }
+                todaySchedules.forEach(s => {
+                    const isFilled = filledScheduleIds.includes(Number(s.id_schedule));
+                    const start = (s.start_time || '').substring(0, 5);
+                    const end = (s.end_time || '').substring(0, 5);
+                    if (isFilled) countTerisi++;
+                    else if (currentTime >= start && currentTime <= end) countSedang++;
+                    else countBelum++;
+                });
 
                 statJurnalTerisi.textContent = countTerisi;
                 statSedangKbm.textContent = countSedang;
                 statBelumDiisi.textContent = countBelum;
+
+                currentTodaySchedules = todaySchedules;
+                currentFilledScheduleIds = filledScheduleIds;
+                currentMonitoringTime = currentTime;
+                currentTodayName = todayName;
+
+                renderTodayMonitoringTable();
             } catch (e) {
                 todayMonitoringBody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-red-500">Gagal memuat monitoring KBM hari ini.</td></tr>`;
             }
         }
     </script>
     <!-- Panggil file layout bersama -->
-    <script src="../js/global-layout.js?v=20261109_10.0"></script>
+    <script src="../js/global-layout.js?v=20261109_11.0"></script>
 </body>
 </html>
