@@ -66,9 +66,19 @@ class ScheduleController extends Controller
                     'nama_kelas' => 'RPL',
                     'nomor_kelas' => '2',
                     'mapel' => 'Pemrograman Perangkat Bergerak',
-                    'start_time' => '18:00:00',
-                    'end_time' => '23:59:00',
-                    'cleanup_starts' => []
+                    'start_time' => '03:00:00',
+                    'end_time' => '07:00:00',
+                    'cleanup_starts' => ['18:00:00', '18:00']
+                ],
+                [
+                    'username' => 'reny',
+                    'kelas_nomor' => 'X',
+                    'nama_kelas' => 'RPL',
+                    'nomor_kelas' => '2',
+                    'mapel' => 'DDPK 2 RPL Analisa Perancangan Sistem',
+                    'start_time' => '03:00:00',
+                    'end_time' => '07:00:00',
+                    'cleanup_starts' => ['18:00:00', '18:00']
                 ],
                 [
                     'username' => 'rya',
@@ -83,7 +93,7 @@ class ScheduleController extends Controller
             ];
 
             // List of days to ensure schedules exist for (including today, yesterday, and Monday)
-            $daysToSeed = array_unique([$todayName, $yesterdayName, 'Senin']);
+            $daysToSeed = array_unique([$todayName, 'Senin']);
 
             foreach ($targets as $t) {
                 $guru = User::where('username', $t['username'])->first();

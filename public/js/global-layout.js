@@ -12,7 +12,7 @@ var API_BASE_URL = isLocalhost
 
 window.API_BASE_URL = API_BASE_URL;
 
-document.addEventListener("DOMContentLoaded", function() {
+function initUniversalGlobalLayout() {
     // 0. Auto-Login & Validasi Batas Sesi 30 Hari
     const loginTimestamp = localStorage.getItem('login_timestamp');
     if (loginTimestamp) {
@@ -1335,4 +1335,10 @@ document.addEventListener("DOMContentLoaded", function() {
     window.addEventListener('appinstalled', () => {
         window.deferredPwaPrompt = null;
     });
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener("DOMContentLoaded", initUniversalGlobalLayout);
+} else {
+    initUniversalGlobalLayout();
+}

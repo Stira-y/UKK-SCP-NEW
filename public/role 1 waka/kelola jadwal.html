@@ -1217,12 +1217,28 @@
                 periods.map(p => `<option value="${p.endTime}" data-jam="${p.jam}" data-is-break="${p.isBreak}" data-label="${p.label}">${p.label} (${p.endTime})</option>`).join('');
 
             if (defaultStartVal) {
-                selectStart.value = defaultStartVal;
-                hiddenStart.value = defaultStartVal;
+                const cleanStart = String(defaultStartVal).substring(0, 5);
+                let opt = Array.from(selectStart.options).find(o => o.value === cleanStart || o.value.substring(0, 5) === cleanStart);
+                if (!opt && cleanStart) {
+                    opt = new Option(`Jam Mulai (${cleanStart})`, cleanStart);
+                    selectStart.appendChild(opt);
+                }
+                if (opt) {
+                    selectStart.value = opt.value;
+                    hiddenStart.value = opt.value;
+                }
             }
             if (defaultEndVal) {
-                selectEnd.value = defaultEndVal;
-                hiddenEnd.value = defaultEndVal;
+                const cleanEnd = String(defaultEndVal).substring(0, 5);
+                let opt = Array.from(selectEnd.options).find(o => o.value === cleanEnd || o.value.substring(0, 5) === cleanEnd);
+                if (!opt && cleanEnd) {
+                    opt = new Option(`Jam Selesai (${cleanEnd})`, cleanEnd);
+                    selectEnd.appendChild(opt);
+                }
+                if (opt) {
+                    selectEnd.value = opt.value;
+                    hiddenEnd.value = opt.value;
+                }
             }
 
             selectStart.onchange = () => {
