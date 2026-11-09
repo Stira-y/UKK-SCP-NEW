@@ -61,12 +61,16 @@ class SelfAttendanceDemoController extends Controller
             'photo'     => 'required|string', // Base64 data URL dari kamera langsung
         ]);
 
-        $user = User::find($request->input('id_siswa'));
-        if (!$user) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Data siswa tidak ditemukan.'
-            ], 404);
+        $user = User::with('schoolClass')->find($request->input('id_siswa'));
+        $fullName = $user->fullname ?? $user->username ?? $request->input('student_name', 'Siswa');
+        $nis = $user->nis ?? $request->input('student_nis', '-');
+        $nisn = $user->nisn ?? '-';
+        $className = '-';
+        if ($user && $user->schoolClass) {
+            $className = trim(($user->schoolClass->kelas_nomor ?? '') . ' ' . ($user->schoolClass->nama_kelas ?? '') . ' ' . ($user->schoolClass->nomor_kelas ?? ''));
+        }
+        if ($className === '-' && $request->filled('student_class')) {
+            $className = $request->input('student_class');
         }
 
         $lat = (float) $request->input('latitude');
@@ -89,7 +93,8 @@ class SelfAttendanceDemoController extends Controller
                 if (!file_exists($dirPhoto)) {
                     mkdir($dirPhoto, 0777, true);
                 }
-                $fileName = 'self_att_' . $user->id_user . '_' . time() . '.jpg';
+                $userId = $user ? $user->id_user : time();
+                $fileName = 'self_att_' . $userId . '_' . time() . '.jpg';
                 file_put_contents($dirPhoto . '/' . $fileName, $photoDecoded);
                 $photoPath = 'storage/self_attendances/' . $fileName;
             }
@@ -102,27 +107,34 @@ class SelfAttendanceDemoController extends Controller
         $attendances = $this->readAttendances();
 
         $newRecord = [
-            'id'             => 'att_' . time() . '_' . rand(100, 999),
-            'id_siswa'       => $user->id_user,
-            'nisn'           => $user->nisn ?? '-',
-            'nis'            => $user->nis ?? '-',
-            'fullname'       => $user->fullname ?? $user->username,
-            'kelas'          => $user->schoolClass ? ($user->schoolClass->kelas_nomor . ' ' . $user->schoolClass->nama_kelas . ' ' . ($user->schoolClass->nomor_kelas ?? '')) : '-',
-            'date'           => $dateStr,
-            'time'           => $timeStr,
-            'status'         => $status,
-            'latitude'       => $lat,
-            'longitude'      => $lng,
-            'distance_m'     => $distance,
-            'is_in_school'   => $isWithinSchool,
-            'photo_url'      => $photoPath ? url($photoPath) : null,
-            'created_at'     => $now->toDateTimeString()
+            'id'                => 'att_' . time() . '_' . rand(100, 999),
+            'id_siswa'          => $user ? $user->id_user : $request->input('id_siswa'),
+            'nisn'              => $nisn,
+            'nis'               => $nis,
+            'student_nis'       => $nis,
+            'fullname'          => $fullName,
+            'student_name'      => $fullName,
+            'kelas'             => $className,
+            'student_class'     => $className,
+            'date'              => $dateStr,
+            'time'              => $timeStr,
+            'submitted_at'      => $timeStr,
+            'status'            => $status,
+            'latitude'          => $lat,
+            'longitude'         => $lng,
+            'distance_m'        => $distance,
+            'distance_meters'   => $distance,
+            'is_in_school'      => $isWithinSchool,
+            'is_within_radius'  => $isWithinSchool,
+            'photo_url'         => $photoPath ? url($photoPath) : null,
+            'created_at'        => $now->toDateTimeString()
         ];
 
         // Ganti presensi jika siswa sudah absen di tanggal yang sama
         $replaced = false;
+        $studentIdentifier = $user ? $user->id_user : $request->input('id_siswa');
         foreach ($attendances as $k => $att) {
-            if ($att['id_siswa'] == $user->id_user && $att['date'] === $dateStr) {
+            if ($att['id_siswa'] == $studentIdentifier && $att['date'] === $dateStr) {
                 $attendances[$k] = $newRecord;
                 $replaced = true;
                 break;
@@ -135,13 +147,15 @@ class SelfAttendanceDemoController extends Controller
         $this->saveAttendances($attendances);
 
         return response()->json([
-            'status'          => 'success',
-            'message'         => $isWithinSchool 
+            'status'            => 'success',
+            'message'           => $isWithinSchool 
                 ? 'Presensi Mandiri Berhasil! Anda berada di area sekolah (Hadir).' 
                 : 'Presensi Tercatat! Anda terdeteksi di luar area sekolah (' . $distance . 'm) status: Alpa.',
             'attendance_status' => $status,
             'distance_meters'   => $distance,
+            'distance_m'        => $distance,
             'is_in_school'      => $isWithinSchool,
+            'is_within_radius'  => $isWithinSchool,
             'data'              => $newRecord
         ], 200);
     }
@@ -172,3 +186,4 @@ class SelfAttendanceDemoController extends Controller
         ], 200);
     }
 }
+

@@ -150,6 +150,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/calendar/events', [\App\Http\Controllers\Api\CalendarDemoController::class, 'store']);
     Route::delete('/calendar/events/{id}', [\App\Http\Controllers\Api\CalendarDemoController::class, 'destroy']);
     Route::get('/calendar/today-config', [\App\Http\Controllers\Api\CalendarDemoController::class, 'todayConfig']);
+    Route::post('/calendar/toggle-presensi-today', [\App\Http\Controllers\Api\CalendarDemoController::class, 'togglePresensiToday']);
 
     Route::post('/self-attendance/submit', [\App\Http\Controllers\Api\SelfAttendanceDemoController::class, 'submit']);
     Route::get('/self-attendance/list', [\App\Http\Controllers\Api\SelfAttendanceDemoController::class, 'list']);

@@ -226,6 +226,8 @@
             return Math.round(R * c);
         }
 
+        let isSessionActive = false;
+
         // 1. Cek Sesi Hari Ini dari Waka (API Kaldik / Today Config)
         async function checkTodayPresensiSession() {
             try {
@@ -238,26 +240,32 @@
                 sessionNoticeBox.classList.remove('hidden');
 
                 if (pm.is_active_now) {
+                    isSessionActive = true;
                     badgeSessionStatus.className = 'text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300';
                     badgeSessionStatus.textContent = 'Sesi Sedang Dibuka';
                     sessionNoticeBox.className = 'rounded-2xl p-4 shadow-sm border text-xs md:text-sm flex items-start space-x-3 bg-emerald-50 border-emerald-200 text-emerald-800';
                     sessionNoticeTitle.textContent = 'Sesi Presensi Mandiri Sedang Aktif!';
                     sessionNoticeText.textContent = `Jam operasional: ${pm.start_time} - ${pm.end_time}. Silakan ambil foto selfie untuk presensi.`;
                 } else if (pm.is_scheduled) {
+                    isSessionActive = false;
                     badgeSessionStatus.className = 'text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-300';
-                    badgeSessionStatus.textContent = 'Sesi Belum Dimulai / Selesai';
+                    badgeSessionStatus.textContent = 'Di Luar Jam Presensi';
                     sessionNoticeBox.className = 'rounded-2xl p-4 shadow-sm border text-xs md:text-sm flex items-start space-x-3 bg-amber-50 border-amber-200 text-amber-800';
                     sessionNoticeTitle.textContent = 'Di Luar Jam Presensi Mandiri';
-                    sessionNoticeText.textContent = `Presensi mandiri hari ini dijadwalkan pada pukul ${pm.start_time} s/d ${pm.end_time}. Anda tetap dapat mencoba demo pengujian sekarang.`;
+                    sessionNoticeText.textContent = `Presensi mandiri hari ini dijadwalkan pada pukul ${pm.start_time} s/d ${pm.end_time}. Sistem presensi saat ini terkunci.`;
                 } else {
-                    badgeSessionStatus.className = 'text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-300';
-                    badgeSessionStatus.textContent = 'Mode Uji Coba Demo';
-                    sessionNoticeBox.className = 'rounded-2xl p-4 shadow-sm border text-xs md:text-sm flex items-start space-x-3 bg-indigo-50 border-indigo-200 text-indigo-800';
-                    sessionNoticeTitle.textContent = 'Mode Uji Coba Presensi Mandiri [DEMO]';
-                    sessionNoticeText.textContent = 'Fitur ini aktif dalam mode pengujian demo untuk verifikasi kamera dan geolokasi sekolah.';
+                    isSessionActive = false;
+                    badgeSessionStatus.className = 'text-xs font-bold px-3 py-1 rounded-full bg-rose-100 text-rose-700 border border-rose-300';
+                    badgeSessionStatus.textContent = 'Presensi Belum Diaktifkan';
+                    sessionNoticeBox.className = 'rounded-2xl p-4 shadow-sm border text-xs md:text-sm flex items-start space-x-3 bg-rose-50 border-rose-200 text-rose-800';
+                    sessionNoticeTitle.textContent = 'Presensi Mandiri Belum Diaktifkan';
+                    sessionNoticeText.textContent = 'Menu presensi mandiri belum diaktifkan oleh Waka Kurikulum pada Kalender Akademik hari ini.';
                 }
+                validateReadyToSubmit();
             } catch (e) {
-                badgeSessionStatus.textContent = 'Mode Demo';
+                badgeSessionStatus.textContent = 'Mode Uji Coba Demo';
+                isSessionActive = true;
+                validateReadyToSubmit();
             }
         }
 
@@ -381,12 +389,17 @@
         function validateReadyToSubmit() {
             const hasLocation = (userLatitude !== null && userLongitude !== null);
             const hasPhoto = !!capturedPhotoBase64;
-            btnSubmitPresensi.disabled = !(hasLocation && hasPhoto);
+            btnSubmitPresensi.disabled = !(hasLocation && hasPhoto && isSessionActive);
+
+            if (!isSessionActive) {
+                textEstimatedStatus.className = 'font-extrabold text-sm text-rose-600';
+                textEstimatedStatus.textContent = 'TERKUNCI (Sesi Kalender Belum Aktif)';
+            }
         }
 
         // 4. Kirim Data Presensi Mandiri
         btnSubmitPresensi.addEventListener('click', async () => {
-            if (!capturedPhotoBase64 || userLatitude === null) return;
+            if (!capturedPhotoBase64 || userLatitude === null || !isSessionActive) return;
 
             btnSubmitPresensi.disabled = true;
             btnSubmitPresensi.textContent = 'Memverifikasi Presensi...';
@@ -394,6 +407,13 @@
             try {
                 const effectiveStudent = window.getEffectiveStudentData ? window.getEffectiveStudentData() : userData;
                 const studentId = effectiveStudent.id_user || effectiveStudent.id;
+                const studentName = effectiveStudent.fullname || effectiveStudent.username || 'Siswa';
+                const studentNis = effectiveStudent.nis || '-';
+                let studentClass = effectiveStudent.kelas || '';
+                if (!studentClass && effectiveStudent.school_class) {
+                    const sc = effectiveStudent.school_class;
+                    studentClass = `${sc.kelas_nomor || ''} ${sc.nama_kelas || ''} ${sc.nomor_kelas || ''}`.trim();
+                }
 
                 const res = await fetch(`${API_BASE_URL}/self-attendance/submit`, {
                     method: 'POST',
@@ -404,6 +424,9 @@
                     },
                     body: JSON.stringify({
                         id_siswa: studentId,
+                        student_name: studentName,
+                        student_nis: studentNis,
+                        student_class: studentClass || '-',
                         latitude: userLatitude,
                         longitude: userLongitude,
                         photo: capturedPhotoBase64
@@ -434,3 +457,4 @@
     </script>
 </body>
 </html>
+
