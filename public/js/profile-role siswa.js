@@ -1248,7 +1248,7 @@ function initProfileEvents() {
         });
     }
 
-    // Sidebar Responsive
+    // Sidebar Responsive & Posisi di Bawah Navbar
     const toggleSidebarNav =
         document.getElementById('toggleSidebarNav');
 
@@ -1258,8 +1258,33 @@ function initProfileEvents() {
     const sidebarOverlay =
         document.getElementById('sidebarOverlay');
 
+    function adjustSidebarMobilePosition() {
+        const nav = document.querySelector('nav');
+        if (nav && sidebar) {
+            const navH = nav.offsetHeight || 60;
+            if (window.innerWidth < 768) {
+                sidebar.style.top = navH + 'px';
+                sidebar.style.height = `calc(100vh - ${navH}px)`;
+                if (sidebarOverlay) {
+                    sidebarOverlay.style.top = navH + 'px';
+                    sidebarOverlay.style.height = `calc(100vh - ${navH}px)`;
+                }
+            } else {
+                sidebar.style.top = '';
+                sidebar.style.height = '';
+                if (sidebarOverlay) {
+                    sidebarOverlay.style.top = '';
+                    sidebarOverlay.style.height = '';
+                }
+            }
+        }
+    }
+    adjustSidebarMobilePosition();
+    window.addEventListener('resize', adjustSidebarMobilePosition);
+
     function toggleSidebar() {
         if (window.innerWidth >= 768) return;
+        adjustSidebarMobilePosition();
 
         if (sidebar) {
             sidebar.classList.toggle('-translate-x-full');

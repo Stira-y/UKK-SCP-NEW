@@ -104,7 +104,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const displayName = getFirstName(userData.fullname || userData.username);
 
         navPlaceholder.innerHTML = `
-            <nav class="bg-indigo-600 text-white px-4 md:px-6 py-3 flex justify-between items-center shadow-md z-30 shrink-0">
+            <nav class="relative z-40 bg-indigo-600 text-white px-4 md:px-6 py-3 flex justify-between items-center shadow-md shrink-0">
                 <div class="flex items-center space-x-3 md:space-x-4">
                     <button id="toggleSidebarNav" class="p-2 text-indigo-100 hover:text-white hover:bg-indigo-700/50 rounded-lg focus:outline-none transition md:pointer-events-none md:opacity-50 md:cursor-not-allowed" aria-label="Toggle Navigation">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -298,7 +298,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         sidebarPlaceholder.innerHTML = `
-            <aside id="sidebar" class="fixed md:static top-[57px] bottom-0 left-0 w-64 bg-white border-r border-slate-200 p-5 flex flex-col justify-between transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-20 h-full shrink-0">
+            <aside id="sidebar" class="fixed md:static bottom-0 left-0 w-64 bg-white border-r border-slate-200 p-5 flex flex-col justify-between transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-30 h-full shrink-0">
                 <div class="space-y-6">
                     <div class="flex items-center justify-between pb-2 border-b border-slate-100">
                         <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Navigasi Utama</span>
@@ -322,14 +322,38 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // Toggle Mobile Sidebar
+    // Toggle Mobile Sidebar & Sinkronisasi Posisi di Bawah Navbar
     const toggleSidebarNav = document.getElementById('toggleSidebarNav');
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
 
+    function adjustSidebarMobilePosition() {
+        const nav = document.querySelector('nav');
+        if (nav && sidebar) {
+            const navH = nav.offsetHeight || 60;
+            if (window.innerWidth < 768) {
+                sidebar.style.top = navH + 'px';
+                sidebar.style.height = `calc(100vh - ${navH}px)`;
+                if (sidebarOverlay) {
+                    sidebarOverlay.style.top = navH + 'px';
+                    sidebarOverlay.style.height = `calc(100vh - ${navH}px)`;
+                }
+            } else {
+                sidebar.style.top = '';
+                sidebar.style.height = '';
+                if (sidebarOverlay) {
+                    sidebarOverlay.style.top = '';
+                    sidebarOverlay.style.height = '';
+                }
+            }
+        }
+    }
+    adjustSidebarMobilePosition();
+
     if (toggleSidebarNav && sidebar) {
         toggleSidebarNav.addEventListener('click', () => {
             if (window.innerWidth >= 768) return;
+            adjustSidebarMobilePosition();
             sidebar.classList.toggle('-translate-x-full');
             if (sidebarOverlay) sidebarOverlay.classList.toggle('hidden');
         });
@@ -342,6 +366,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     window.addEventListener('resize', () => {
+        adjustSidebarMobilePosition();
         if (window.innerWidth >= 768 && sidebar && sidebarOverlay) {
             sidebar.classList.remove('-translate-x-full');
             sidebarOverlay.classList.add('hidden');
