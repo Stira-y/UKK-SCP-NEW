@@ -1,16 +1,23 @@
-// Service Worker for SCP Sekolah SMKN 1 Bantul PWA
-const CACHE_NAME = 'scp-smkn1bantul-v20261109';
+// Service Worker for SCP SMKN 1 Bantul PWA
+const CACHE_NAME = 'scp-smkn1bantul-v20261109_2';
 const STATIC_ASSETS = [
+    '/',
+    '/login/login.html',
     '/manifest.json',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
-    '/icons/logo-smkn1bantul.png'
+    '/icons/icon-maskable-192.png',
+    '/icons/icon-maskable-512.png',
+    '/icons/logo-smkn1bantul.png',
+    '/favicon.ico'
 ];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(STATIC_ASSETS);
+            return cache.addAll(STATIC_ASSETS).catch((err) => {
+                console.warn('PWA Cache addAll warning:', err);
+            });
         })
     );
     self.skipWaiting();
@@ -26,29 +33,30 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
-        })
+        }).then(() => self.clients.claim())
     );
-    self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-    // Hanya tangani request GET http / https
     if (event.request.method !== 'GET') return;
-
-    // Jangan cache endpoint API dinamis agar selalu live realtime
     if (event.request.url.includes('/api/')) return;
 
     event.respondWith(
         fetch(event.request)
-            .then((response) => {
-                if (response && response.status === 200 && response.type === 'basic') {
-                    const responseClone = response.clone();
+            .then((networkResponse) => {
+                if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                    const responseClone = networkResponse.clone();
                     caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
                 }
-                return response;
+                return networkResponse;
             })
             .catch(() => {
-                return caches.match(event.request);
+                return caches.match(event.request).then((cachedResponse) => {
+                    if (cachedResponse) return cachedResponse;
+                    if (event.request.mode === 'navigate') {
+                        return caches.match('/login/login.html');
+                    }
+                });
             })
     );
 });

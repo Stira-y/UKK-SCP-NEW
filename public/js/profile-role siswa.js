@@ -12,6 +12,26 @@ var API_BASE_URL = isLocalhost
 
 window.API_BASE_URL = API_BASE_URL;
 
+// Registrasi PWA Service Worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch(function() {});
+    });
+}
+
+// Cek batas sesi 30 hari
+const loginTimestamp = localStorage.getItem('login_timestamp');
+if (loginTimestamp) {
+    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+    if (Date.now() - Number(loginTimestamp) > THIRTY_DAYS_MS) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        localStorage.removeItem('login_timestamp');
+        alert('Sesi masuk Anda telah kedaluwarsa (30 hari). Silakan masuk kembali.');
+        window.location.href = '../login/login.html';
+    }
+}
+
 const token = localStorage.getItem('auth_token');
 const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
 const userId = userData.id_user || userData.id || 'default';
@@ -64,6 +84,7 @@ window.handleLogout = function() {
     if (confirm('Apakah Anda yakin ingin keluar dari akun ini?')) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
+        localStorage.removeItem('login_timestamp');
         window.location.href = '../login/login.html';
     }
 };
