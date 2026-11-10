@@ -108,10 +108,10 @@ let otpIsVerifying = false;
 const OTP_BASE_COOLDOWN = 30;
 
 function ensureOtpModalInDOM() {
-    let modal = document.getElementById("otpModal");
+    let modal = document.getElementById("wakaOtpModal");
     if (!modal) {
         const modalHTML = `
-            <div id="otpModal" class="fixed inset-0 bg-slate-900/60 z-[70] hidden flex items-center justify-center p-4">
+            <div id="wakaOtpModal" class="fixed inset-0 bg-slate-900/60 z-[70] hidden flex items-center justify-center p-4">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform transition-all p-6 text-center">
                     <div class="flex justify-between items-center mb-4">
                         <h3 id="otpModalTitle" class="text-lg font-bold text-slate-800 w-full text-center pl-6">Verifikasi Kode OTP</h3>
@@ -144,14 +144,14 @@ function ensureOtpModalInDOM() {
             </div>
         `;
         document.body.insertAdjacentHTML("beforeend", modalHTML);
-        modal = document.getElementById("otpModal");
+        modal = document.getElementById("wakaOtpModal");
     }
     bindOtpEvents();
     return modal;
 }
 
 function bindOtpEvents() {
-    const modal = document.getElementById("otpModal");
+    const modal = document.getElementById("wakaOtpModal");
     if (!modal || modal.dataset.boundEvents === "true") return;
     modal.dataset.boundEvents = "true";
 
@@ -243,7 +243,7 @@ function bindOtpEvents() {
 }
 
 function updateOtpTimerUI(secondsLeft) {
-    const modal = document.getElementById("otpModal");
+    const modal = document.getElementById("wakaOtpModal");
     if (!modal) return;
     const btnResendOtp = modal.querySelector("#btnResendOtp");
     const btnManualRetryOtp = modal.querySelector("#btnManualRetryOtp");
@@ -292,7 +292,7 @@ async function triggerOtpSendRequest() {
     if (!otpActiveConfig || otpIsSending) return;
     otpIsSending = true;
 
-    const modal = document.getElementById("otpModal");
+    const modal = document.getElementById("wakaOtpModal");
     const otpErrorMessage = modal ? modal.querySelector("#otpErrorMessage") : null;
     const otpInputs = modal ? Array.from(modal.querySelectorAll(".otp-input")) : [];
     if (otpErrorMessage) otpErrorMessage.classList.add("hidden");
@@ -330,12 +330,24 @@ async function triggerOtpSendRequest() {
             startOtpCooldown(OTP_BASE_COOLDOWN);
             if (otpInputs[0]) otpInputs[0].focus();
         } else {
-            alert(res.message || "Gagal mengirimkan kode OTP.");
-            updateOtpTimerUI(0);
+            clearInterval(otpCooldownInterval);
+            if (otpActiveConfig && typeof otpActiveConfig.onError === "function") {
+                if (modal) modal.classList.add("hidden");
+                otpActiveConfig.onError(res.message || "Gagal mengirimkan kode OTP.");
+            } else {
+                alert(res.message || "Gagal mengirimkan kode OTP.");
+                updateOtpTimerUI(0);
+            }
         }
     } catch (err) {
-        alert("Terjadi kesalahan koneksi saat mengirim kode OTP.");
-        updateOtpTimerUI(0);
+        clearInterval(otpCooldownInterval);
+        if (otpActiveConfig && typeof otpActiveConfig.onError === "function") {
+            if (modal) modal.classList.add("hidden");
+            otpActiveConfig.onError("Terjadi kesalahan koneksi saat mengirim kode OTP.");
+        } else {
+            alert("Terjadi kesalahan koneksi saat mengirim kode OTP.");
+            updateOtpTimerUI(0);
+        }
     } finally {
         otpIsSending = false;
     }
@@ -345,7 +357,7 @@ async function submitOtpVerification(code) {
     if (!otpActiveConfig || otpIsVerifying) return;
     otpIsVerifying = true;
 
-    const modal = document.getElementById("otpModal");
+    const modal = document.getElementById("wakaOtpModal");
     const otpErrorMessage = modal.querySelector("#otpErrorMessage");
 
     try {
@@ -396,7 +408,7 @@ async function submitOtpVerification(code) {
 
 window.openOtpWaka = function(config) {
     otpActiveConfig = Object.assign({
-        apiBaseUrl: "https://ukk-scp-yudhis.my.id/api'",
+        apiBaseUrl: "https://ukk-scp-yudhis.my.id/api",
         token: localStorage.getItem("auth_token") || "",
         mode: "password",
         context: "teacher",

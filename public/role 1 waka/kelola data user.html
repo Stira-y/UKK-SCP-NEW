@@ -358,7 +358,7 @@
         </div>
     </div>
 
-    <script src="../js/pw-waka.js?v=20261110_6.0"></script>
+    <script src="../js/pw-waka.js?v=20261110_7.0"></script>
 
     <script>
         
@@ -457,7 +457,8 @@
             const isModalOpen = !studentEmailGuideModal.classList.contains('hidden') || 
                                 !editUserModal.classList.contains('hidden') || 
                                 !addUserModal.classList.contains('hidden') ||
-                                (document.getElementById('otpModal') && !document.getElementById('otpModal').classList.contains('hidden'));
+                                (document.getElementById('otpModal') && !document.getElementById('otpModal').classList.contains('hidden')) ||
+                                (document.getElementById('wakaOtpModal') && !document.getElementById('wakaOtpModal').classList.contains('hidden'));
             if (isModalOpen) {
                 searchInput.value = lastActiveSearchValue;
             } else {
@@ -551,8 +552,14 @@
         addEmailInput.addEventListener('input', (e) => {
             const val = e.target.value.trim().toLowerCase();
             document.getElementById('error_addEmail').classList.add('hidden');
-            const isTakenInSystem = allSystemUsers.some(u => (u.email || '').toLowerCase() === val);
-            if (val && (isTakenInSystem || allStudentsData.some(st => (st.email || '').toLowerCase() === val))) {
+            const isArchivedUser = (u) => {
+                const t = String(u.title || '').trim().toLowerCase();
+                if (['dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua'].includes(t)) return true;
+                if (Number(u.id_role) === 4 && !u.id_class) return true;
+                return false;
+            };
+            const isTakenInSystem = allSystemUsers.some(u => !isArchivedUser(u) && (u.email || '').trim().toLowerCase() === val);
+            if (val && (isTakenInSystem || allStudentsData.some(st => !isArchivedUser(st) && (st.email || '').trim().toLowerCase() === val))) {
                 addEmailError.textContent = 'Email sudah digunakan oleh akun lain!';
                 addEmailError.classList.remove('hidden');
             } else {
@@ -676,6 +683,8 @@
                     onSuccess: (code) => {
                         verifiedOtpCode = String(code).trim();
                         currentStudentEmail = pendingNewEmail;
+                        btnStudentInitChangeEmail.textContent = 'Email Terverifikasi';
+                        btnStudentInitChangeEmail.className = 'w-36 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg transition shadow-sm flex items-center justify-center cursor-default';
                         alert('Email siswa berhasil dikonfirmasi! Silakan klik tombol Simpan untuk menerapkan perubahan.');
                         fetchAllSystemUsers();
                         searchInput.readOnly = false;
@@ -1618,6 +1627,9 @@
             currentStudentEmail = st.email || '';
             verifiedOtpCode = '';
 
+            btnStudentInitChangeEmail.textContent = 'Ganti Email';
+            btnStudentInitChangeEmail.className = 'w-32 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm flex items-center justify-center';
+
             document.getElementById('editUserId').value = st.id_user;
             document.getElementById('editFullname').value = st.fullname || '';
             editNisInput.value = st.nis || '';
@@ -1665,6 +1677,6 @@
             searchInput.value = lastActiveSearchValue;
         });
     </script>
-    <script src="../js/global-layout.js?v=20261110_6.0"></script>
+    <script src="../js/global-layout.js?v=20261110_7.0"></script>
 </body>
 </html>

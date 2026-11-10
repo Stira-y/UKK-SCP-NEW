@@ -14,9 +14,62 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
+    private function releaseArchivedEmailCollisions(string $email, $excludeUserId = null): void
+    {
+        $cleanEmail = strtolower(trim($email));
+        if ($cleanEmail === '') {
+            return;
+        }
+
+        $query = User::whereRaw('LOWER(TRIM(email)) = ?', [$cleanEmail]);
+        if ($excludeUserId !== null && $excludeUserId !== 'general') {
+            $query->where('id_user', '!=', $excludeUserId);
+        }
+
+        $query->where(function ($q) {
+            $q->whereRaw("LOWER(TRIM(COALESCE(title, ''))) IN ('dikeluarkan', 'pensiun', 'alumni', 'lulus')")
+              ->orWhere(function ($sub) {
+                  $sub->where('id_role', 4)
+                      ->whereNull('id_class')
+                      ->where(function ($p) {
+                          $p->whereNull('title')
+                            ->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
+                      });
+              });
+        })
+        ->get()
+        ->each(function ($archivedUser) {
+            $archivedUser->email = 'archived_' . $archivedUser->id_user . '_' . time() . '_' . $archivedUser->email;
+            $archivedUser->save();
+        });
+    }
+
+    private function isEmailTakenByActiveUser(string $email, $excludeUserId = null): bool
+    {
+        $cleanEmail = strtolower(trim($email));
+        if ($cleanEmail === '') {
+            return false;
+        }
+
+        $this->releaseArchivedEmailCollisions($cleanEmail, $excludeUserId);
+
+        $query = User::whereRaw('LOWER(TRIM(email)) = ?', [$cleanEmail]);
+        if ($excludeUserId !== null && $excludeUserId !== 'general') {
+            $query->where('id_user', '!=', $excludeUserId);
+        }
+
+        return $query
+            ->whereRaw("LOWER(TRIM(COALESCE(title, ''))) NOT IN ('dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua')")
+            ->where(function ($q) {
+                $q->where('id_role', '!=', 4)
+                  ->orWhereNotNull('id_class');
+            })
+            ->exists();
+    }
     public function index(Request $request)
     {
         $query = User::with(['role', 'schoolClass', 'counselorClasses', 'parents', 'linkedStudents.schoolClass']);
@@ -310,6 +363,16 @@ class UserController extends Controller
             $request->merge(['nip' => null]);
         }
 
+        if ($request->filled('email')) {
+            $this->releaseArchivedEmailCollisions((string) $request->email);
+            if ($this->isEmailTakenByActiveUser((string) $request->email)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Email sudah digunakan oleh akun lain!'
+                ], 422);
+            }
+        }
+
         $messages = [
             'nip.unique' => 'NIP sudah terdaftar!',
             'username.unique' => 'Username sudah digunakan!',
@@ -325,7 +388,7 @@ class UserController extends Controller
             'id_class' => 'nullable',
             'title' => 'required|string|max:100',
             'username' => 'required|string|max:100|unique:users,username',
-            'email' => 'required|string|email|max:255|unique:users,email',
+            'email' => 'required|string|email|max:255',
             'password' => 'nullable|string|min:8'
         ], $messages);
 
@@ -396,6 +459,16 @@ class UserController extends Controller
             $request->request->remove('email');
         }
 
+        if ($request->filled('email')) {
+            $this->releaseArchivedEmailCollisions((string) $request->email, $id);
+            if ($this->isEmailTakenByActiveUser((string) $request->email, $id)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Email sudah digunakan oleh akun lain!'
+                ], 422);
+            }
+        }
+
         $messages = [
             'nip.unique' => 'NIP sudah terdaftar!',
             'username.unique' => 'Username sudah digunakan!',
@@ -409,7 +482,7 @@ class UserController extends Controller
             'id_class' => 'nullable',
             'title' => 'required|string|max:100',
             'username' => 'required|string|max:100|unique:users,username,' . $id . ',id_user',
-            'email' => 'nullable|string|email|max:255|unique:users,email,' . $id . ',id_user',
+            'email' => 'nullable|string|email|max:255',
             'password' => 'nullable|string|min:8'
         ], $messages);
 
@@ -652,6 +725,16 @@ class UserController extends Controller
 
     public function storeStudentByWaka(Request $request)
     {
+        if ($request->filled('email')) {
+            $this->releaseArchivedEmailCollisions((string) $request->email);
+            if ($this->isEmailTakenByActiveUser((string) $request->email)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Email ini sudah digunakan oleh akun lain.'
+                ], 422);
+            }
+        }
+
         $messages = [
             'nis.unique' => 'NIS sudah digunakan',
             'nisn.unique' => 'NISN sudah digunakan',
@@ -661,7 +744,7 @@ class UserController extends Controller
 
         $validator = Validator::make($request->all(), [
             'fullname' => 'required|string|max:255',
-            'email' => 'required|string|email:rfc,dns|max:255|unique:users,email',
+            'email' => 'required|string|email|max:255',
             'username' => 'nullable|string|max:100|unique:users,username',
             'no_telp' => 'nullable|string|max:30',
             'nis' => 'nullable|string|max:50|unique:users,nis',
@@ -948,29 +1031,7 @@ class UserController extends Controller
         if ($type === 'new_email' && $request->filled('new_email')) {
             $newEmail = strtolower(trim($request->input('new_email')));
 
-            // Lepaskan email dari akun yang sudah diarsipkan/dikeluarkan/pensiun/alumni
-            User::where('email', $newEmail)
-                ->where('id_user', '!=', $targetUserId)
-                ->where(function ($q) {
-                    $q->whereIn(DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
-                      ->orWhere(function($sub) {
-                          $sub->where('id_role', 4)->whereNull('id_class')->where(function($p) {
-                              $p->whereNull('title')->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
-                          });
-                      });
-                })
-                ->get()
-                ->each(function($archivedUser) {
-                    $archivedUser->email = 'archived_' . $archivedUser->id_user . '_' . time() . '_' . $archivedUser->email;
-                    $archivedUser->save();
-                });
-
-            $collision = User::where('email', $newEmail)
-                ->where('id_user', '!=', $targetUserId)
-                ->whereNotIn(DB::raw('LOWER(TRIM(COALESCE(title, "")))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua'])
-                ->exists();
-
-            if ($collision) {
+            if ($this->isEmailTakenByActiveUser($newEmail, $targetUserId)) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Email ini sudah terdaftar/digunakan oleh akun lain.'
@@ -1088,6 +1149,13 @@ class UserController extends Controller
         }
 
         if ($hasEmailChange) {
+            if ($this->isEmailTakenByActiveUser((string) $request->email, $id)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Email ini sudah digunakan oleh akun lain.'
+                ], 422);
+            }
+
             $submittedOtp = $request->input('otp_email', $request->input('otp'));
             $verifiedEmailToken = Cache::get("waka_verified_new_email_{$wakaUser->id_user}_{$id}");
             $cacheKey = "waka_edit_otp_new_email_{$wakaUser->id_user}_{$id}";
@@ -1117,7 +1185,7 @@ class UserController extends Controller
             'fullname' => 'sometimes|required|string|max:255|unique:users,fullname,' . $id . ',id_user',
             'username' => 'nullable|string|max:100|unique:users,username,' . $id . ',id_user',
             'no_telp' => 'nullable|string|max:30',
-            'email' => 'sometimes|required|string|email:rfc,dns|max:255',
+            'email' => 'sometimes|required|string|email|max:255',
             'id_class' => 'nullable|exists:classes,id_class',
             'password' => 'nullable|string|min:8'
         ], $messages);
@@ -1382,30 +1450,7 @@ class UserController extends Controller
             ], 422);
         }
 
-        // Lepaskan email dari akun yang sudah dihapus/dikeluarkan/pensiun/alumni agar bisa digunakan kembali
-        User::where('email', $newEmail)
-            ->where('id_user', '!=', $user->id_user)
-            ->where(function ($q) {
-                $q->whereIn(DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
-                  ->orWhere(function($sub) {
-                      $sub->where('id_role', 4)->whereNull('id_class')->where(function($p) {
-                          $p->whereNull('title')->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
-                      });
-                  });
-            })
-            ->get()
-            ->each(function($archivedUser) {
-                $archivedUser->email = 'archived_' . $archivedUser->id_user . '_' . time() . '_' . $archivedUser->email;
-                $archivedUser->save();
-            });
-
-        // Cek apakah ada akun aktif lain (bukan akun sendiri atau akun orang tua) yang sedang memakai email ini
-        $activeCollision = User::where('email', $newEmail)
-            ->where('id_user', '!=', $user->id_user)
-            ->whereNotIn(DB::raw('LOWER(TRIM(COALESCE(title, "")))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua'])
-            ->exists();
-
-        if ($activeCollision) {
+        if ($this->isEmailTakenByActiveUser($newEmail, $user->id_user)) {
             return response()->json([
                 'status' => 'already_taken',
                 'message' => 'Email ini sudah digunakan oleh akun lain.'
@@ -1474,22 +1519,7 @@ class UserController extends Controller
 
         $newEmail = strtolower(trim($cachedData['new_email']));
 
-        // Lepaskan jika masih ada akun arsip yang bentrok dengan email ini sebelum disimpan
-        User::where('email', $newEmail)
-            ->where('id_user', '!=', $user->id_user)
-            ->where(function ($q) {
-                $q->whereIn(DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
-                  ->orWhere(function($sub) {
-                      $sub->where('id_role', 4)->whereNull('id_class')->where(function($p) {
-                          $p->whereNull('title')->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
-                      });
-                  });
-            })
-            ->get()
-            ->each(function($archivedUser) {
-                $archivedUser->email = 'archived_' . $archivedUser->id_user . '_' . time() . '_' . $archivedUser->email;
-                $archivedUser->save();
-            });
+        $this->releaseArchivedEmailCollisions($newEmail, $user->id_user);
 
         $user->email = $newEmail;
         $user->save();
