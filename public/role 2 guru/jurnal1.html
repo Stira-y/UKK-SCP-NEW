@@ -259,6 +259,12 @@
             fetchTodayTeacherSchedules();
         });
 
+        window.addEventListener('focus', () => {
+            if (!selectSchedule.value) {
+                fetchTodayTeacherSchedules();
+            }
+        });
+
         async function fetchTodayTeacherSchedules() {
             try {
                 const daysIndo = { 0: 'Minggu', 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu' };
@@ -376,22 +382,35 @@
                         const block = scheduleBlockMap.get(Number(s.id_schedule)) || [s];
                         const blockEndClean = (block[block.length - 1].end_time || '').substring(0, 5);
                         const isExpired = currentHourMinute > blockEndClean;
+                        const isNotStarted = currentHourMinute < startTimeClean;
 
                         let statusLabel = '';
                         let textClass = 'font-semibold text-slate-800';
+                        let isDisabled = false;
 
                         if (isFilled) {
                             statusLabel = ' (Sudah Selesai)';
                             textClass = 'text-slate-400 bg-slate-100 font-normal';
+                            isDisabled = true;
                         } else if (isExpired) {
                             statusLabel = ' (Waktu KBM Berakhir)';
                             textClass = 'text-red-500 bg-red-50 font-normal';
+                            isDisabled = true;
+                        } else if (isNotStarted) {
+                            statusLabel = ' (Belum Waktunya)';
+                            textClass = 'text-slate-400 bg-slate-100 font-normal';
+                            isDisabled = true;
                         } else if (currentHourMinute > endTimeClean && block.length > 1) {
                             statusLabel = ` (Lanjutan KBM s/d ${blockEndClean})`;
                             textClass = 'font-semibold text-indigo-700 bg-indigo-50/60';
+                        } else {
+                            statusLabel = ' (Sedang Berlangsung)';
+                            textClass = 'font-semibold text-emerald-700 bg-emerald-50/60';
                         }
 
-                        return `<option value="${s.id_schedule}" data-class="${s.id_class}" data-filled="${isFilled}" data-expired="${isExpired}" class="${textClass}">${w} | ${c} - ${s.mapel}${statusLabel}</option>`;
+                        const disabledAttr = isDisabled ? 'disabled' : '';
+
+                        return `<option value="${s.id_schedule}" data-class="${s.id_class}" data-filled="${isFilled}" data-expired="${isExpired}" data-not-started="${isNotStarted}" ${disabledAttr} class="${textClass}">${w} | ${c} - ${s.mapel}${statusLabel}</option>`;
                     }).join('');
             } catch (err) {
                 selectSchedule.innerHTML = `<option value="" disabled selected>Gagal memuat jadwal.</option>`;
@@ -445,7 +464,9 @@
         }
 
         function validateFormState() {
-            const hasSchedule = selectSchedule.value !== '';
+            const selectedOpt = selectSchedule.options[selectSchedule.selectedIndex];
+            const isOptDisabled = selectedOpt && (selectedOpt.disabled || selectedOpt.getAttribute('data-not-started') === 'true' || selectedOpt.getAttribute('data-filled') === 'true' || selectedOpt.getAttribute('data-expired') === 'true');
+            const hasSchedule = selectSchedule.value !== '' && !isOptDisabled;
             const hasTopic = topicDescription.value.trim().length > 0;
             const hasPhotos = selectedFiles.length > 0;
 
@@ -462,6 +483,20 @@
             const selectedOpt = selectSchedule.options[selectSchedule.selectedIndex];
             const isFilled = selectedOpt && selectedOpt.getAttribute('data-filled') === 'true';
             const isExpired = selectedOpt && selectedOpt.getAttribute('data-expired') === 'true';
+            const isNotStarted = selectedOpt && selectedOpt.getAttribute('data-not-started') === 'true';
+
+            if (isNotStarted) {
+                selectSchedule.value = '';
+                if (consecutiveSchedulesBox) consecutiveSchedulesBox.classList.add('hidden');
+                validateFormState();
+
+                alertIconWrapper.className = 'w-12 h-12 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center mb-4';
+                alertModalTitle.textContent = 'Belum Waktunya';
+                alertModalDesc.textContent = 'Waktu KBM untuk jadwal mengajar ini belum tiba sesuai waktu realtime!';
+                alertModalSub.textContent = 'Anda baru dapat memilih jadwal dan mengisi jurnal ketika jam KBM telah dimulai.';
+                alreadyFilledModal.classList.remove('hidden');
+                return;
+            }
 
             if (isFilled) {
                 selectSchedule.value = '';

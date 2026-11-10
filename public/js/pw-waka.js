@@ -29,7 +29,7 @@ function checkPwCriteria(pwd) {
 
 window.validatePasswordRules = checkPwCriteria;
 
-window.initPwWaka = function(inputId, toggleBtnId, errorElemId) {
+window.initPwWaka = function (inputId, toggleBtnId, errorElemId) {
     const input = document.getElementById(inputId);
     const toggleBtn = document.getElementById(toggleBtnId);
     const errorElem = document.getElementById(errorElemId);
@@ -45,7 +45,7 @@ window.initPwWaka = function(inputId, toggleBtnId, errorElemId) {
         toggleBtn.innerHTML = PW_ICON_EYE_SLASH;
         toggleBtn.setAttribute("type", "button");
 
-        toggleBtn.onclick = function(e) {
+        toggleBtn.onclick = function (e) {
             e.preventDefault();
             e.stopPropagation();
             const isHidden = input.getAttribute("type") === "password";
@@ -59,13 +59,13 @@ window.initPwWaka = function(inputId, toggleBtnId, errorElemId) {
         };
     }
 
-    input.addEventListener("keydown", function(e) {
+    input.addEventListener("keydown", function (e) {
         if (e.key === " " || e.code === "Space" || e.keyCode === 32) {
             e.preventDefault();
         }
     });
 
-    input.addEventListener("input", function() {
+    input.addEventListener("input", function () {
         if (/\s/.test(input.value)) {
             input.value = input.value.replace(/\s+/g, "");
         }
@@ -84,7 +84,7 @@ window.initPwWaka = function(inputId, toggleBtnId, errorElemId) {
     });
 };
 
-window.resetPwField = function(inputId, toggleBtnId, errorElemId) {
+window.resetPwField = function (inputId, toggleBtnId, errorElemId) {
     const input = document.getElementById(inputId);
     const toggleBtn = document.getElementById(toggleBtnId);
     const errorElem = document.getElementById(errorElemId);
@@ -177,13 +177,13 @@ function bindOtpEvents() {
     }
 
     otpInputs.forEach((input, index) => {
-        input.addEventListener("paste", function(e) {
+        input.addEventListener("paste", function (e) {
             e.preventDefault();
             const pasteData = (e.clipboardData || window.clipboardData).getData("text");
             distributeOtpDigits(pasteData);
         });
 
-        input.addEventListener("input", function(e) {
+        input.addEventListener("input", function (e) {
             const digits = String(e.target.value || "").replace(/\D/g, "");
             if (digits.length > 1) {
                 distributeOtpDigits(digits);
@@ -200,7 +200,7 @@ function bindOtpEvents() {
             }
         });
 
-        input.addEventListener("keydown", function(e) {
+        input.addEventListener("keydown", function (e) {
             if (e.key === "Backspace") {
                 if (!e.target.value && index > 0) {
                     otpInputs[index - 1].focus();
@@ -215,7 +215,7 @@ function bindOtpEvents() {
     });
 
     if (btnCloseOtp) {
-        btnCloseOtp.addEventListener("click", function() {
+        btnCloseOtp.addEventListener("click", function () {
             modal.classList.add("hidden");
             if (otpActiveConfig && typeof otpActiveConfig.onCancel === "function") {
                 otpActiveConfig.onCancel();
@@ -224,7 +224,7 @@ function bindOtpEvents() {
     }
 
     if (btnResendOtp) {
-        btnResendOtp.addEventListener("click", function(e) {
+        btnResendOtp.addEventListener("click", function (e) {
             e.preventDefault();
             if (!btnResendOtp.disabled && !otpIsSending) {
                 triggerOtpSendRequest();
@@ -233,7 +233,7 @@ function bindOtpEvents() {
     }
 
     if (btnManualRetryOtp) {
-        btnManualRetryOtp.addEventListener("click", function(e) {
+        btnManualRetryOtp.addEventListener("click", function (e) {
             e.preventDefault();
             if (!btnManualRetryOtp.disabled && !otpIsSending) {
                 triggerOtpSendRequest();
@@ -327,6 +327,7 @@ async function triggerOtpSendRequest() {
 
         const res = await response.json();
         if (response.ok) {
+            if (modal) modal.classList.remove("hidden");
             startOtpCooldown(OTP_BASE_COOLDOWN);
             if (otpInputs[0]) otpInputs[0].focus();
         } else {
@@ -373,10 +374,10 @@ async function submitOtpVerification(code) {
                 "Content-Type": "application/json",
                 "Accept": "application/json"
             },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 otp: String(code).trim(),
                 type: otpActiveConfig.mode,
-                current_user_id: otpActiveConfig.currentUserId 
+                current_user_id: otpActiveConfig.currentUserId
             })
         });
 
@@ -406,7 +407,7 @@ async function submitOtpVerification(code) {
     }
 }
 
-window.openOtpWaka = function(config) {
+window.openOtpWaka = function (config) {
     otpActiveConfig = Object.assign({
         apiBaseUrl: "https://ukk-scp-yudhis.my.id/api",
         token: localStorage.getItem("auth_token") || "",
@@ -434,8 +435,10 @@ window.openOtpWaka = function(config) {
     }
 
     otpInputs.forEach(i => i.value = "");
-    modal.classList.remove("hidden");
-    if (otpInputs[0]) otpInputs[0].focus();
+    if (otpActiveConfig.mode !== "new_email") {
+        modal.classList.remove("hidden");
+        if (otpInputs[0]) otpInputs[0].focus();
+    }
 
     triggerOtpSendRequest();
 };

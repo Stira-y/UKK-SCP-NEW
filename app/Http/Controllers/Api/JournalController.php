@@ -91,6 +91,21 @@ class JournalController extends Controller
             'photos.*'          => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
         ]);
 
+        $now = Carbon::now('Asia/Jakarta');
+        $todayDate = $now->toDateString();
+        $currentTime = $now->format('H:i');
+
+        $schedule = Schedule::find($validated['id_schedule']);
+        if ($schedule && $validated['date'] === $todayDate) {
+            $startTime = substr($schedule->start_time ?? '00:00', 0, 5);
+            if ($currentTime < $startTime) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Waktu KBM untuk jadwal ini belum dimulai sesuai waktu realtime (' . $currentTime . ' < ' . $startTime . ')!'
+                ], 422);
+            }
+        }
+
         $uploadedPaths = [];
         if ($request->hasFile('photos')) {
             $totalSize = 0;
