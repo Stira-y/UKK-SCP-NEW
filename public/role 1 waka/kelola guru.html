@@ -429,7 +429,7 @@
         </div>
     </div>
 
-    <script src="../js/pw-waka.js"></script>
+    <script src="../js/pw-waka.js?v=20261110_6.0"></script>
 
     <script>
         
@@ -1529,15 +1529,53 @@
             searchInput.value = lastActiveSearchValue;
         });
 
+        document.getElementById('inputTeacherUniqueEmail').addEventListener('input', (e) => {
+            searchInput.value = lastActiveSearchValue;
+            const val = e.target.value.trim().toLowerCase();
+            const errEl = document.getElementById('errorTeacherUniqueEmail');
+            const isArchivedUser = (u) => {
+                const t = String(u.title || '').trim().toLowerCase();
+                if (['dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua'].includes(t)) return true;
+                if (Number(u.id_role) === 4 && !u.id_class) return true;
+                return false;
+            };
+            const isTaken = allSystemUsers.some(u => Number(u.id_user) !== Number(editingTeacherId) && !isArchivedUser(u) && (u.email || '').trim().toLowerCase() === val)
+                || allTeachers.some(t => Number(t.id_user) !== Number(editingTeacherId) && !isArchivedUser(t) && (t.email || '').trim().toLowerCase() === val);
+
+            if (val && (isTaken || val === (currentTeacherEmail || '').trim().toLowerCase())) {
+                errEl.textContent = 'Email sudah terdaftar/digunakan oleh akun lain!';
+                errEl.classList.remove('hidden');
+            } else {
+                errEl.textContent = '';
+                errEl.classList.add('hidden');
+            }
+        });
+
         document.getElementById('btnSubmitTeacherUniqueEmail').addEventListener('click', () => {
             searchInput.value = lastActiveSearchValue;
             const emailVal = document.getElementById('inputTeacherUniqueEmail').value.trim().toLowerCase();
-            document.getElementById('errorTeacherUniqueEmail').textContent = '';
-            document.getElementById('errorTeacherUniqueEmail').classList.add('hidden');
+            const errEl = document.getElementById('errorTeacherUniqueEmail');
+            errEl.textContent = '';
+            errEl.classList.add('hidden');
 
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-                document.getElementById('errorTeacherUniqueEmail').textContent = 'Silahkan masukkan format email (@...) yang benar';
-                document.getElementById('errorTeacherUniqueEmail').classList.remove('hidden');
+                errEl.textContent = 'Silahkan masukkan format email (@...) yang benar';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            const isArchivedUser = (u) => {
+                const t = String(u.title || '').trim().toLowerCase();
+                if (['dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua'].includes(t)) return true;
+                if (Number(u.id_role) === 4 && !u.id_class) return true;
+                return false;
+            };
+            const isTaken = allSystemUsers.some(u => Number(u.id_user) !== Number(editingTeacherId) && !isArchivedUser(u) && (u.email || '').trim().toLowerCase() === emailVal)
+                || allTeachers.some(t => Number(t.id_user) !== Number(editingTeacherId) && !isArchivedUser(t) && (t.email || '').trim().toLowerCase() === emailVal);
+
+            if (isTaken || emailVal === (currentTeacherEmail || '').trim().toLowerCase()) {
+                errEl.textContent = 'Email ini sudah terdaftar/digunakan oleh akun lain.';
+                errEl.classList.remove('hidden');
                 return;
             }
 
@@ -1562,6 +1600,11 @@
                         alert('Email baru guru berhasil dikonfirmasi! Silakan klik tombol Simpan di bawah untuk menyimpan perubahan.');
                         searchInput.readOnly = false;
                         searchInput.value = lastActiveSearchValue;
+                    },
+                    onError: (msg) => {
+                        document.getElementById('modalTeacherNewEmailInput').classList.remove('hidden');
+                        errEl.textContent = msg || 'Email ini sudah terdaftar/digunakan oleh akun lain.';
+                        errEl.classList.remove('hidden');
                     },
                     onCancel: () => {
                         searchInput.readOnly = false;
@@ -1778,6 +1821,6 @@
             });
         }
     </script>
-    <script src="../js/global-layout.js?v=20261110_5.0"></script>
+    <script src="../js/global-layout.js?v=20261110_6.0"></script>
 </body>
 </html>

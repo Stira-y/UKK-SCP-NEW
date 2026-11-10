@@ -358,7 +358,7 @@
         </div>
     </div>
 
-    <script src="../js/pw-waka.js"></script>
+    <script src="../js/pw-waka.js?v=20261110_6.0"></script>
 
     <script>
         
@@ -600,10 +600,16 @@
         inputStudentNewEmail.addEventListener('input', (e) => {
             searchInput.value = lastActiveSearchValue;
             const val = e.target.value.trim().toLowerCase();
-            const isTakenByOtherUser = allSystemUsers.some(u => u.id_user !== editingStudentId && (u.email || '').toLowerCase() === val);
-            const isTakenInStudents = allStudentsData.some(st => st.id_user !== editingStudentId && (st.email || '').toLowerCase() === val);
+            const isArchivedUser = (u) => {
+                const t = String(u.title || '').trim().toLowerCase();
+                if (['dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua'].includes(t)) return true;
+                if (Number(u.id_role) === 4 && !u.id_class) return true;
+                return false;
+            };
+            const isTakenByOtherUser = allSystemUsers.some(u => Number(u.id_user) !== Number(editingStudentId) && !isArchivedUser(u) && (u.email || '').trim().toLowerCase() === val);
+            const isTakenInStudents = allStudentsData.some(st => Number(st.id_user) !== Number(editingStudentId) && !isArchivedUser(st) && (st.email || '').trim().toLowerCase() === val);
 
-            if (val && (isTakenByOtherUser || isTakenInStudents || val === currentStudentEmail.toLowerCase())) {
+            if (val && (isTakenByOtherUser || isTakenInStudents || val === (currentStudentEmail || '').trim().toLowerCase())) {
                 studentNewEmailError.textContent = 'Email sudah terdaftar/digunakan oleh akun lain!';
                 studentNewEmailError.classList.remove('hidden');
             } else {
@@ -642,6 +648,21 @@
                 return;
             }
 
+            const isArchivedUser = (u) => {
+                const t = String(u.title || '').trim().toLowerCase();
+                if (['dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua'].includes(t)) return true;
+                if (Number(u.id_role) === 4 && !u.id_class) return true;
+                return false;
+            };
+            const isTakenByOtherUser = allSystemUsers.some(u => Number(u.id_user) !== Number(editingStudentId) && !isArchivedUser(u) && (u.email || '').trim().toLowerCase() === emailVal);
+            const isTakenInStudents = allStudentsData.some(st => Number(st.id_user) !== Number(editingStudentId) && !isArchivedUser(st) && (st.email || '').trim().toLowerCase() === emailVal);
+
+            if (isTakenByOtherUser || isTakenInStudents || emailVal === (currentStudentEmail || '').trim().toLowerCase()) {
+                studentNewEmailError.textContent = 'Email sudah terdaftar/digunakan oleh akun lain!';
+                studentNewEmailError.classList.remove('hidden');
+                return;
+            }
+
             studentEmailGuideModal.classList.add('hidden');
             pendingNewEmail = emailVal;
 
@@ -659,6 +680,11 @@
                         fetchAllSystemUsers();
                         searchInput.readOnly = false;
                         searchInput.value = lastActiveSearchValue;
+                    },
+                    onError: (msg) => {
+                        studentEmailGuideModal.classList.remove('hidden');
+                        studentNewEmailError.textContent = msg || 'Email sudah terdaftar/digunakan oleh akun lain!';
+                        studentNewEmailError.classList.remove('hidden');
                     },
                     onCancel: () => {
                         searchInput.readOnly = false;
@@ -1639,6 +1665,6 @@
             searchInput.value = lastActiveSearchValue;
         });
     </script>
-    <script src="../js/global-layout.js?v=20261110_5.0"></script>
+    <script src="../js/global-layout.js?v=20261110_6.0"></script>
 </body>
 </html>

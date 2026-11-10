@@ -158,7 +158,7 @@ class AuthController extends Controller
         \App\Models\User::where('email', $newEmail)
             ->where('id_user', '!=', $user->id_user)
             ->where(function ($q) {
-                $q->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
+                $q->whereRaw("LOWER(TRIM(COALESCE(title, ''))) IN ('dikeluarkan', 'pensiun', 'alumni', 'lulus')")
                   ->orWhere(function($sub) {
                       $sub->where('id_role', 4)->whereNull('id_class')->where(function($p) {
                           $p->whereNull('title')->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
@@ -173,7 +173,7 @@ class AuthController extends Controller
 
         $activeCollision = \App\Models\User::where('email', $newEmail)
             ->where('id_user', '!=', $user->id_user)
-            ->whereNotIn(\Illuminate\Support\Facades\DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
+            ->whereRaw("LOWER(TRIM(COALESCE(title, ''))) NOT IN ('dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua')")
             ->exists();
 
         if ($activeCollision) {

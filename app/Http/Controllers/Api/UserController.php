@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -409,7 +410,7 @@ class UserController extends Controller
             'id_class' => 'nullable',
             'title' => 'required|string|max:100',
             'username' => 'required|string|max:100|unique:users,username,' . $id . ',id_user',
-            'email' => 'nullable|string|email|max:255|unique:users,email,' . $id . ',id_user',
+            'email' => 'nullable|string|email|max:255',
             'password' => 'nullable|string|min:8'
         ], $messages);
 
@@ -952,7 +953,7 @@ class UserController extends Controller
             User::where('email', $newEmail)
                 ->where('id_user', '!=', $targetUserId)
                 ->where(function ($q) {
-                    $q->whereIn(DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
+                    $q->whereRaw("LOWER(TRIM(COALESCE(title, ''))) IN ('dikeluarkan', 'pensiun', 'alumni', 'lulus')")
                       ->orWhere(function($sub) {
                           $sub->where('id_role', 4)->whereNull('id_class')->where(function($p) {
                               $p->whereNull('title')->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
@@ -967,7 +968,7 @@ class UserController extends Controller
 
             $collision = User::where('email', $newEmail)
                 ->where('id_user', '!=', $targetUserId)
-                ->whereNotIn(DB::raw('LOWER(TRIM(COALESCE(title, "")))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua'])
+                ->whereRaw("LOWER(TRIM(COALESCE(title, ''))) NOT IN ('dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua')")
                 ->exists();
 
             if ($collision) {
@@ -1386,7 +1387,7 @@ class UserController extends Controller
         User::where('email', $newEmail)
             ->where('id_user', '!=', $user->id_user)
             ->where(function ($q) {
-                $q->whereIn(DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
+                $q->whereRaw("LOWER(TRIM(COALESCE(title, ''))) IN ('dikeluarkan', 'pensiun', 'alumni', 'lulus')")
                   ->orWhere(function($sub) {
                       $sub->where('id_role', 4)->whereNull('id_class')->where(function($p) {
                           $p->whereNull('title')->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
@@ -1402,7 +1403,7 @@ class UserController extends Controller
         // Cek apakah ada akun aktif lain (bukan akun sendiri atau akun orang tua) yang sedang memakai email ini
         $activeCollision = User::where('email', $newEmail)
             ->where('id_user', '!=', $user->id_user)
-            ->whereNotIn(DB::raw('LOWER(TRIM(COALESCE(title, "")))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua'])
+            ->whereRaw("LOWER(TRIM(COALESCE(title, ''))) NOT IN ('dikeluarkan', 'pensiun', 'alumni', 'lulus', 'orang tua')")
             ->exists();
 
         if ($activeCollision) {
@@ -1478,7 +1479,7 @@ class UserController extends Controller
         User::where('email', $newEmail)
             ->where('id_user', '!=', $user->id_user)
             ->where(function ($q) {
-                $q->whereIn(DB::raw('LOWER(COALESCE(title, ""))'), ['dikeluarkan', 'pensiun', 'alumni', 'lulus'])
+                $q->whereRaw("LOWER(TRIM(COALESCE(title, ''))) IN ('dikeluarkan', 'pensiun', 'alumni', 'lulus')")
                   ->orWhere(function($sub) {
                       $sub->where('id_role', 4)->whereNull('id_class')->where(function($p) {
                           $p->whereNull('title')->orWhereRaw("LOWER(TRIM(title)) != 'orang tua'");
