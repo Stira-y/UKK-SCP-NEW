@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SCP Sekolah">
     <script src="/js/pwa.js?v=20261109_3.0"></script>
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; object-src 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com data:; img-src 'self' data: blob: http: https:; connect-src 'self' https: http: ws: wss:; object-src 'none';">
     <title>Kelola Data Guru - Sistem SCP</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -432,7 +432,10 @@
     <script src="../js/pw-waka.js?v=20261110_7.0"></script>
 
     <script>
-        
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        window.API_BASE_URL = window.API_BASE_URL || (isLocalhost ? 'http://localhost/ukk-scp-new/public/api' : `${window.location.origin}/api`);
+        var API_BASE_URL = window.API_BASE_URL;
+
         const token = localStorage.getItem('auth_token');
         const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
 
@@ -1078,103 +1081,167 @@
             const file = e.target.files[0];
             if (!file) return;
 
+            if (typeof XLSX === 'undefined') {
+                alert('Library pemroses Excel (SheetJS) belum siap dimuat. Silakan periksa koneksi internet atau refresh halaman.');
+                excelFileInput.value = '';
+                return;
+            }
+
             const reader = new FileReader();
+            reader.onerror = () => {
+                alert('Gagal membaca file dari komputer. Silakan coba lagi.');
+                excelFileInput.value = '';
+            };
+
             reader.onload = async (evt) => {
+                let rows = [];
                 try {
                     const data = new Uint8Array(evt.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
+                    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+                        alert('File Excel tidak memiliki lembar kerja (worksheet).');
+                        return;
+                    }
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                    rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                } catch (readErr) {
+                    console.error('SheetJS parse error:', readErr);
+                    alert('Gagal memproses file Excel: ' + (readErr.message || 'Format file tidak didukung atau file korup.'));
+                    return;
+                }
 
-                    if (rows.length === 0) {
-                        alert('File Excel kosong!');
-                        return;
-                    }
+                if (!rows || rows.length === 0) {
+                    alert('File Excel kosong atau tidak memiliki data baris!');
+                    return;
+                }
 
-                    const payloadItems = [];
+                const payloadItems = [];
 
-                    for (const row of rows) {
-                        const findVal = (targets) => {
-                            for (const k in row) {
-                                for (const t of targets) {
-                                    if (k.trim().toLowerCase() === t.toLowerCase()) return String(row[k]).trim();
-                                }
+                for (let rIdx = 0; rIdx < rows.length; rIdx++) {
+                    const row = rows[rIdx];
+                    const findVal = (targets) => {
+                        for (const k in row) {
+                            const cleanK = k.toString().trim().toLowerCase().replace(/[\s_\-]+/g, '');
+                            for (const t of targets) {
+                                const cleanTarget = t.toLowerCase().replace(/[\s_\-]+/g, '');
+                                if (cleanK === cleanTarget) return String(row[k]).trim();
                             }
-                            return '';
-                        };
+                        }
+                        return '';
+                    };
 
-                        const nip = findVal(['NIP']);
-                        const fullname = findVal(['Fullname', 'Nama', 'Nama Lengkap']);
-                        const username = findVal(['Username']);
-                        const email = findVal(['Email']);
-                        let password = findVal(['Password', 'Kata Sandi']);
-                        let title = findVal(['Title', 'Jabatan']);
-                        const role = findVal(['Role', 'Peran']);
-                        const kelas = findVal(['Kelas Diampu', 'Kelas', 'Class']);
+                    const nip = findVal(['NIP', 'NomorIndukPegawai', 'NoNip']);
+                    const fullname = findVal(['Fullname', 'Nama', 'NamaLengkap', 'NamaGuru']);
+                    let username = findVal(['Username', 'User', 'NamaPengguna']);
+                    let email = findVal(['Email', 'Surel', 'AlamatEmail']);
+                    let password = findVal(['Password', 'KataSandi', 'Sandi']);
+                    let title = findVal(['Title', 'Jabatan', 'Tugas']);
+                    let role = findVal(['Role', 'Peran']);
+                    const kelas = findVal(['KelasDiampu', 'Kelas', 'Class', 'Rombel', 'MengampuKelas']);
 
-                        if (!password) password = 'Peh_1234';
+                    if (!fullname) continue;
 
-                        if (title.toLowerCase() === 'guru biasa') title = 'Guru Normada';
+                    if (!password) password = 'Peh_1234';
+                    if (!title) title = 'Guru Normada';
+                    if (title.toLowerCase().replace(/\s+/g, '') === 'gurubiasa') title = 'Guru Normada';
 
-                        if (fullname && username && email && title && role) {
-                            payloadItems.push({
-                                nip: nip,
-                                fullname: fullname,
-                                username: username,
-                                email: email,
-                                password: password,
-                                title: title,
-                                role: role,
-                                kelas: kelas
-                            });
+                    if (!role) {
+                        const cleanT = title.toLowerCase().replace(/\s+/g, '');
+                        if (cleanT === 'walikelas' || cleanT === 'gurubk' || cleanT === 'kesiswaan') {
+                            role = 'Kesiswaan';
+                        } else if (cleanT === 'waka' || cleanT === 'wakakurikulum') {
+                            role = 'Waka';
+                        } else {
+                            role = 'Guru';
                         }
                     }
 
-                    if (payloadItems.length === 0) {
-                        alert('Tidak ada data valid! Pastikan format kolom: NIP, Fullname, Username, Email, Password, Title, Role, Kelas Diampu.');
-                        return;
+                    if (!username) {
+                        if (nip && nip !== '-') {
+                            username = 'guru_' + nip.replace(/[^a-zA-Z0-9]/g, '');
+                        } else {
+                            username = fullname.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) + (rIdx + 1);
+                        }
                     }
 
-                    if (!confirm(`Ditemukan ${payloadItems.length} baris guru. Lanjutkan proses import?`)) return;
+                    if (!email) {
+                        const cleanUser = username.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        email = `${cleanUser}@smkn1purwosari.sch.id`;
+                    }
 
-                    btnTriggerExcelImport.disabled = true;
-                    btnTriggerExcelImport.innerHTML = `<span>Mengimpor...</span>`;
-
-                    const res = await fetch(`${API_BASE_URL}/waka/teachers/import-batch`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({ items: payloadItems })
+                    payloadItems.push({
+                        nip: nip,
+                        fullname: fullname,
+                        username: username,
+                        email: email,
+                        password: password,
+                        title: title,
+                        role: role,
+                        kelas: kelas
                     });
+                }
 
-                    const resJson = await res.json();
+                if (payloadItems.length === 0) {
+                    alert('Tidak ada baris data guru yang valid terbaca!\nPastikan header kolom Excel memiliki minimal: Nama Lengkap (Fullname).');
+                    return;
+                }
 
-                    if (res.ok) {
-                        let msg = resJson.message || 'Import data guru berhasil!';
-                        if (resJson.errors && resJson.errors.length > 0) {
-                            msg += '\n\nCatatan kendala:\n' + resJson.errors.slice(0, 5).join('\n');
-                            if (resJson.errors.length > 5) msg += `\n...dan ${resJson.errors.length - 5} lainnya.`;
+                if (!confirm(`Ditemukan ${payloadItems.length} baris guru siap diimpor ke database. Lanjutkan?`)) return;
+
+                btnTriggerExcelImport.disabled = true;
+                const originalHtml = btnTriggerExcelImport.innerHTML;
+
+                const BATCH_SIZE = 150;
+                const totalBatches = Math.ceil(payloadItems.length / BATCH_SIZE);
+                let totalSuccess = 0;
+                let accumulatedErrors = [];
+
+                try {
+                    for (let b = 0; b < totalBatches; b++) {
+                        const batchItems = payloadItems.slice(b * BATCH_SIZE, (b + 1) * BATCH_SIZE);
+                        btnTriggerExcelImport.innerHTML = `<span>Mengimpor (${b + 1}/${totalBatches})...</span>`;
+
+                        const res = await fetch(`${API_BASE_URL}/waka/teachers/import-batch`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ items: batchItems })
+                        });
+
+                        const resJson = await res.json().catch(() => null);
+
+                        if (!res.ok) {
+                            const errDetail = (resJson && resJson.message) ? resJson.message : `Server Error (HTTP ${res.status})`;
+                            throw new Error(errDetail);
                         }
-                        alert(msg);
-                        addUserModal.classList.add('hidden');
-                        fetchTeachers();
-                        fetchAllSystemUsers();
-                    } else {
-                        let errorMsg = resJson.message || 'Gagal mengimpor file.';
-                        if (resJson.errors && Array.isArray(resJson.errors)) errorMsg += '\n' + resJson.errors.slice(0, 5).join('\n');
-                        alert(errorMsg);
+
+                        if (resJson) {
+                            totalSuccess += (resJson.imported_count || batchItems.length);
+                            if (resJson.errors && Array.isArray(resJson.errors)) {
+                                accumulatedErrors = accumulatedErrors.concat(resJson.errors);
+                            }
+                        }
                     }
-                } catch (err) {
-                    alert('Gagal membaca file Excel.');
+
+                    let msg = `Import data guru berhasil! (${totalSuccess} guru ditambahkan)`;
+                    if (accumulatedErrors.length > 0) {
+                        msg += '\n\nCatatan kendala / baris terlewati:\n' + accumulatedErrors.slice(0, 5).join('\n');
+                        if (accumulatedErrors.length > 5) msg += `\n...dan ${accumulatedErrors.length - 5} lainnya.`;
+                    }
+                    alert(msg);
+                    addUserModal.classList.add('hidden');
+                    fetchTeachers();
+                    fetchAllSystemUsers();
+                } catch (netErr) {
+                    console.error('Import network/server error:', netErr);
+                    alert('Gagal mengimpor ke server: ' + (netErr.message || 'Terjadi kesalahan pada server.'));
                 } finally {
                     btnTriggerExcelImport.disabled = false;
-                    btnTriggerExcelImport.innerHTML = `
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                        <span>Import Excel</span>
-                    `;
+                    btnTriggerExcelImport.innerHTML = originalHtml;
+                    excelFileInput.value = '';
                 }
             };
             reader.readAsArrayBuffer(file);
