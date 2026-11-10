@@ -33,57 +33,6 @@ Route::get('/system-config/active-cycle', function () {
         ]);
     }
 
-    // Pastikan jadwal dummy untuk dinda, rosyida, rya/reny hari ini jam 03:00-07:00
-    try {
-        $daysMap = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
-        $todayName = $daysMap[(int) date('N')] ?? 'Senin';
-        $activeCycle = (string) ($config->active_cycle ?: '1');
-        $room = \App\Models\Room::first();
-        $idRoom = $room ? $room->id_room : 1;
-
-        $dummySpecs = [
-            ['username' => 'dinda', 'kelas_nomor' => 'X', 'nama_kelas' => 'RPL', 'nomor_kelas' => '2', 'subject' => 'Dasar Pemrograman Web'],
-            ['username' => 'rosyida', 'kelas_nomor' => 'XI', 'nama_kelas' => 'RPL', 'nomor_kelas' => '2', 'subject' => 'Pemrograman Web & Perangkat Bergerak'],
-            ['username' => 'rya', 'kelas_nomor' => 'XII', 'nama_kelas' => 'RPL', 'nomor_kelas' => '2', 'subject' => 'Pengembangan Produk Kreatif & Kewirausahaan'],
-            ['username' => 'reny', 'kelas_nomor' => 'XII', 'nama_kelas' => 'RPL', 'nomor_kelas' => '2', 'subject' => 'Bimbingan Konseling & Karir'],
-        ];
-
-        foreach ($dummySpecs as $spec) {
-            $teacher = User::whereRaw('LOWER(username) LIKE ?', ['%' . $spec['username'] . '%'])
-                ->orWhereRaw('LOWER(fullname) LIKE ?', ['%' . $spec['username'] . '%'])
-                ->first();
-            $cls = \App\Models\SchoolClass::where('kelas_nomor', $spec['kelas_nomor'])
-                ->whereRaw('UPPER(nama_kelas) = ?', [$spec['nama_kelas']])
-                ->where('nomor_kelas', $spec['nomor_kelas'])
-                ->first();
-            if ($teacher && $cls) {
-                $existingDummy = \App\Models\Schedule::where('id_guru', $teacher->id_user)
-                    ->where('id_class', $cls->id_class)
-                    ->where('subject', $spec['subject'])
-                    ->first();
-                if ($existingDummy) {
-                    $existingDummy->update([
-                        'day_of_week' => $todayName,
-                        'cycle_week' => $activeCycle,
-                        'start_time' => '03:00:00',
-                        'end_time' => '07:00:00',
-                    ]);
-                } else {
-                    \App\Models\Schedule::create([
-                        'id_guru' => $teacher->id_user,
-                        'id_class' => $cls->id_class,
-                        'id_room' => $idRoom,
-                        'subject' => $spec['subject'],
-                        'day_of_week' => $todayName,
-                        'cycle_week' => $activeCycle,
-                        'start_time' => '03:00:00',
-                        'end_time' => '07:00:00',
-                    ]);
-                }
-            }
-        }
-    } catch (\Throwable $e) {}
-
     return response()->json([
         'status' => 'success',
         'data' => [

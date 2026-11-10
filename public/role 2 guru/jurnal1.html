@@ -207,15 +207,30 @@
 
         async function fetchTodayTeacherSchedules() {
             try {
-                try {
-                    const configRes = await fetch(`${API_BASE_URL}/system-config/active-cycle`, {
+                const daysIndo = { 0: 'Minggu', 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu' };
+                const todayName = daysIndo[new Date().getDay()] || 'Senin';
+                const todayStr = new Date().toLocaleDateString('en-CA');
+                const now = new Date();
+                const currentHourMinute = now.toTimeString().substring(0, 5);
+
+                const [configRes, res, journalRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/system-config/active-cycle`, {
                         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                    });
+                    }).catch(() => null),
+                    fetch(`${API_BASE_URL}/schedules?day_of_week=${encodeURIComponent(todayName)}`, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    }).catch(() => null),
+                    fetch(`${API_BASE_URL}/journals?date=${todayStr}`, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    }).catch(() => null)
+                ]);
+
+                if (configRes && configRes.ok) {
                     const configJson = await configRes.json();
                     if (configJson.data && configJson.data.active_cycle) {
                         systemActiveCycle = String(configJson.data.active_cycle);
                     }
-                } catch (e) {
+                } else {
                     systemActiveCycle = '1';
                 }
 
@@ -223,28 +238,22 @@
                     badgeActiveCycle.textContent = `Putaran Aktif: ${systemActiveCycle}`;
                 }
 
-                const daysIndo = { 0: 'Minggu', 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu' };
-                const todayName = daysIndo[new Date().getDay()] || 'Senin';
-                const todayStr = new Date().toLocaleDateString('en-CA');
-                const now = new Date();
-                const currentHourMinute = now.toTimeString().substring(0, 5);
-
-                const res = await fetch(`${API_BASE_URL}/schedules?cycle_type=${systemActiveCycle}`, {
-                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                });
-                const json = await res.json();
-                const allSchedules = json.data || [];
+                let allSchedules = [];
+                if (res && res.ok) {
+                    const json = await res.json();
+                    allSchedules = json.data || [];
+                }
 
                 try {
-                    const journalRes = await fetch(`${API_BASE_URL}/journals?date=${todayStr}`, {
-                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                    });
-                    const journalJson = await journalRes.json();
-                    const listJournals = journalJson.data || [];
-                    
-                    filledScheduleIds = listJournals
-                        .filter(j => j.attendances && j.attendances.length > 0)
-                        .map(j => Number(j.id_schedule));
+                    if (journalRes && journalRes.ok) {
+                        const journalJson = await journalRes.json();
+                        const listJournals = journalJson.data || [];
+                        filledScheduleIds = listJournals
+                            .filter(j => j.attendances && j.attendances.length > 0)
+                            .map(j => Number(j.id_schedule));
+                    } else {
+                        filledScheduleIds = [];
+                    }
                 } catch (e) {
                     filledScheduleIds = [];
                 }
@@ -253,6 +262,7 @@
                 const myUserName = (userData.username || '').trim().toLowerCase();
 
                 teacherSchedules = allSchedules.filter(s => {
+                    if (String(s.cycle_type || '1') !== String(systemActiveCycle)) return false;
                     const matchId = Number(s.id_guru) === Number(userData.id_user);
                     let matchName = false;
                     if (s.teacher) {

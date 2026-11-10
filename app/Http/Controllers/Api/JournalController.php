@@ -250,7 +250,10 @@ class JournalController extends Controller
 
     public function getTodayMonitoring(Request $request)
     {
-        ScheduleController::ensureSpecialDummySchedules();
+        \Illuminate\Support\Facades\Cache::remember('dummy_schedules_ready_' . date('Y-m-d-H'), 3600, function () {
+            ScheduleController::ensureSpecialDummySchedules();
+            return true;
+        });
 
         $daysIndo = [
             'Sunday'    => 'Minggu',
@@ -275,6 +278,13 @@ class JournalController extends Controller
             ->orderBy('start_time', 'asc')
             ->get();
 
+        // Ambil seluruh jurnal hari ini dalam 1 query (menghindari N+1 query di dalam loop)
+        $todayJournals = Journal::whereIn('id_schedule', $schedules->pluck('id_schedule'))
+            ->whereDate('date', $todayDate)
+            ->withCount('attendances')
+            ->get()
+            ->keyBy('id_schedule');
+
         $groupedByClass = $schedules->groupBy('id_class');
         $monitoringResults = [];
 
@@ -285,10 +295,7 @@ class JournalController extends Controller
             foreach ($schedList as $index => $sch) {
                 $isConsecutiveSameTeacher = ($prevTeacherId === $sch->id_guru && $prevJournalFilled);
 
-                $journal = Journal::where('id_schedule', $sch->id_schedule)
-                    ->whereDate('date', $todayDate)
-                    ->withCount('attendances')
-                    ->first();
+                $journal = $todayJournals->get($sch->id_schedule);
 
                 $startTime = Carbon::parse($sch->start_time);
                 $lateThreshold = Carbon::parse($sch->start_time)->addMinutes(15);

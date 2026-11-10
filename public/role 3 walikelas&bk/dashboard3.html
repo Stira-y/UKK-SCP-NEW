@@ -349,89 +349,65 @@
             specialLeaveDateBadge.textContent = `${todayName}, ${todayStr}`;
 
             let activeCycle = '1';
+            let filledJournalScheduleIds = [];
+            let allJournalsToday = [];
+            let mySchedulesToday = [];
+
             try {
-                const resConfig = await fetch(`${API_BASE}/system-config/active-cycle`, {
-                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
-                });
-                const jsonConfig = await resConfig.json();
-                activeCycle = jsonConfig.data?.active_cycle ? String(jsonConfig.data.active_cycle) : '1';
+                const [resConfig, resJournals, resSched] = await Promise.all([
+                    fetch(`${API_BASE}/system-config/active-cycle`, {
+                        headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                    }).catch(() => null),
+                    fetch(`${API_BASE}/journals?date=${todayStr}`, {
+                        headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                    }).catch(() => null),
+                    fetch(`${API_BASE}/schedules?day_of_week=${encodeURIComponent(todayName)}`, {
+                        headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                    }).catch(() => null)
+                ]);
+
+                if (resConfig && resConfig.ok) {
+                    const jsonConfig = await resConfig.json();
+                    activeCycle = jsonConfig.data?.active_cycle ? String(jsonConfig.data.active_cycle) : '1';
+                }
                 cycleBadge.textContent = `Putaran Aktif: ${activeCycle}`;
                 localStorage.setItem('active_cycle', activeCycle);
+
+                if (resJournals && resJournals.ok) {
+                    const jsonJ = await resJournals.json();
+                    allJournalsToday = jsonJ.data || [];
+                    filledJournalScheduleIds = allJournalsToday.map(j => Number(j.id_schedule));
+                }
+
+                if (resSched && resSched.ok) {
+                    const jsonSched = await resSched.json();
+                    const allScheds = jsonSched.data || [];
+
+                    const myFullName = (userObj.fullname || '').trim().toLowerCase();
+                    const myUserName = (userObj.username || '').trim().toLowerCase();
+
+                    mySchedulesToday = allScheds.filter(s => {
+                        if (String(s.cycle_type || '1') !== String(activeCycle)) return false;
+                        const matchId = Number(s.id_guru) === currentUserId;
+                        let matchName = false;
+                        if (s.teacher) {
+                            const tFull = (s.teacher.fullname || '').trim().toLowerCase();
+                            const tUser = (s.teacher.username || '').trim().toLowerCase();
+                            if (myFullName && tFull && (myFullName === tFull || tFull.includes(myFullName) || myFullName.includes(tFull))) {
+                                matchName = true;
+                            } else if (myUserName && tUser && (myUserName === tUser)) {
+                                matchName = true;
+                            }
+                        }
+                        return (matchId || matchName) && s.day_of_week === todayName;
+                    });
+                }
             } catch (e) {
                 cycleBadge.textContent = 'Putaran Aktif: 1';
             }
             renderCycleBanner(activeCycle);
 
-            let filledJournalScheduleIds = [];
-            let allJournalsToday = [];
-            try {
-                const resJournals = await fetch(`${API_BASE}/journals?date=${todayStr}`, {
-                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
-                });
-                const jsonJ = await resJournals.json();
-                allJournalsToday = jsonJ.data || [];
-                filledJournalScheduleIds = allJournalsToday.map(j => Number(j.id_schedule));
-            } catch (e) {}
-
-            let mySchedulesToday = [];
-            try {
-                const resSched = await fetch(`${API_BASE}/schedules?cycle_type=${activeCycle}`, {
-                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
-                });
-                const jsonSched = await resSched.json();
-                const allScheds = jsonSched.data || [];
-
-                const myFullName = (userObj.fullname || '').trim().toLowerCase();
-                const myUserName = (userObj.username || '').trim().toLowerCase();
-
-                mySchedulesToday = allScheds.filter(s => {
-                    const matchId = Number(s.id_guru) === currentUserId;
-                    let matchName = false;
-                    if (s.teacher) {
-                        const tFull = (s.teacher.fullname || '').trim().toLowerCase();
-                        const tUser = (s.teacher.username || '').trim().toLowerCase();
-                        if (myFullName && tFull && (myFullName === tFull || tFull.includes(myFullName) || myFullName.includes(tFull))) {
-                            matchName = true;
-                        } else if (myUserName && tUser && (myUserName === tUser)) {
-                            matchName = true;
-                        }
-                    }
-                    return (matchId || matchName) && s.day_of_week === todayName;
-                });
-            } catch (e) {}
-
             mySchedulesToday.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-
-            let activeSched = mySchedulesToday.find(s => {
-                const startM = timeStrToMinutes(s.start_time);
-                const endM = timeStrToMinutes(s.end_time);
-                return currentTotalMinutes >= startM && currentTotalMinutes <= endM;
-            });
-
-            if (!activeSched && mySchedulesToday.length > 0) {
-                activeSched = mySchedulesToday[0];
-            }
-
-            if (activeSched && activeSched.school_class) {
-                activeTeachingClassId = Number(activeSched.id_class);
-                const sc = activeSched.school_class;
-                const className = `${sc.kelas_nomor} ${sc.nama_kelas} ${sc.nomor_kelas || ''}`.trim();
-                specialLeaveTargetClassText.textContent = `Kelas Diajar: ${className} (Mapel: ${activeSched.mapel})`;
-                await loadClassStudentsForSpecialLeave(activeTeachingClassId);
-                await loadSpecialLeavesForClass(activeTeachingClassId, todayStr);
-            } else if (isWaliKelas && userObj.id_class) {
-                activeTeachingClassId = Number(userObj.id_class);
-                const sc = userObj.school_class;
-                const className = sc ? `${sc.kelas_nomor} ${sc.nama_kelas} ${sc.nomor_kelas || ''}`.trim() : 'Kelas Binaan';
-                specialLeaveTargetClassText.textContent = `Kelas Binaan: ${className}`;
-                await loadClassStudentsForSpecialLeave(activeTeachingClassId);
-                await loadSpecialLeavesForClass(activeTeachingClassId, todayStr);
-            } else {
-                activeTeachingClassId = null;
-                specialLeaveTargetClassText.textContent = `Tidak ada jadwal KBM mengajar aktif untuk Anda hari ini.`;
-                selectSpecialLeaveStudent.innerHTML = `<option value="">-- Tidak ada kelas aktif --</option>`;
-                specialLeaveTableBody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-400">Tidak ada jadwal KBM kelas mengajar hari ini.</td></tr>`;
-            }
 
             let lateJournalAlerts = [];
 
@@ -478,12 +454,45 @@
                 }
             }
 
-            await loadLateStudents(mySchedulesToday, todayStr);
+            let activeSched = mySchedulesToday.find(s => {
+                const startM = timeStrToMinutes(s.start_time);
+                const endM = timeStrToMinutes(s.end_time);
+                return currentTotalMinutes >= startM && currentTotalMinutes <= endM;
+            });
+
+            if (!activeSched && mySchedulesToday.length > 0) {
+                activeSched = mySchedulesToday[0];
+            }
+
+            const backgroundTasks = [loadLateStudents(mySchedulesToday, todayStr)];
+
+            if (activeSched && activeSched.school_class) {
+                activeTeachingClassId = Number(activeSched.id_class);
+                const sc = activeSched.school_class;
+                const className = `${sc.kelas_nomor} ${sc.nama_kelas} ${sc.nomor_kelas || ''}`.trim();
+                specialLeaveTargetClassText.textContent = `Kelas Diajar: ${className} (Mapel: ${activeSched.mapel})`;
+                backgroundTasks.push(loadClassStudentsForSpecialLeave(activeTeachingClassId));
+                backgroundTasks.push(loadSpecialLeavesForClass(activeTeachingClassId, todayStr));
+            } else if (isWaliKelas && userObj.id_class) {
+                activeTeachingClassId = Number(userObj.id_class);
+                const sc = userObj.school_class;
+                const className = sc ? `${sc.kelas_nomor} ${sc.nama_kelas} ${sc.nomor_kelas || ''}`.trim() : 'Kelas Binaan';
+                specialLeaveTargetClassText.textContent = `Kelas Binaan: ${className}`;
+                backgroundTasks.push(loadClassStudentsForSpecialLeave(activeTeachingClassId));
+                backgroundTasks.push(loadSpecialLeavesForClass(activeTeachingClassId, todayStr));
+            } else {
+                activeTeachingClassId = null;
+                specialLeaveTargetClassText.textContent = `Tidak ada jadwal KBM mengajar aktif untuk Anda hari ini.`;
+                selectSpecialLeaveStudent.innerHTML = `<option value="">-- Tidak ada kelas aktif --</option>`;
+                specialLeaveTableBody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-400">Tidak ada jadwal KBM kelas mengajar hari ini.</td></tr>`;
+            }
+
+            await Promise.all(backgroundTasks);
         }
 
         async function loadClassStudentsForSpecialLeave(classId) {
             try {
-                const resUsers = await fetch(`${API_BASE}/users`, {
+                const resUsers = await fetch(`${API_BASE}/users?id_role=4&id_class=${classId}`, {
                     headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
                 });
                 const jsonUsers = await resUsers.json();

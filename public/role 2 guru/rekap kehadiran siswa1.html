@@ -166,23 +166,31 @@
 
         async function detectCurrentTeachingClass() {
             try {
-                const resConfig = await fetch(`${API_BASE_URL}/system-config/active-cycle`, {
-                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                });
-                const jsonConfig = await resConfig.json();
-                activeCycle = jsonConfig.data?.active_cycle ? String(jsonConfig.data.active_cycle) : '1';
-                cycleBadge.textContent = `Putaran Aktif: ${activeCycle}`;
-
                 const daysIndo = { 0: 'Minggu', 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu' };
                 const now = new Date();
                 const todayName = daysIndo[now.getDay()] || 'Senin';
                 const currentTime = now.toTimeString().substring(0, 5);
 
-                const resSched = await fetch(`${API_BASE_URL}/schedules?id_guru=${userData.id_user}&cycle_type=${activeCycle}`, {
-                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                });
-                const jsonSched = await resSched.json();
-                const mySchedules = jsonSched.data || [];
+                const [resConfig, resSched] = await Promise.all([
+                    fetch(`${API_BASE_URL}/system-config/active-cycle`, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    }).catch(() => null),
+                    fetch(`${API_BASE_URL}/schedules?id_guru=${userData.id_user}&day_of_week=${encodeURIComponent(todayName)}`, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    }).catch(() => null)
+                ]);
+
+                if (resConfig && resConfig.ok) {
+                    const jsonConfig = await resConfig.json();
+                    activeCycle = jsonConfig.data?.active_cycle ? String(jsonConfig.data.active_cycle) : '1';
+                }
+                cycleBadge.textContent = `Putaran Aktif: ${activeCycle}`;
+
+                let mySchedules = [];
+                if (resSched && resSched.ok) {
+                    const jsonSched = await resSched.json();
+                    mySchedules = (jsonSched.data || []).filter(s => String(s.cycle_type || '1') === String(activeCycle));
+                }
 
                 const todayScheds = mySchedules.filter(s => s.day_of_week === todayName);
 
@@ -227,9 +235,18 @@
             recapTableBody.innerHTML = `<tr><td colspan="13" class="py-8 text-center text-slate-400">Menghitung data presensi siswa kelas KBM...</td></tr>`;
 
             try {
-                const resUsers = await fetch(`${API_BASE_URL}/users`, {
-                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                });
+                const [resUsers, resAtt, resLeaves] = await Promise.all([
+                    fetch(`${API_BASE_URL}/users?id_role=4&id_class=${currentClassTarget}`, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    }),
+                    fetch(`${API_BASE_URL}/attendances`, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    }),
+                    fetch(`${API_BASE_URL}/leave-requests`, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    }).catch(() => null)
+                ]);
+
                 const jsonUsers = await resUsers.json();
                 const allUsers = jsonUsers.data || jsonUsers || [];
 
@@ -246,18 +263,12 @@
                     return String(a.nis || '').localeCompare(String(b.nis || ''));
                 });
 
-                const resAtt = await fetch(`${API_BASE_URL}/attendances`, {
-                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                });
                 const jsonAtt = await resAtt.json();
                 const allAttendances = jsonAtt.data || jsonAtt || [];
 
                 let approvedLeaves = [];
                 try {
-                    const resLeaves = await fetch(`${API_BASE_URL}/leave-requests`, {
-                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                    });
-                    if (resLeaves.ok) {
+                    if (resLeaves && resLeaves.ok) {
                         const jsonLeaves = await resLeaves.json();
                         const rawLeaves = jsonLeaves.data || jsonLeaves || [];
                         approvedLeaves = rawLeaves.filter(lv => {

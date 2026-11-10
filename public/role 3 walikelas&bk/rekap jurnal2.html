@@ -327,7 +327,7 @@
         // Muat Data Kelas yang Diajar oleh Guru/Wali Kelas/BK
         async function loadTeacherClasses() {
             try {
-                const res = await fetch(`${API_BASE_URL}/schedules`, {
+                const res = await fetch(`${API_BASE_URL}/schedules?id_guru=${userData.id_user}`, {
                     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
                 });
                 const json = await res.json();
@@ -784,8 +784,7 @@
         filterWeek.addEventListener('change', renderJournalTable);
 
         document.addEventListener('DOMContentLoaded', async () => {
-            await loadTeacherClasses();
-            await loadJournals();
+            await Promise.all([loadTeacherClasses(), loadJournals()]);
         });
     </script>
 </body>

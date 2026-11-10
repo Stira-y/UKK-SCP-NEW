@@ -327,27 +327,14 @@ async function triggerOtpSendRequest() {
 
         const res = await response.json();
         if (response.ok) {
-            if (modal) modal.classList.remove("hidden");
             startOtpCooldown(OTP_BASE_COOLDOWN);
             if (otpInputs[0]) otpInputs[0].focus();
         } else {
-            if (modal) modal.classList.add("hidden");
-            const errMsg = res.message || "Gagal mengirimkan kode OTP.";
-            if (typeof otpActiveConfig.onError === "function") {
-                otpActiveConfig.onError(errMsg);
-            } else {
-                alert(errMsg);
-            }
+            alert(res.message || "Gagal mengirimkan kode OTP.");
             updateOtpTimerUI(0);
         }
     } catch (err) {
-        if (modal) modal.classList.add("hidden");
-        const errMsg = "Terjadi kesalahan koneksi saat mengirim kode OTP.";
-        if (typeof otpActiveConfig.onError === "function") {
-            otpActiveConfig.onError(errMsg);
-        } else {
-            alert(errMsg);
-        }
+        alert("Terjadi kesalahan koneksi saat mengirim kode OTP.");
         updateOtpTimerUI(0);
     } finally {
         otpIsSending = false;
@@ -435,10 +422,8 @@ window.openOtpWaka = function(config) {
     }
 
     otpInputs.forEach(i => i.value = "");
-    if (otpActiveConfig.mode !== "new_email") {
-        modal.classList.remove("hidden");
-        if (otpInputs[0]) otpInputs[0].focus();
-    }
+    modal.classList.remove("hidden");
+    if (otpInputs[0]) otpInputs[0].focus();
 
     triggerOtpSendRequest();
 };

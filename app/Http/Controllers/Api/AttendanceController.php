@@ -15,27 +15,29 @@ class AttendanceController extends Controller
     {
         try {
             $todayWib = \Carbon\Carbon::now('Asia/Jakarta')->toDateString();
-            $yesterdayWib = \Carbon\Carbon::now('Asia/Jakarta')->subDay()->toDateString();
-            $daysMap = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
-            $todayDayName = $daysMap[(int) \Carbon\Carbon::now('Asia/Jakarta')->format('N')] ?? 'Senin';
+            \Illuminate\Support\Facades\Cache::remember('att_date_repaired_' . $todayWib, 600, function () use ($todayWib) {
+                $yesterdayWib = \Carbon\Carbon::now('Asia/Jakarta')->subDay()->toDateString();
+                $daysMap = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
+                $todayDayName = $daysMap[(int) \Carbon\Carbon::now('Asia/Jakarta')->format('N')] ?? 'Senin';
 
-            // Perbaiki otomatis tanggal jurnal & presensi yang tersimpan kemarin akibat selisih zona waktu UTC (toISOString) atau jadwal dummy yang dipindah ke hari ini
-            $yesterdayJournals = \App\Models\Journal::with('schedule')
-                ->whereDate('date', $yesterdayWib)
-                ->get();
-            foreach ($yesterdayJournals as $yj) {
-                $hasTodayJournal = \App\Models\Journal::where('id_schedule', $yj->id_schedule)
-                    ->whereDate('date', $todayWib)
-                    ->exists();
-                $createdWibDate = $yj->created_at ? \Carbon\Carbon::parse($yj->created_at)->timezone('Asia/Jakarta')->toDateString() : '';
-                $schedDay = $yj->schedule ? trim((string) $yj->schedule->day_of_week) : '';
+                $yesterdayJournals = \App\Models\Journal::with('schedule')
+                    ->whereDate('date', $yesterdayWib)
+                    ->get();
+                foreach ($yesterdayJournals as $yj) {
+                    $hasTodayJournal = \App\Models\Journal::where('id_schedule', $yj->id_schedule)
+                        ->whereDate('date', $todayWib)
+                        ->exists();
+                    $createdWibDate = $yj->created_at ? \Carbon\Carbon::parse($yj->created_at)->timezone('Asia/Jakarta')->toDateString() : '';
+                    $schedDay = $yj->schedule ? trim((string) $yj->schedule->day_of_week) : '';
 
-                if (!$hasTodayJournal && ($createdWibDate === $todayWib || strcasecmp($schedDay, $todayDayName) === 0)) {
-                    $yj->date = $todayWib;
-                    $yj->save();
-                    Attendance::where('id_jurnal', $yj->id_jurnal)->update(['date' => $todayWib]);
+                    if (!$hasTodayJournal && ($createdWibDate === $todayWib || strcasecmp($schedDay, $todayDayName) === 0)) {
+                        $yj->date = $todayWib;
+                        $yj->save();
+                        Attendance::where('id_jurnal', $yj->id_jurnal)->update(['date' => $todayWib]);
+                    }
                 }
-            }
+                return true;
+            });
         } catch (\Throwable $e) {}
 
         $query = Attendance::with(['journal.schedule', 'student.schoolClass']);

@@ -669,7 +669,6 @@
         selectCycle.addEventListener('change', async () => {
             currentCycle = selectCycle.value;
             applyCycleVisualStatus();
-            await fetchSchedules();
             renderClassTable();
         });
 
@@ -678,11 +677,13 @@
         });
 
         document.addEventListener('DOMContentLoaded', async () => {
-            await fetchSystemConfiguration();
-            await fetchClasses();
-            await fetchTeachers();
-            await fetchRooms();
-            await fetchSchedules();
+            await Promise.all([
+                fetchSystemConfiguration(),
+                fetchClasses(),
+                fetchTeachers(),
+                fetchRooms(),
+                fetchSchedules()
+            ]);
             renderClassTable();
         });
 
