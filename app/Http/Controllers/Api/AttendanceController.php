@@ -153,25 +153,37 @@ class AttendanceController extends Controller
             ->map(fn($id) => (int) $id)
             ->flip();
 
-        foreach ($rawItems as $item) {
-            $studentId = (int) ($item['id_siswa'] ?? $item['id_student'] ?? 0);
-            if (!$studentId) continue;
-
-            $status = $item['status'] ?? 'Hadir';
-            if (isset($approvedLeaveStudentIds[$studentId])) {
-                $status = 'Izin';
+        $targetJournalIds = $request->input('journal_ids', []);
+        if (!is_array($targetJournalIds) || empty($targetJournalIds)) {
+            $targetJournalIds = [$idJurnal];
+        } else {
+            if (!in_array((int) $idJurnal, array_map('intval', $targetJournalIds), true)) {
+                array_unshift($targetJournalIds, (int) $idJurnal);
             }
+        }
+        $targetJournalIds = array_values(array_unique(array_filter(array_map('intval', $targetJournalIds))));
 
-            Attendance::updateOrCreate(
-                [
-                    'id_jurnal' => $idJurnal,
-                    'id_siswa'  => $studentId,
-                    'date'      => $date
-                ],
-                [
-                    'status'    => $status
-                ]
-            );
+        foreach ($targetJournalIds as $jId) {
+            foreach ($rawItems as $item) {
+                $studentId = (int) ($item['id_siswa'] ?? $item['id_student'] ?? 0);
+                if (!$studentId) continue;
+
+                $status = $item['status'] ?? 'Hadir';
+                if (isset($approvedLeaveStudentIds[$studentId])) {
+                    $status = 'Izin';
+                }
+
+                Attendance::updateOrCreate(
+                    [
+                        'id_jurnal' => $jId,
+                        'id_siswa'  => $studentId,
+                        'date'      => $date
+                    ],
+                    [
+                        'status'    => $status
+                    ]
+                );
+            }
         }
 
         return response()->json([

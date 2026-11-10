@@ -549,7 +549,11 @@
                 ]);
                 const jsonSched = await resSched.json();
                 const allSchedules = jsonSched.data || [];
-                const todaySchedules = allSchedules.filter(s => s.day_of_week === todayName);
+                const todaySchedules = allSchedules.filter(s => {
+                    if (s.day_of_week !== todayName) return false;
+                    const mapelUpper = String(s.mapel || '').trim().toUpperCase();
+                    return !['ISTIRAHAT', 'ISTIRAHAT I', 'ISTIRAHAT II', 'UPACARA', 'UPACARA BENDERA'].includes(mapelUpper);
+                });
 
                 todaySchedules.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
 

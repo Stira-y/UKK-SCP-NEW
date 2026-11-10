@@ -47,6 +47,16 @@
                             <select id="selectSchedule" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs md:text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition">
                                 <option value="" disabled selected>-- Memuat jadwal mengajar... --</option>
                             </select>
+
+                            <!-- Box Pilih Jam Berturut-turut Sekaligus -->
+                            <div id="consecutiveSchedulesBox" class="hidden mt-3 p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-2">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <span class="text-xs font-bold text-indigo-900">Isi Jurnal &amp; Presensi Sekaligus (Guru &amp; Kelas Sama):</span>
+                                    <span id="consecutiveRangeBadge" class="text-[11px] font-bold bg-indigo-600 text-white px-2.5 py-0.5 rounded-full"></span>
+                                </div>
+                                <p class="text-[11px] text-slate-600">Jadwal mengajar Anda berturut-turut di kelas ini. Centang jam yang ingin diisi jurnal dan presensinya sekaligus:</p>
+                                <div id="consecutiveCheckboxesList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1"></div>
+                            </div>
                         </div>
 
                         <div>
@@ -196,10 +206,54 @@
         const alertIconWrapper = document.getElementById('alertIconWrapper');
 
         let teacherSchedules = [];
+        let scheduleBlockMap = new Map();
         let selectedFiles = [];
         let systemActiveCycle = '1';
         let filledScheduleIds = [];
         const MAX_TOTAL_BYTES = 5 * 1024 * 1024;
+        const consecutiveSchedulesBox = document.getElementById('consecutiveSchedulesBox');
+        const consecutiveRangeBadge = document.getElementById('consecutiveRangeBadge');
+        const consecutiveCheckboxesList = document.getElementById('consecutiveCheckboxesList');
+
+        function timeToMin(t) {
+            if (!t) return 0;
+            const [h, m] = String(t).substring(0, 5).split(':').map(Number);
+            return (h || 0) * 60 + (m || 0);
+        }
+
+        function isConsecutiveSameClass(prev, curr) {
+            if (Number(prev.id_class) !== Number(curr.id_class)) return false;
+            const endPrev = timeToMin(prev.end_time);
+            const startCurr = timeToMin(curr.start_time);
+            const gap = startCurr - endPrev;
+            if (gap >= 0 && gap <= 5) return true;
+            if (gap === 15) return true;
+            if (gap >= 55 && gap <= 75 && endPrev >= (11 * 60 + 20) && startCurr <= (12 * 60 + 50)) return true;
+            return false;
+        }
+
+        function assignLiterasiTeachersFallback(allSchedules) {
+            const nonKbm = ['LITERASI', 'ISTIRAHAT', 'ISTIRAHAT I', 'ISTIRAHAT II', 'UPACARA', 'UPACARA BENDERA'];
+            allSchedules.forEach(s => {
+                const mapelUpper = String(s.mapel || '').trim().toUpperCase();
+                if (mapelUpper.includes('LITERASI') && !s.id_guru) {
+                    const firstKbm = allSchedules
+                        .filter(k =>
+                            Number(k.id_class) === Number(s.id_class) &&
+                            k.day_of_week === s.day_of_week &&
+                            String(k.cycle_type || '1') === String(s.cycle_type || '1') &&
+                            k.id_guru &&
+                            !nonKbm.includes(String(k.mapel || '').trim().toUpperCase()) &&
+                            String(k.start_time || '').substring(0, 5) >= '07:15'
+                        )
+                        .sort((a, b) => String(a.start_time || '').localeCompare(String(b.start_time || '')))[0];
+                    if (firstKbm) {
+                        s.id_guru = firstKbm.id_guru;
+                        s.teacher = firstKbm.teacher;
+                    }
+                }
+            });
+        }
 
         document.addEventListener('DOMContentLoaded', fetchTodayTeacherSchedules);
 
@@ -259,8 +313,12 @@
                 const myFullName = (userData.fullname || '').trim().toLowerCase();
                 const myUserName = (userData.username || '').trim().toLowerCase();
 
+                assignLiterasiTeachersFallback(allSchedules);
+
                 teacherSchedules = allSchedules.filter(s => {
                     if (String(s.cycle_type || '1') !== String(systemActiveCycle)) return false;
+                    const mapelUpper = String(s.mapel || '').trim().toUpperCase();
+                    if (['ISTIRAHAT', 'ISTIRAHAT I', 'ISTIRAHAT II', 'UPACARA', 'UPACARA BENDERA'].includes(mapelUpper)) return false;
                     const matchId = Number(s.id_guru) === Number(userData.id_user);
                     let matchName = false;
                     if (s.teacher) {
@@ -277,6 +335,28 @@
                            String(s.cycle_type) === String(systemActiveCycle);
                 });
 
+                teacherSchedules.sort((a, b) => String(a.start_time || '').localeCompare(String(b.start_time || '')));
+
+                const scheduleBlocks = [];
+                teacherSchedules.forEach(s => {
+                    if (scheduleBlocks.length === 0) {
+                        scheduleBlocks.push([s]);
+                    } else {
+                        const lastBlock = scheduleBlocks[scheduleBlocks.length - 1];
+                        const prevSched = lastBlock[lastBlock.length - 1];
+                        if (isConsecutiveSameClass(prevSched, s)) {
+                            lastBlock.push(s);
+                        } else {
+                            scheduleBlocks.push([s]);
+                        }
+                    }
+                });
+
+                scheduleBlockMap = new Map();
+                scheduleBlocks.forEach(block => {
+                    block.forEach(s => scheduleBlockMap.set(Number(s.id_schedule), block));
+                });
+
                 if (teacherSchedules.length === 0) {
                     selectSchedule.innerHTML = `<option value="" disabled selected>Tidak ada jadwal mengajar untuk Anda hari ini (${todayName} - Putaran ${systemActiveCycle}).</option>`;
                     return;
@@ -289,7 +369,10 @@
                         const startTimeClean = (s.start_time || '').substring(0, 5);
                         const endTimeClean = (s.end_time || '').substring(0, 5);
                         const w = `${startTimeClean} - ${endTimeClean}`;
-                        const isExpired = currentHourMinute > endTimeClean;
+
+                        const block = scheduleBlockMap.get(Number(s.id_schedule)) || [s];
+                        const blockEndClean = (block[block.length - 1].end_time || '').substring(0, 5);
+                        const isExpired = currentHourMinute > blockEndClean;
 
                         let statusLabel = '';
                         let textClass = 'font-semibold text-slate-800';
@@ -300,14 +383,62 @@
                         } else if (isExpired) {
                             statusLabel = ' (Waktu KBM Berakhir)';
                             textClass = 'text-red-500 bg-red-50 font-normal';
+                        } else if (currentHourMinute > endTimeClean && block.length > 1) {
+                            statusLabel = ` (Lanjutan KBM s/d ${blockEndClean})`;
+                            textClass = 'font-semibold text-indigo-700 bg-indigo-50/60';
                         }
 
-                        // Sudah diselaraskan tanpa 
                         return `<option value="${s.id_schedule}" data-class="${s.id_class}" data-filled="${isFilled}" data-expired="${isExpired}" class="${textClass}">${w} | ${c} - ${s.mapel}${statusLabel}</option>`;
                     }).join('');
             } catch (err) {
                 selectSchedule.innerHTML = `<option value="" disabled selected>Gagal memuat jadwal.</option>`;
             }
+        }
+
+        function renderConsecutiveBlockUI(selectedScheduleId) {
+            if (!consecutiveSchedulesBox || !consecutiveCheckboxesList) return;
+            const block = scheduleBlockMap.get(Number(selectedScheduleId));
+            if (!block || block.length <= 1) {
+                consecutiveSchedulesBox.classList.add('hidden');
+                consecutiveCheckboxesList.innerHTML = '';
+                return;
+            }
+
+            const firstStart = (block[0].start_time || '').substring(0, 5);
+            const lastEnd = (block[block.length - 1].end_time || '').substring(0, 5);
+            const sc = block[0].school_class;
+            const className = sc ? `${sc.kelas_nomor} ${sc.nama_kelas} ${sc.nomor_kelas || ''}`.trim() : 'Kelas';
+
+            if (consecutiveRangeBadge) {
+                consecutiveRangeBadge.textContent = `${className} (${firstStart} - ${lastEnd})`;
+            }
+
+            consecutiveCheckboxesList.innerHTML = block.map(item => {
+                const sid = Number(item.id_schedule);
+                const isItemFilled = filledScheduleIds.includes(sid);
+                const st = (item.start_time || '').substring(0, 5);
+                const en = (item.end_time || '').substring(0, 5);
+                const checkedAttr = !isItemFilled ? 'checked' : '';
+                const disabledAttr = isItemFilled ? 'disabled' : '';
+                const badgeHtml = isItemFilled
+                    ? `<span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Sudah Diisi</span>`
+                    : `<span class="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">Sekaligus</span>`;
+
+                return `
+                    <label class="flex items-center justify-between p-2.5 rounded-xl border ${isItemFilled ? 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed' : 'bg-white border-indigo-200 hover:border-indigo-400 cursor-pointer shadow-xs'} transition">
+                        <div class="flex items-center space-x-2.5 min-w-0">
+                            <input type="checkbox" class="consecutive-sched-cb w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" value="${sid}" ${checkedAttr} ${disabledAttr}>
+                            <div class="truncate">
+                                <span class="font-mono text-xs font-bold text-slate-800 block">${st} - ${en}</span>
+                                <span class="text-[11px] text-slate-600 font-medium truncate block">${item.mapel}</span>
+                            </div>
+                        </div>
+                        ${badgeHtml}
+                    </label>
+                `;
+            }).join('');
+
+            consecutiveSchedulesBox.classList.remove('hidden');
         }
 
         function validateFormState() {
@@ -331,6 +462,7 @@
 
             if (isFilled) {
                 selectSchedule.value = '';
+                if (consecutiveSchedulesBox) consecutiveSchedulesBox.classList.add('hidden');
                 validateFormState();
 
                 alertIconWrapper.className = 'w-12 h-12 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center mb-4';
@@ -343,16 +475,18 @@
 
             if (isExpired) {
                 selectSchedule.value = '';
+                if (consecutiveSchedulesBox) consecutiveSchedulesBox.classList.add('hidden');
                 validateFormState();
 
                 alertIconWrapper.className = 'w-12 h-12 rounded-full bg-red-100 text-red-600 mx-auto flex items-center justify-center mb-4';
                 alertModalTitle.textContent = 'Waktu KBM Berakhir';
-                alertModalDesc.textContent = 'Waktu KBM untuk jadwal ini sudah berakhir (jam selesai KBM telah lewat)!';
+                alertModalDesc.textContent = 'Waktu KBM untuk seluruh rangkaian jam mengajar Anda di kelas ini sudah berakhir!';
                 alertModalSub.textContent = 'Anda tidak dapat mengisi jurnal untuk jam KBM yang telah selesai.';
                 alreadyFilledModal.classList.remove('hidden');
                 return;
             }
 
+            renderConsecutiveBlockUI(selectSchedule.value);
             validateFormState();
         });
 
@@ -535,8 +669,17 @@
             const classId = selectedOption.getAttribute('data-class');
             const todayStr = new Date().toLocaleDateString('en-CA');
 
+            const checkedBoxes = Array.from(document.querySelectorAll('.consecutive-sched-cb:checked:not(:disabled)'));
+            const targetScheduleIds = checkedBoxes.length > 0
+                ? checkedBoxes.map(cb => Number(cb.value))
+                : [Number(scheduleId)];
+            if (!targetScheduleIds.includes(Number(scheduleId))) {
+                targetScheduleIds.unshift(Number(scheduleId));
+            }
+
             const formData = new FormData();
             formData.append('id_schedule', scheduleId);
+            targetScheduleIds.forEach(sid => formData.append('schedule_ids[]', sid));
             formData.append('date', todayStr);
             formData.append('topic_description', topicDescription.value.trim());
 
@@ -556,7 +699,10 @@
                 const json = await res.json();
 
                 if (res.ok) {
-                    sessionStorage.setItem('current_journal_id', json.data.id_jurnal);
+                    const journalId = json.data.id_jurnal;
+                    const journalIds = json.journal_ids || [journalId];
+                    sessionStorage.setItem('current_journal_id', journalId);
+                    sessionStorage.setItem('current_journal_ids', JSON.stringify(journalIds));
                     sessionStorage.setItem('current_class_id', classId);
                     sessionStorage.setItem('current_date', todayStr);
 

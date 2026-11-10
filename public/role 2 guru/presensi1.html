@@ -168,6 +168,14 @@
         
         const token = localStorage.getItem('auth_token');
         const journalId = sessionStorage.getItem('current_journal_id');
+        const journalIds = (() => {
+            try {
+                const parsed = JSON.parse(sessionStorage.getItem('current_journal_ids') || 'null');
+                return Array.isArray(parsed) && parsed.length > 0 ? parsed : (journalId ? [Number(journalId)] : []);
+            } catch (e) {
+                return journalId ? [Number(journalId)] : [];
+            }
+        })();
         const classId = sessionStorage.getItem('current_class_id');
         const attendanceDate = sessionStorage.getItem('current_date') || new Date().toLocaleDateString('en-CA');
 
@@ -411,6 +419,7 @@
                     },
                     body: JSON.stringify({
                         id_jurnal: journalId,
+                        journal_ids: journalIds,
                         date: attendanceDate,
                         items: items
                     })
@@ -419,6 +428,7 @@
                 if (res.ok) {
                     alert('Presensi siswa berhasil disimpan dan KBM dinyatakan selesai!');
                     sessionStorage.removeItem('current_journal_id');
+                    sessionStorage.removeItem('current_journal_ids');
                     sessionStorage.removeItem('current_class_id');
                     sessionStorage.removeItem('current_date');
                     window.location.href = 'dashboard2.html';

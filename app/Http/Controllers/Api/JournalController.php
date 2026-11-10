@@ -84,6 +84,8 @@ class JournalController extends Controller
     {
         $validated = $request->validate([
             'id_schedule'       => 'required|integer|exists:schedules,id_schedule',
+            'schedule_ids'      => 'nullable|array',
+            'schedule_ids.*'    => 'integer|exists:schedules,id_schedule',
             'date'              => 'required|date',
             'topic_description' => 'required|string',
             'photos.*'          => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
@@ -109,21 +111,41 @@ class JournalController extends Controller
             }
         }
 
-        $journal = Journal::updateOrCreate(
-            [
-                'id_schedule' => $validated['id_schedule'],
-                'date'        => $validated['date'],
-            ],
-            [
-                'topic_description' => $validated['topic_description'],
-                'photo_path'        => !empty($uploadedPaths) ? json_encode($uploadedPaths) : null,
-            ]
-        );
+        $targetScheduleIds = $request->input('schedule_ids', []);
+        if (!is_array($targetScheduleIds) || empty($targetScheduleIds)) {
+            $targetScheduleIds = [$validated['id_schedule']];
+        } else {
+            if (!in_array((int) $validated['id_schedule'], array_map('intval', $targetScheduleIds), true)) {
+                array_unshift($targetScheduleIds, (int) $validated['id_schedule']);
+            }
+        }
+        $targetScheduleIds = array_values(array_unique(array_map('intval', $targetScheduleIds)));
+
+        $primaryJournal = null;
+        $createdJournalIds = [];
+
+        foreach ($targetScheduleIds as $sid) {
+            $j = Journal::updateOrCreate(
+                [
+                    'id_schedule' => $sid,
+                    'date'        => $validated['date'],
+                ],
+                [
+                    'topic_description' => $validated['topic_description'],
+                    'photo_path'        => !empty($uploadedPaths) ? json_encode($uploadedPaths) : null,
+                ]
+            );
+            if (!$primaryJournal || (int) $sid === (int) $validated['id_schedule']) {
+                $primaryJournal = $j;
+            }
+            $createdJournalIds[] = $j->id_jurnal;
+        }
 
         return response()->json([
-            'status' => 'success',
-            'message' => 'Draf jurnal berhasil disimpan, silakan lanjutkan ke presensi.',
-            'data' => $journal
+            'status'      => 'success',
+            'message'     => 'Draf jurnal berhasil disimpan, silakan lanjutkan ke presensi.',
+            'data'        => $primaryJournal,
+            'journal_ids' => $createdJournalIds,
         ], 200);
     }
 
@@ -250,8 +272,9 @@ class JournalController extends Controller
 
     public function getTodayMonitoring(Request $request)
     {
-        \Illuminate\Support\Facades\Cache::remember('dummy_schedules_ready_' . date('Y-m-d-H'), 3600, function () {
+        \Illuminate\Support\Facades\Cache::remember('dummy_schedules_ready_v2_' . date('Y-m-d-H'), 3600, function () {
             ScheduleController::ensureSpecialDummySchedules();
+            ScheduleController::syncLiterasiTeachers();
             return true;
         });
 
@@ -275,6 +298,7 @@ class JournalController extends Controller
         $schedules = Schedule::with(['schoolClass', 'teacher', 'room'])
             ->where('day_of_week', $todayName)
             ->where('cycle_type', $cycle)
+            ->whereRaw("UPPER(TRIM(COALESCE(mapel, ''))) NOT IN ('ISTIRAHAT', 'ISTIRAHAT I', 'ISTIRAHAT II', 'UPACARA', 'UPACARA BENDERA')")
             ->orderBy('start_time', 'asc')
             ->get();
 

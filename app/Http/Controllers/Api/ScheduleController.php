@@ -149,11 +149,48 @@ class ScheduleController extends Controller
         }
     }
 
+    public static function syncLiterasiTeachers(): void
+    {
+        try {
+            $literasiSchedules = Schedule::whereRaw("UPPER(TRIM(mapel)) LIKE '%LITERASI%'")
+                ->get();
+
+            foreach ($literasiSchedules as $lit) {
+                $firstKbm = Schedule::where('id_class', $lit->id_class)
+                    ->where('day_of_week', $lit->day_of_week)
+                    ->where('cycle_type', $lit->cycle_type)
+                    ->whereNotNull('id_guru')
+                    ->where('start_time', '>=', '07:15:00')
+                    ->whereRaw("UPPER(TRIM(mapel)) NOT IN ('LITERASI', 'ISTIRAHAT', 'ISTIRAHAT I', 'ISTIRAHAT II', 'UPACARA', 'UPACARA BENDERA')")
+                    ->orderBy('start_time', 'asc')
+                    ->first();
+
+                if (!$firstKbm) {
+                    $firstKbm = Schedule::where('id_class', $lit->id_class)
+                        ->where('day_of_week', $lit->day_of_week)
+                        ->where('cycle_type', $lit->cycle_type)
+                        ->whereNotNull('id_guru')
+                        ->whereRaw("UPPER(TRIM(mapel)) NOT IN ('LITERASI', 'ISTIRAHAT', 'ISTIRAHAT I', 'ISTIRAHAT II', 'UPACARA', 'UPACARA BENDERA')")
+                        ->orderBy('start_time', 'asc')
+                        ->first();
+                }
+
+                if ($firstKbm && $firstKbm->id_guru && (int) $lit->id_guru !== (int) $firstKbm->id_guru && empty($lit->id_guru)) {
+                    $lit->id_guru = $firstKbm->id_guru;
+                    $lit->save();
+                }
+            }
+        } catch (\Throwable $e) {
+            // Silently ignore
+        }
+    }
+
     public function index(Request $request)
     {
-        \Illuminate\Support\Facades\Cache::remember('dummy_schedules_ready_' . date('Y-m-d-H'), 3600, function () {
+        \Illuminate\Support\Facades\Cache::remember('dummy_schedules_ready_v2_' . date('Y-m-d-H'), 3600, function () {
             self::cleanupDummyTeachers();
             self::ensureSpecialDummySchedules();
+            self::syncLiterasiTeachers();
             return true;
         });
 
@@ -716,6 +753,7 @@ class ScheduleController extends Controller
                     }
                 }
             }
+            self::syncLiterasiTeachers();
         }
 
         if ($importedCount === 0 && count($errors) > 0) {

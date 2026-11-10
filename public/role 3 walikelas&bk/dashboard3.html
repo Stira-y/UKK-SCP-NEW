@@ -383,11 +383,34 @@
                     const jsonSched = await resSched.json();
                     const allScheds = jsonSched.data || [];
 
+                    const nonKbm = ['LITERASI', 'ISTIRAHAT', 'ISTIRAHAT I', 'ISTIRAHAT II', 'UPACARA', 'UPACARA BENDERA'];
+                    allScheds.forEach(s => {
+                        const mapelUpper = String(s.mapel || '').trim().toUpperCase();
+                        if (mapelUpper.includes('LITERASI') && !s.id_guru) {
+                            const firstKbm = allScheds
+                                .filter(k =>
+                                    Number(k.id_class) === Number(s.id_class) &&
+                                    k.day_of_week === s.day_of_week &&
+                                    String(k.cycle_type || '1') === String(s.cycle_type || '1') &&
+                                    k.id_guru &&
+                                    !nonKbm.includes(String(k.mapel || '').trim().toUpperCase()) &&
+                                    String(k.start_time || '').substring(0, 5) >= '07:15'
+                                )
+                                .sort((a, b) => String(a.start_time || '').localeCompare(String(b.start_time || '')))[0];
+                            if (firstKbm) {
+                                s.id_guru = firstKbm.id_guru;
+                                s.teacher = firstKbm.teacher;
+                            }
+                        }
+                    });
+
                     const myFullName = (userObj.fullname || '').trim().toLowerCase();
                     const myUserName = (userObj.username || '').trim().toLowerCase();
 
                     mySchedulesToday = allScheds.filter(s => {
                         if (String(s.cycle_type || '1') !== String(activeCycle)) return false;
+                        const mapelUpper = String(s.mapel || '').trim().toUpperCase();
+                        if (['ISTIRAHAT', 'ISTIRAHAT I', 'ISTIRAHAT II', 'UPACARA', 'UPACARA BENDERA'].includes(mapelUpper)) return false;
                         const matchId = Number(s.id_guru) === currentUserId;
                         let matchName = false;
                         if (s.teacher) {
