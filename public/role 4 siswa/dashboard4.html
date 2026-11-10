@@ -488,7 +488,7 @@
             
             const today = new Date();
             const todayName = daysIndo[today.getDay()] || 'Senin';
-            const todayStr = today.toISOString().split('T')[0];
+            const todayStr = today.toLocaleDateString('en-CA');
             const currentMonth = today.getMonth() + 1;
             const currentYear = today.getFullYear();
 
@@ -627,27 +627,27 @@
 
                 let harianVal = '-';
                 let harianClass = 'text-slate-400 font-bold';
-                if (todayLeave || todayAtts.some(a => String(a.status || '').trim().toLowerCase() === 'izin')) {
+                if (todayLeave || todayAtts.some(a => ['izin', 'sakit'].includes(String(a.status || '').trim().toLowerCase()))) {
                     harianVal = 'Izin';
-                    harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700';
+                    harianClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700';
                 } else if (todayAtts.some(a => String(a.status || '').trim().toLowerCase() === 'hadir')) {
                     harianVal = 'Hadir';
-                    harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700';
+                    harianClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700';
                 } else if (todayAtts.length > 0) {
-                    const chosenAtt = todayAtts[todayAtts.length - 1];
+                    const chosenAtt = todayAtts[0];
                     const sLower = String(chosenAtt.status || '').trim().toLowerCase();
-                    if (sLower === 'sakit') {
-                        harianVal = 'Sakit';
-                        harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700';
-                    } else if (sLower === 'terlambat') {
+                    if (sLower === 'terlambat') {
                         harianVal = 'Terlambat';
-                        harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700';
+                        harianClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700';
                     } else if (sLower === 'alpa') {
                         harianVal = 'Alpa';
-                        harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700';
+                        harianClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700';
+                    } else if (sLower === 'sakit' || sLower === 'izin') {
+                        harianVal = 'Izin';
+                        harianClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700';
                     } else {
                         harianVal = chosenAtt.status || '-';
-                        harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700';
+                        harianClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700';
                     }
                 }
 

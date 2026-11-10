@@ -531,7 +531,7 @@
             const daysIndo = { 0: 'Minggu', 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu' };
             const now = new Date();
             const todayName = daysIndo[now.getDay()] || 'Senin';
-            const todayStr = now.toISOString().split('T')[0];
+            const todayStr = now.toLocaleDateString('en-CA');
             const currentTime = now.toTimeString().substring(0, 5);
 
             labelTodayText.textContent = `${todayName}, ${todayStr}`;
@@ -586,6 +586,6 @@
         }
     </script>
     <!-- Panggil file layout bersama -->
-    <script src="../js/global-layout.js?v=20261110_4.0"></script>
+    <script src="../js/global-layout.js?v=20261110_5.0"></script>
 </body>
 </html>

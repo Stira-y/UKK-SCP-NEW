@@ -315,7 +315,7 @@
             const daysIndo = { 0: 'Minggu', 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu' };
             const now = new Date();
             const todayName = daysIndo[now.getDay()] || 'Senin';
-            const todayStr = now.toISOString().split('T')[0];
+            const todayStr = now.toLocaleDateString('en-CA');
             const currentTotalMinutes = (now.getHours() * 60) + now.getMinutes();
 
             todayBadge.textContent = `${todayName}, ${todayStr}`;
@@ -592,7 +592,7 @@
 
         btnConfirmSpecialLeaveYes.addEventListener('click', async () => {
             confirmSpecialLeaveModal.classList.add('hidden');
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = new Date().toLocaleDateString('en-CA');
 
             if (actionType === 'save') {
                 const studentId = selectSpecialLeaveStudent.value;
@@ -757,6 +757,6 @@
             }
         });
     </script>
-    <script src="../js/global-layout.js?v=20261110_4.0"></script>
+    <script src="../js/global-layout.js?v=20261110_5.0"></script>
 </body>
 </html>

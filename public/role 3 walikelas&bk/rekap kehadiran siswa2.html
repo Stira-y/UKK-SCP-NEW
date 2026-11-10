@@ -435,13 +435,16 @@
 
                     const studentLeaves = approvedLeaves.filter(lv => Number(lv.id_siswa) === Number(st.id_user));
                     studentLeaves.forEach(lv => {
-                        const start = new Date(lv.start_date);
-                        const end = new Date(lv.end_date || lv.start_date);
-                        
-                        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                            if ((d.getMonth() + 1) === m && d.getFullYear() === y) {
-                                const dStr = d.toISOString().substring(0, 10);
-                                countedIzinDays.add(dStr);
+                        const sParts = String(lv.start_date || '').substring(0, 10).split('-').map(Number);
+                        const eParts = String(lv.end_date || lv.start_date || '').substring(0, 10).split('-').map(Number);
+                        if (sParts.length === 3 && eParts.length === 3) {
+                            const start = new Date(sParts[0], sParts[1] - 1, sParts[2]);
+                            const end = new Date(eParts[0], eParts[1] - 1, eParts[2]);
+                            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                                if ((d.getMonth() + 1) === m && d.getFullYear() === y) {
+                                    const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                    countedIzinDays.add(dStr);
+                                }
                             }
                         }
                     });
@@ -450,7 +453,7 @@
                     const totalIzin = countedIzinDays.size;
                     const totalAlpa = countedAlpaDays.size;
 
-                    // Hitung status kehadiran Harian (Hari Ini)
+                    // Hitung status kehadiran Harian (Hari Ini): Hadir, Izin, Alpa, Terlambat
                     const nowLocal = new Date();
                     const todayDateStr = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`;
                     
@@ -464,27 +467,27 @@
 
                     let harianVal = '-';
                     let harianClass = 'text-slate-400 font-bold';
-                    if (todayLeave || todayAtts.some(a => String(a.status || '').trim().toLowerCase() === 'izin')) {
+                    if (todayLeave || todayAtts.some(a => ['izin', 'sakit'].includes(String(a.status || '').trim().toLowerCase()))) {
                         harianVal = 'Izin';
-                        harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700';
+                        harianClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700';
                     } else if (todayAtts.some(a => String(a.status || '').trim().toLowerCase() === 'hadir')) {
                         harianVal = 'Hadir';
-                        harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700';
+                        harianClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700';
                     } else if (todayAtts.length > 0) {
-                        const chosenAtt = todayAtts[todayAtts.length - 1];
+                        const chosenAtt = todayAtts[0];
                         const sLower = String(chosenAtt.status || '').trim().toLowerCase();
-                        if (sLower === 'sakit') {
-                            harianVal = 'Sakit';
-                            harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700';
-                        } else if (sLower === 'terlambat') {
+                        if (sLower === 'terlambat') {
                             harianVal = 'Terlambat';
-                            harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700';
+                            harianClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700';
                         } else if (sLower === 'alpa') {
                             harianVal = 'Alpa';
-                            harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700';
+                            harianClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700';
+                        } else if (sLower === 'sakit' || sLower === 'izin') {
+                            harianVal = 'Izin';
+                            harianClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700';
                         } else {
                             harianVal = chosenAtt.status || '-';
-                            harianClass = 'px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700';
+                            harianClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700';
                         }
                     }
 
@@ -596,6 +599,6 @@
             doc.save(`Rekap_Kehadiran_${monthNames[m]}_${y}.pdf`);
         });
     </script>
-    <script src="../js/global-layout.js?v=20261110_4.0"></script>
+    <script src="../js/global-layout.js?v=20261110_5.0"></script>
 </body>
 </html>

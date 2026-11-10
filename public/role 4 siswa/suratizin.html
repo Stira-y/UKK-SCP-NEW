@@ -516,7 +516,7 @@
         const MAX_TOTAL_SIZE_MB = 5;
         const MAX_TOTAL_SIZE_BYTES = MAX_TOTAL_SIZE_MB * 1024 * 1024;
 
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = new Date().toLocaleDateString('en-CA');
         leaveStartDateInput.min = todayStr;
         leaveEndDateInput.min = todayStr;
 
@@ -622,7 +622,7 @@
             }
             window.currentLeaveRequests = requests;
             const lastEdited = getLastEditedData();
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleDateString('en-CA');
 
             leaveTableBody.innerHTML = requests.map(item => {
                 let statusBadge = '';

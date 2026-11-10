@@ -169,7 +169,7 @@
         const token = localStorage.getItem('auth_token');
         const journalId = sessionStorage.getItem('current_journal_id');
         const classId = sessionStorage.getItem('current_class_id');
-        const attendanceDate = sessionStorage.getItem('current_date') || new Date().toISOString().split('T')[0];
+        const attendanceDate = sessionStorage.getItem('current_date') || new Date().toLocaleDateString('en-CA');
 
         if (!journalId || !classId) {
             alert('Silakan isi jurnal mengajar terlebih dahulu.');
@@ -434,6 +434,6 @@
             }
         }
     </script>
-    <script src="../js/global-layout.js?v=20261110_4.0"></script>
+    <script src="../js/global-layout.js?v=20261110_5.0"></script>
 </body>
 </html>

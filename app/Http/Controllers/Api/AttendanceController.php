@@ -13,6 +13,31 @@ class AttendanceController extends Controller
 {
     public function index(Request $request)
     {
+        try {
+            $todayWib = \Carbon\Carbon::now('Asia/Jakarta')->toDateString();
+            $yesterdayWib = \Carbon\Carbon::now('Asia/Jakarta')->subDay()->toDateString();
+            $daysMap = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
+            $todayDayName = $daysMap[(int) \Carbon\Carbon::now('Asia/Jakarta')->format('N')] ?? 'Senin';
+
+            // Perbaiki otomatis tanggal jurnal & presensi yang tersimpan kemarin akibat selisih zona waktu UTC (toISOString) atau jadwal dummy yang dipindah ke hari ini
+            $yesterdayJournals = \App\Models\Journal::with('schedule')
+                ->whereDate('date', $yesterdayWib)
+                ->get();
+            foreach ($yesterdayJournals as $yj) {
+                $hasTodayJournal = \App\Models\Journal::where('id_schedule', $yj->id_schedule)
+                    ->whereDate('date', $todayWib)
+                    ->exists();
+                $createdWibDate = $yj->created_at ? \Carbon\Carbon::parse($yj->created_at)->timezone('Asia/Jakarta')->toDateString() : '';
+                $schedDay = $yj->schedule ? trim((string) $yj->schedule->day_of_week) : '';
+
+                if (!$hasTodayJournal && ($createdWibDate === $todayWib || strcasecmp($schedDay, $todayDayName) === 0)) {
+                    $yj->date = $todayWib;
+                    $yj->save();
+                    Attendance::where('id_jurnal', $yj->id_jurnal)->update(['date' => $todayWib]);
+                }
+            }
+        } catch (\Throwable $e) {}
+
         $query = Attendance::with(['journal.schedule', 'student.schoolClass']);
 
         if ($request->has('id_jurnal')) {
@@ -27,25 +52,29 @@ class AttendanceController extends Controller
             $query->whereDate('date', $request->date);
         }
 
-        $attendances = $query->latest('date')->get();
+        $attendances = $query->latest('date')->latest('id_presensi')->get();
 
         // Sinkronisasi otomatis status Izin jika surat izin siswa sudah terverifikasi (Disetujui / Di Terima)
-        $approvedLeaves = LeaveRequest::whereRaw("LOWER(TRIM(COALESCE(status_approval, ''))) IN ('disetujui', 'di terima', 'diterima')")->get();
-        if ($approvedLeaves->isNotEmpty()) {
-            foreach ($attendances as $att) {
-                $attDate = substr((string) $att->date, 0, 10);
-                $hasLeave = $approvedLeaves->first(function ($lv) use ($att, $attDate) {
-                    if ((int) $lv->id_siswa !== (int) $att->id_siswa) return false;
-                    $sDate = substr((string) $lv->start_date, 0, 10);
-                    $eDate = substr((string) ($lv->end_date ?? $lv->start_date), 0, 10);
-                    return $attDate >= $sDate && $attDate <= $eDate;
-                });
-                if ($hasLeave && strtolower(trim($att->status ?? '')) !== 'izin') {
-                    $att->status = 'Izin';
-                    Attendance::where('id_attendance', $att->id_attendance)->update(['status' => 'Izin']);
+        try {
+            $approvedLeaves = LeaveRequest::whereRaw("LOWER(TRIM(COALESCE(status_approval, ''))) IN ('disetujui', 'di terima', 'diterima')")->get();
+            if ($approvedLeaves->isNotEmpty()) {
+                foreach ($attendances as $att) {
+                    $attDate = substr((string) $att->date, 0, 10);
+                    $hasLeave = $approvedLeaves->first(function ($lv) use ($att, $attDate) {
+                        if ((int) $lv->id_siswa !== (int) $att->id_siswa) return false;
+                        $sDate = substr((string) $lv->start_date, 0, 10);
+                        $eDate = substr((string) ($lv->end_date ?? $lv->start_date), 0, 10);
+                        return $attDate >= $sDate && $attDate <= $eDate;
+                    });
+                    if ($hasLeave && strtolower(trim($att->status ?? '')) !== 'izin') {
+                        $att->status = 'Izin';
+                        if ($att->id_presensi) {
+                            Attendance::where('id_presensi', $att->id_presensi)->update(['status' => 'Izin']);
+                        }
+                    }
                 }
             }
-        }
+        } catch (\Throwable $e) {}
 
         return response()->json([
             'status' => 'success',

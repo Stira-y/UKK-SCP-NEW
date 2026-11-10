@@ -225,7 +225,7 @@
 
                 const daysIndo = { 0: 'Minggu', 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu' };
                 const todayName = daysIndo[new Date().getDay()] || 'Senin';
-                const todayStr = new Date().toISOString().split('T')[0];
+                const todayStr = new Date().toLocaleDateString('en-CA');
                 const now = new Date();
                 const currentHourMinute = now.toTimeString().substring(0, 5);
 
@@ -524,7 +524,7 @@
             const selectedOption = selectSchedule.options[selectSchedule.selectedIndex];
             const scheduleId = selectSchedule.value;
             const classId = selectedOption.getAttribute('data-class');
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = new Date().toLocaleDateString('en-CA');
 
             const formData = new FormData();
             formData.append('id_schedule', scheduleId);
@@ -564,6 +564,6 @@
             }
         });
     </script>
-    <script src="../js/global-layout.js?v=20261110_4.0"></script>
+    <script src="../js/global-layout.js?v=20261110_5.0"></script>
 </body>
 </html>

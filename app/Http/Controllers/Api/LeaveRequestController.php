@@ -38,6 +38,25 @@ class LeaveRequestController extends Controller
 
         $leaveRequests = $query->latest('created_at')->get();
 
+        // Jika ada surat izin yang baru dibuat/diverifikasi hari ini (WIB) tapi tanggalnya tertulis kemarin karena efek UTC toISOString sebelum jam 07:00 pagi, sesuaikan end_date ke hari ini
+        try {
+            $todayWib = \Carbon\Carbon::now('Asia/Jakarta')->toDateString();
+            $yesterdayWib = \Carbon\Carbon::now('Asia/Jakarta')->subDay()->toDateString();
+            foreach ($leaveRequests as $lv) {
+                $sDate = substr((string) $lv->start_date, 0, 10);
+                $eDate = substr((string) ($lv->end_date ?? $lv->start_date), 0, 10);
+                $createdWib = $lv->created_at ? \Carbon\Carbon::parse($lv->created_at)->timezone('Asia/Jakarta')->toDateString() : '';
+                $updatedWib = $lv->updated_at ? \Carbon\Carbon::parse($lv->updated_at)->timezone('Asia/Jakarta')->toDateString() : '';
+                if ($eDate === $yesterdayWib && ($createdWib === $todayWib || $updatedWib === $todayWib)) {
+                    if ($sDate === $yesterdayWib && $createdWib === $todayWib) {
+                        $lv->start_date = $todayWib;
+                    }
+                    $lv->end_date = $todayWib;
+                    $lv->save();
+                }
+            }
+        } catch (\Throwable $e) {}
+
         return response()->json([
             'status' => 'success',
             'data' => $leaveRequests

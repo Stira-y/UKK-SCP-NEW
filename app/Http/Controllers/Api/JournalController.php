@@ -49,26 +49,30 @@ class JournalController extends Controller
         $journals = $query->latest('date')->latest('id_jurnal')->get();
 
         // Sinkronisasi otomatis status Izin pada presensi jurnal jika surat izin siswa sudah terverifikasi
-        $approvedLeaves = LeaveRequest::whereRaw("LOWER(TRIM(COALESCE(status_approval, ''))) IN ('disetujui', 'di terima', 'diterima')")->get();
-        if ($approvedLeaves->isNotEmpty()) {
-            foreach ($journals as $j) {
-                $jDate = substr((string) $j->date, 0, 10);
-                if ($j->relationLoaded('attendances') && $j->attendances) {
-                    foreach ($j->attendances as $att) {
-                        $hasLeave = $approvedLeaves->first(function ($lv) use ($att, $jDate) {
-                            if ((int) $lv->id_siswa !== (int) $att->id_siswa) return false;
-                            $sDate = substr((string) $lv->start_date, 0, 10);
-                            $eDate = substr((string) ($lv->end_date ?? $lv->start_date), 0, 10);
-                            return $jDate >= $sDate && $jDate <= $eDate;
-                        });
-                        if ($hasLeave && strtolower(trim($att->status ?? '')) !== 'izin') {
-                            $att->status = 'Izin';
-                            Attendance::where('id_attendance', $att->id_attendance)->update(['status' => 'Izin']);
+        try {
+            $approvedLeaves = LeaveRequest::whereRaw("LOWER(TRIM(COALESCE(status_approval, ''))) IN ('disetujui', 'di terima', 'diterima')")->get();
+            if ($approvedLeaves->isNotEmpty()) {
+                foreach ($journals as $j) {
+                    $jDate = substr((string) $j->date, 0, 10);
+                    if ($j->relationLoaded('attendances') && $j->attendances) {
+                        foreach ($j->attendances as $att) {
+                            $hasLeave = $approvedLeaves->first(function ($lv) use ($att, $jDate) {
+                                if ((int) $lv->id_siswa !== (int) $att->id_siswa) return false;
+                                $sDate = substr((string) $lv->start_date, 0, 10);
+                                $eDate = substr((string) ($lv->end_date ?? $lv->start_date), 0, 10);
+                                return $jDate >= $sDate && $jDate <= $eDate;
+                            });
+                            if ($hasLeave && strtolower(trim($att->status ?? '')) !== 'izin') {
+                                $att->status = 'Izin';
+                                if ($att->id_presensi) {
+                                    Attendance::where('id_presensi', $att->id_presensi)->update(['status' => 'Izin']);
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
+        } catch (\Throwable $e) {}
 
         return response()->json([
             'status' => 'success',
