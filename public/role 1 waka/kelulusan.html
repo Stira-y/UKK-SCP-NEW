@@ -91,7 +91,7 @@
                                     <th id="thCol5" class="py-3.5 px-4 font-semibold text-center w-28">Total Izin</th>
                                     <th id="thCol6" class="py-3.5 px-4 font-semibold text-center w-32">Total Presensi</th>
                                     <th id="thTahunOrTanggal" class="py-3.5 px-4 font-semibold text-center w-32">Tahun Lulus</th>
-                                    <th class="py-3.5 px-4 font-semibold text-center w-24">Aksi</th>
+                                    <th class="py-3.5 px-4 font-semibold text-center w-48">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="graduationTableBody" class="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
@@ -124,6 +124,33 @@
         </div>
     </div>
 
+    <!-- Modal Konfirmasi Batalkan Status Arsip (Restore) -->
+    <div id="confirmRestoreModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center transform transition-all animate-in fade-in zoom-in duration-200">
+            <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center mb-4">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+            </div>
+            <h3 class="text-base font-bold text-slate-800 mb-1">Batalkan Status Arsip</h3>
+            <p id="restoreConfirmSubtext" class="text-xs text-slate-500 mb-4 leading-relaxed">
+                Apakah Anda yakin ingin membatalkan status arsip dan mengembalikan user ini?
+            </p>
+
+            <!-- Dropdown Pilihan Kelas (Khusus Siswa) -->
+            <div id="restoreClassSelectionContainer" class="text-left mb-5 hidden">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Kembalikan Siswa ke Kelas:</label>
+                <select id="restoreClassSelect" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs md:text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="">-- Memuat daftar kelas... --</option>
+                </select>
+                <p class="text-[11px] text-slate-400 mt-1 italic">Siswa akan kembali muncul di Kelola Data Siswa.</p>
+            </div>
+
+            <div class="flex items-center justify-center gap-3">
+                <button type="button" id="btnCancelRestore" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">Tutup</button>
+                <button type="button" id="btnConfirmRestore" class="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shadow-md">Ya, Batalkan</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
         const userData = JSON.parse(localStorage.getItem('user_data') || sessionStorage.getItem('user_data') || '{}');
@@ -152,6 +179,9 @@
 
         let rawGraduations = [];
         let pendingDeleteId = null;
+        let pendingRestoreId = null;
+        let pendingRestoreStatus = null;
+        let schoolClasses = [];
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -160,8 +190,35 @@
             } else if (urlParams.get('type') === 'guru_pensiun' || urlParams.get('type') === 'pensiun') {
                 selectArsipType.value = 'guru_pensiun';
             }
+            fetchClasses();
             fetchGraduations();
         });
+
+        async function fetchClasses() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/classes`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const data = await res.json();
+                schoolClasses = data.data || data || [];
+                populateRestoreClassDropdown();
+            } catch (e) {
+                console.error('Error fetching classes:', e);
+            }
+        }
+
+        function populateRestoreClassDropdown() {
+            const restoreClassSelect = document.getElementById('restoreClassSelect');
+            if (!restoreClassSelect) return;
+            if (!schoolClasses || schoolClasses.length === 0) {
+                restoreClassSelect.innerHTML = '<option value="">-- Tidak ada kelas tersedia --</option>';
+                return;
+            }
+            restoreClassSelect.innerHTML = schoolClasses.map(c => {
+                const name = `${c.kelas_nomor} ${c.nama_kelas} ${c.nomor_kelas || ''}`.trim();
+                return `<option value="${c.id_class}">${name}</option>`;
+            }).join('');
+        }
 
         async function fetchGraduations() {
             try {
@@ -230,6 +287,77 @@
                 alert('Terjadi kesalahan koneksi saat menghapus user.');
             } finally {
                 pendingDeleteId = null;
+            }
+        });
+
+        function confirmRestoreArchivedUser(id, name, statusArsip) {
+            pendingRestoreId = id;
+            pendingRestoreStatus = statusArsip;
+            const isTeacher = (statusArsip === 'guru_pensiun');
+            const restoreClassSelectionContainer = document.getElementById('restoreClassSelectionContainer');
+
+            if (isTeacher) {
+                restoreClassSelectionContainer.classList.add('hidden');
+                document.getElementById('restoreConfirmSubtext').textContent = 
+                    `Apakah Anda yakin ingin membatalkan status pensiun untuk "${name}"? Akun guru ini akan dikembalikan ke Kelola Data Guru sebagai Guru aktif.`;
+            } else {
+                restoreClassSelectionContainer.classList.remove('hidden');
+                populateRestoreClassDropdown();
+                document.getElementById('restoreConfirmSubtext').textContent = 
+                    `Apakah Anda yakin ingin membatalkan status arsip siswa "${name}" dan mengembalikannya ke Kelola Data Siswa?`;
+            }
+
+            document.getElementById('confirmRestoreModal').classList.remove('hidden');
+        }
+
+        document.getElementById('btnCancelRestore').addEventListener('click', () => {
+            document.getElementById('confirmRestoreModal').classList.add('hidden');
+            pendingRestoreId = null;
+            pendingRestoreStatus = null;
+        });
+
+        document.getElementById('btnConfirmRestore').addEventListener('click', async () => {
+            if (!pendingRestoreId) return;
+            const btn = document.getElementById('btnConfirmRestore');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span>Memproses...</span>';
+
+            try {
+                const payload = {};
+                if (pendingRestoreStatus !== 'guru_pensiun') {
+                    const classSelect = document.getElementById('restoreClassSelect');
+                    if (classSelect && classSelect.value) {
+                        payload.id_class = classSelect.value;
+                    }
+                }
+
+                const res = await fetch(`${API_BASE_URL}/waka/graduations/${pendingRestoreId}/restore`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const resJson = await res.json().catch(() => ({}));
+
+                if (res.ok) {
+                    alert(resJson.message || 'Status arsip berhasil dibatalkan dan user telah dipulihkan!');
+                    document.getElementById('confirmRestoreModal').classList.add('hidden');
+                    fetchGraduations();
+                } else {
+                    alert(resJson.message || 'Gagal membatalkan status arsip user.');
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan koneksi saat memproses pembatalan status arsip.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                pendingRestoreId = null;
+                pendingRestoreStatus = null;
             }
         });
 
@@ -304,10 +432,16 @@
                     <td class="py-3 px-4 text-center font-extrabold text-emerald-700 ${!isPensiun ? 'bg-emerald-50/40' : ''}">${col6Val}</td>
                     <td class="py-3 px-4 text-center font-medium ${dateColor}">${dateOrYearVal}</td>
                     <td class="py-3 px-4 text-center">
-                        <button type="button" onclick="confirmDeleteArchivedUser(${item.id_user}, '${escapeJs(item.fullname)}')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg text-xs font-bold transition inline-flex items-center space-x-1 shadow-xs" title="Hapus User Permanen">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                            <span>Hapus</span>
-                        </button>
+                        <div class="flex items-center justify-center space-x-1.5">
+                            <button type="button" onclick="confirmRestoreArchivedUser(${item.id_user}, '${escapeJs(item.fullname)}', '${item.status_arsip}')" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-300 rounded-lg text-xs font-bold transition inline-flex items-center space-x-1 shadow-xs" title="Batalkan status arsip dan kembalikan user">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                <span>Batalkan</span>
+                            </button>
+                            <button type="button" onclick="confirmDeleteArchivedUser(${item.id_user}, '${escapeJs(item.fullname)}')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg text-xs font-bold transition inline-flex items-center space-x-1 shadow-xs" title="Hapus User Permanen">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                <span>Hapus</span>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -395,6 +529,6 @@
             doc.save(fileName);
         });
     </script>
-    <script src="../js/global-layout.js?v=20261110_6.0"></script>
+    <script src="../js/global-layout.js?v=20261111_1.0"></script>
 </body>
 </html>

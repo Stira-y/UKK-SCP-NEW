@@ -65,6 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/waka/students/promote', [UserController::class, 'promoteClasses']);
     Route::post('/waka/students/{id}/expel', [UserController::class, 'expelStudent']);
     Route::get('/waka/graduations', [UserController::class, 'getGraduations']);
+    Route::post('/waka/graduations/{id}/restore', [UserController::class, 'restoreArchivedUser']);
 
     // Route Khusus Kelola User Guru oleh Waka
     Route::get('/waka/teachers', [UserController::class, 'getTeachersGrouped']);

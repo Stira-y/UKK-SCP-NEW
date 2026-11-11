@@ -186,6 +186,85 @@ class UserController extends Controller
         ], 200);
     }
 
+    public function restoreArchivedUser(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        // 1. Pulihkan Email Asli jika sebelumnya diprefiks archived_
+        if ($user->email && preg_match('/^archived_\d+_\d+_(.+)$/', $user->email, $matches)) {
+            $originalEmail = $matches[1];
+            // Cek apakah originalEmail sedang dipakai akun aktif lain
+            $isTaken = User::where('email', $originalEmail)
+                ->where('id_user', '!=', $user->id_user)
+                ->whereRaw("LOWER(TRIM(COALESCE(title, ''))) NOT IN ('dikeluarkan', 'pensiun', 'alumni', 'lulus')")
+                ->exists();
+
+            if (!$isTaken) {
+                $user->email = $originalEmail;
+            }
+        }
+
+        // 2. Jika Siswa (id_role == 4)
+        if ((int)$user->id_role === 4) {
+            $user->title = null;
+
+            // Tentukan kelas tujuan
+            $targetClassId = $request->input('id_class');
+
+            if (!$targetClassId) {
+                // Cari histori kelas terakhir siswa dari tabel attendances
+                $lastAttClassId = Attendance::where('id_siswa', $user->id_user)
+                    ->whereNotNull('id_class')
+                    ->latest('date')
+                    ->value('id_class');
+
+                if ($lastAttClassId && SchoolClass::where('id_class', $lastAttClassId)->exists()) {
+                    $targetClassId = $lastAttClassId;
+                }
+            }
+
+            // Jika masih belum ada, cari kelas default berdasarkan tingkat atau kelas pertama
+            if (!$targetClassId) {
+                $defaultClass = SchoolClass::orderBy('kelas_nomor', 'asc')->first();
+                if ($defaultClass) {
+                    $targetClassId = $defaultClass->id_class;
+                }
+            }
+
+            if (!$targetClassId) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Tidak dapat menemukan kelas aktif untuk menampung siswa ini. Silakan buat kelas terlebih dahulu di Kelola Kelas.'
+                ], 422);
+            }
+
+            $user->id_class = $targetClassId;
+            $user->save();
+
+            $className = $user->schoolClass
+                ? ($user->schoolClass->kelas_nomor . ' ' . $user->schoolClass->nama_kelas . ' ' . ($user->schoolClass->nomor_kelas ?? ''))
+                : '';
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => "Data siswa {$user->fullname} berhasil dibatalkan dari arsip dan dikembalikan ke Kelola Data Siswa" . ($className ? " (Kelas {$className})" : "") . "."
+            ], 200);
+        }
+
+        // 3. Jika Guru / Waka / Kesiswaan
+        $user->title = 'Guru Normada';
+        if (!in_array((int)$user->id_role, [1, 2, 3])) {
+            $user->id_role = 2;
+        }
+
+        $user->save();
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => "Data guru {$user->fullname} berhasil dibatalkan dari status pensiun dan dikembalikan ke Kelola Data Guru."
+        ], 200);
+    }
+
     public function getGraduations(Request $request)
     {
         $type = $request->query('type');
