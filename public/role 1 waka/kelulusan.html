@@ -127,15 +127,15 @@
     <!-- Modal Konfirmasi Batalkan Status Arsip (Restore) -->
     <div id="confirmRestoreModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center transform transition-all animate-in fade-in zoom-in duration-200">
-            <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center mb-4">
+            <div id="restoreIconContainer" class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center mb-4">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
             </div>
-            <h3 class="text-base font-bold text-slate-800 mb-1">Batalkan Status Arsip</h3>
+            <h3 id="restoreModalTitle" class="text-base font-bold text-slate-800 mb-1">Batalkan Status Arsip</h3>
             <p id="restoreConfirmSubtext" class="text-xs text-slate-500 mb-4 leading-relaxed">
                 Apakah Anda yakin ingin membatalkan status arsip dan mengembalikan user ini?
             </p>
 
-            <!-- Dropdown Pilihan Kelas (Khusus Siswa) -->
+            <!-- Dropdown Pilihan Kelas (Khusus Siswa jika > 5 menit) -->
             <div id="restoreClassSelectionContainer" class="text-left mb-5 hidden">
                 <label class="block text-xs font-semibold text-slate-600 mb-1">Kembalikan Siswa ke Kelas:</label>
                 <select id="restoreClassSelect" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs md:text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
@@ -294,17 +294,48 @@
             pendingRestoreId = id;
             pendingRestoreStatus = statusArsip;
             const isTeacher = (statusArsip === 'guru_pensiun');
+            const item = rawGraduations.find(g => g.id_user === id) || {};
+            const isWithin5Min = Boolean(item.is_within_undo);
+
+            const restoreIconContainer = document.getElementById('restoreIconContainer');
+            const restoreModalTitle = document.getElementById('restoreModalTitle');
+            const restoreConfirmSubtext = document.getElementById('restoreConfirmSubtext');
             const restoreClassSelectionContainer = document.getElementById('restoreClassSelectionContainer');
+            const btnConfirmRestore = document.getElementById('btnConfirmRestore');
 
             if (isTeacher) {
                 restoreClassSelectionContainer.classList.add('hidden');
-                document.getElementById('restoreConfirmSubtext').textContent = 
-                    `Apakah Anda yakin ingin membatalkan status pensiun untuk "${name}"? Akun guru ini akan dikembalikan ke Kelola Data Guru sebagai Guru aktif.`;
+                if (isWithin5Min) {
+                    restoreIconContainer.className = "w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center mb-4";
+                    restoreModalTitle.textContent = "Batalkan Pensiun (Undo < 5 Menit)";
+                    restoreConfirmSubtext.innerHTML = `Masih dalam radius 5 menit! Akun guru <strong>${escapeJs(name)}</strong> akan langsung dipulihkan ke Kelola Data Guru beserta seluruh data akun utuh tanpa perubahan.`;
+                    btnConfirmRestore.className = "w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-md";
+                    btnConfirmRestore.textContent = "Kembalikan Langsung (Undo)";
+                } else {
+                    restoreIconContainer.className = "w-12 h-12 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center mb-4";
+                    restoreModalTitle.textContent = "Batalkan Pensiun (> 5 Menit)";
+                    restoreConfirmSubtext.innerHTML = `Batas waktu 5 menit telah kedaluwarsa. Data email lama dan password telah di-reset.<br><br>Akun guru <strong>${escapeJs(name)}</strong> akan diaktifkan kembali ke Kelola Data Guru dengan password default <code>Peh_1234</code>.`;
+                    btnConfirmRestore.className = "w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shadow-md";
+                    btnConfirmRestore.textContent = "Pulihkan Akun Guru";
+                }
             } else {
-                restoreClassSelectionContainer.classList.remove('hidden');
-                populateRestoreClassDropdown();
-                document.getElementById('restoreConfirmSubtext').textContent = 
-                    `Apakah Anda yakin ingin membatalkan status arsip siswa "${name}" dan mengembalikannya ke Kelola Data Siswa?`;
+                if (isWithin5Min) {
+                    restoreClassSelectionContainer.classList.add('hidden');
+                    restoreIconContainer.className = "w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center mb-4";
+                    restoreModalTitle.textContent = "Batalkan Arsip (Undo Cepat < 5 Menit)";
+                    const origClass = item.prev_class_name ? `kelas aslinya (<strong>${item.prev_class_name}</strong>)` : 'kelas aslinya';
+                    restoreConfirmSubtext.innerHTML = `Masih dalam radius 5 menit! Data siswa <strong>${escapeJs(name)}</strong> akan <strong>langsung dikembalikan ke ${origClass}</strong> beserta seluruh data email dan password utuh tanpa perubahan.`;
+                    btnConfirmRestore.className = "w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-md";
+                    btnConfirmRestore.textContent = "Kembalikan Langsung (Undo)";
+                } else {
+                    restoreClassSelectionContainer.classList.remove('hidden');
+                    populateRestoreClassDropdown();
+                    restoreIconContainer.className = "w-12 h-12 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center mb-4";
+                    restoreModalTitle.textContent = "Batalkan Status Arsip (> 5 Menit)";
+                    restoreConfirmSubtext.innerHTML = `Batas waktu undo cepat 5 menit telah kedaluwarsa. Data email lama dan password telah terhapus/hangus.<br><br>Silakan <strong>pilih kelas tujuan</strong> secara manual untuk mengaktifkan kembali siswa <strong>${escapeJs(name)}</strong>. Akun akan mendapatkan password baru default: <code>Peh_1234</code>.`;
+                    btnConfirmRestore.className = "w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shadow-md";
+                    btnConfirmRestore.textContent = "Pulihkan ke Kelas Pilihan";
+                }
             }
 
             document.getElementById('confirmRestoreModal').classList.remove('hidden');
@@ -433,10 +464,17 @@
                     <td class="py-3 px-4 text-center font-medium ${dateColor}">${dateOrYearVal}</td>
                     <td class="py-3 px-4 text-center">
                         <div class="flex items-center justify-center space-x-1.5">
-                            <button type="button" onclick="confirmRestoreArchivedUser(${item.id_user}, '${escapeJs(item.fullname)}', '${item.status_arsip}')" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-300 rounded-lg text-xs font-bold transition inline-flex items-center space-x-1 shadow-xs" title="Batalkan status arsip dan kembalikan user">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-                                <span>Batalkan</span>
-                            </button>
+                            ${item.is_within_undo ? `
+                                <button type="button" onclick="confirmRestoreArchivedUser(${item.id_user}, '${escapeJs(item.fullname)}', '${item.status_arsip}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-lg text-xs font-bold transition inline-flex items-center space-x-1 shadow-xs" title="Undo Cepat (< 5 Menit): Otomatis kembali ke kelas aslinya & data akun utuh">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                    <span>Undo (${Math.max(1, Math.ceil((item.remaining_undo_sec || 300) / 60))}m)</span>
+                                </button>
+                            ` : `
+                                <button type="button" onclick="confirmRestoreArchivedUser(${item.id_user}, '${escapeJs(item.fullname)}', '${item.status_arsip}')" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-300 rounded-lg text-xs font-bold transition inline-flex items-center space-x-1 shadow-xs" title="Batalkan Arsip (> 5 Menit): Pilih kelas manual & data akun di-reset">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                    <span>Batalkan</span>
+                                </button>
+                            `}
                             <button type="button" onclick="confirmDeleteArchivedUser(${item.id_user}, '${escapeJs(item.fullname)}')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg text-xs font-bold transition inline-flex items-center space-x-1 shadow-xs" title="Hapus User Permanen">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 <span>Hapus</span>

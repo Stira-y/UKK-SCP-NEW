@@ -157,6 +157,16 @@ class UserController extends Controller
     public function expelStudent($id)
     {
         $student = User::where('id_role', 4)->findOrFail($id);
+
+        // Simpan snapshot untuk batas undo 5 menit (300 detik)
+        Cache::put("archive_snapshot_{$student->id_user}", [
+            'id_class'    => $student->id_class,
+            'email'       => $student->email,
+            'password'    => $student->password,
+            'title'       => $student->title,
+            'archived_at' => now()->timestamp,
+        ], 300);
+
         $student->id_class = null;
         $student->title = 'dikeluarkan';
         if ($student->email && !str_starts_with($student->email, 'archived_')) {
@@ -173,6 +183,16 @@ class UserController extends Controller
     public function retireTeacher($id)
     {
         $teacher = User::whereIn('id_role', [1, 2, 3])->findOrFail($id);
+
+        // Simpan snapshot untuk batas undo 5 menit (300 detik)
+        Cache::put("archive_snapshot_{$teacher->id_user}", [
+            'id_class'    => $teacher->id_class,
+            'email'       => $teacher->email,
+            'password'    => $teacher->password,
+            'title'       => $teacher->title,
+            'archived_at' => now()->timestamp,
+        ], 300);
+
         $teacher->id_class = null;
         $teacher->title = 'Pensiun';
         if ($teacher->email && !str_starts_with($teacher->email, 'archived_')) {
@@ -190,79 +210,144 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        // 1. Pulihkan Email Asli jika sebelumnya diprefiks archived_
-        if ($user->email && preg_match('/^archived_\d+_\d+_(.+)$/', $user->email, $matches)) {
-            $originalEmail = $matches[1];
-            // Cek apakah originalEmail sedang dipakai akun aktif lain
-            $isTaken = User::where('email', $originalEmail)
-                ->where('id_user', '!=', $user->id_user)
-                ->whereRaw("LOWER(TRIM(COALESCE(title, ''))) NOT IN ('dikeluarkan', 'pensiun', 'alumni', 'lulus')")
-                ->exists();
+        // Cek snapshot dari Cache (radius 5 menit / 300 detik)
+        $snapshot = Cache::get("archive_snapshot_{$user->id_user}");
+        $isWithin5Min = !empty($snapshot) && isset($snapshot['archived_at']) && ((now()->timestamp - $snapshot['archived_at']) <= 300);
 
-            if (!$isTaken) {
-                $user->email = $originalEmail;
-            }
-        }
-
-        // 2. Jika Siswa (id_role == 4)
+        // 1. Jika Siswa (id_role == 4)
         if ((int)$user->id_role === 4) {
             $user->title = null;
 
-            // Tentukan kelas tujuan
-            $targetClassId = $request->input('id_class');
-
-            if (!$targetClassId) {
-                // Cari histori kelas terakhir siswa dari tabel attendances
-                $lastAttClassId = Attendance::where('id_siswa', $user->id_user)
-                    ->whereNotNull('id_class')
-                    ->latest('date')
-                    ->value('id_class');
-
-                if ($lastAttClassId && SchoolClass::where('id_class', $lastAttClassId)->exists()) {
-                    $targetClassId = $lastAttClassId;
+            if ($isWithin5Min) {
+                // --- KONDISI A: MASIH DALAM RADIUS 5 MENIT (UNDO INSTAN) ---
+                $restoredClassId = $snapshot['id_class'] ?? null;
+                if ($restoredClassId && SchoolClass::where('id_class', $restoredClassId)->exists()) {
+                    $user->id_class = $restoredClassId;
+                } else {
+                    $user->id_class = $request->input('id_class') ?: SchoolClass::orderBy('kelas_nomor', 'asc')->value('id_class');
                 }
-            }
 
-            // Jika masih belum ada, cari kelas default berdasarkan tingkat atau kelas pertama
-            if (!$targetClassId) {
-                $defaultClass = SchoolClass::orderBy('kelas_nomor', 'asc')->first();
-                if ($defaultClass) {
-                    $targetClassId = $defaultClass->id_class;
+                // Pulihkan email asli
+                if (!empty($snapshot['email'])) {
+                    $origEmail = $snapshot['email'];
+                    if (!User::where('email', $origEmail)->where('id_user', '!=', $user->id_user)->exists()) {
+                        $user->email = $origEmail;
+                    }
+                } elseif ($user->email && preg_match('/^archived_\d+_\d+_(.+)$/', $user->email, $matches)) {
+                    $cleanEmail = $matches[1];
+                    if (!User::where('email', $cleanEmail)->where('id_user', '!=', $user->id_user)->exists()) {
+                        $user->email = $cleanEmail;
+                    }
                 }
-            }
 
-            if (!$targetClassId) {
+                // Pulihkan password asli
+                if (!empty($snapshot['password'])) {
+                    $user->password = $snapshot['password'];
+                }
+
+                $user->save();
+                Cache::forget("archive_snapshot_{$user->id_user}");
+
+                $className = $user->schoolClass
+                    ? trim("{$user->schoolClass->kelas_nomor} {$user->schoolClass->nama_kelas} " . ($user->schoolClass->nomor_kelas ?? ''))
+                    : '';
+
                 return response()->json([
-                    'status' => 'error',
-                    'message' => 'Tidak dapat menemukan kelas aktif untuk menampung siswa ini. Silakan buat kelas terlebih dahulu di Kelola Kelas.'
-                ], 422);
+                    'status'          => 'success',
+                    'is_instant_undo' => true,
+                    'message'         => "Pembatalan berhasil! Karena masih dalam radius 5 menit, data siswa {$user->fullname} langsung dikembalikan ke kelas aslinya ({$className}) beserta seluruh data akun (email & password) utuh tanpa perubahan."
+                ], 200);
+
+            } else {
+                // --- KONDISI B: MELEBIHI 5 MENIT (PILIH KELAS MANUAL & RESET DATA) ---
+                $manualClassId = $request->input('id_class');
+
+                if (!$manualClassId) {
+                    return response()->json([
+                        'status'  => 'error',
+                        'message' => 'Batas waktu 5 menit telah kedaluwarsa. Anda wajib memilih kelas secara manual untuk mengembalikan siswa ini.'
+                    ], 422);
+                }
+
+                if (!SchoolClass::where('id_class', $manualClassId)->exists()) {
+                    return response()->json([
+                        'status'  => 'error',
+                        'message' => 'Kelas yang dipilih tidak valid.'
+                    ], 422);
+                }
+
+                $user->id_class = $manualClassId;
+
+                // Email dan password lama tidak dikembalikan karena sudah terhapus
+                $baseUser = $user->username ?: ('siswa_' . ($user->nis ?: $user->id_user));
+                $newDefaultEmail = strtolower($baseUser) . '@smkn1purwosari.sch.id';
+                if (User::where('email', $newDefaultEmail)->where('id_user', '!=', $user->id_user)->exists()) {
+                    $newDefaultEmail = strtolower($baseUser) . '_' . $user->id_user . '@smkn1purwosari.sch.id';
+                }
+                $user->email = $newDefaultEmail;
+
+                // Reset password baru default Peh_1234
+                $user->password = Hash::make('Peh_1234');
+                $user->save();
+
+                $className = $user->schoolClass
+                    ? trim("{$user->schoolClass->kelas_nomor} {$user->schoolClass->nama_kelas} " . ($user->schoolClass->nomor_kelas ?? ''))
+                    : '';
+
+                return response()->json([
+                    'status'          => 'success',
+                    'is_instant_undo' => false,
+                    'message'         => "Data siswa {$user->fullname} berhasil dipulihkan ke kelas {$className}. Karena telah melebihi batas 5 menit, email lama & password telah di-reset (Email: {$user->email}, Password default: Peh_1234)."
+                ], 200);
             }
-
-            $user->id_class = $targetClassId;
-            $user->save();
-
-            $className = $user->schoolClass
-                ? ($user->schoolClass->kelas_nomor . ' ' . $user->schoolClass->nama_kelas . ' ' . ($user->schoolClass->nomor_kelas ?? ''))
-                : '';
-
-            return response()->json([
-                'status'  => 'success',
-                'message' => "Data siswa {$user->fullname} berhasil dibatalkan dari arsip dan dikembalikan ke Kelola Data Siswa" . ($className ? " (Kelas {$className})" : "") . "."
-            ], 200);
         }
 
-        // 3. Jika Guru / Waka / Kesiswaan
+        // 2. Logika untuk Guru / Waka / Kesiswaan
         $user->title = 'Guru Normada';
         if (!in_array((int)$user->id_role, [1, 2, 3])) {
             $user->id_role = 2;
         }
 
-        $user->save();
+        if ($isWithin5Min) {
+            // Restore within 5 minutes
+            if (!empty($snapshot['email'])) {
+                $origEmail = $snapshot['email'];
+                if (!User::where('email', $origEmail)->where('id_user', '!=', $user->id_user)->exists()) {
+                    $user->email = $origEmail;
+                }
+            } elseif ($user->email && preg_match('/^archived_\d+_\d+_(.+)$/', $user->email, $matches)) {
+                $user->email = $matches[1];
+            }
 
-        return response()->json([
-            'status'  => 'success',
-            'message' => "Data guru {$user->fullname} berhasil dibatalkan dari status pensiun dan dikembalikan ke Kelola Data Guru."
-        ], 200);
+            if (!empty($snapshot['password'])) {
+                $user->password = $snapshot['password'];
+            }
+
+            $user->save();
+            Cache::forget("archive_snapshot_{$user->id_user}");
+
+            return response()->json([
+                'status'          => 'success',
+                'is_instant_undo' => true,
+                'message'         => "Pembatalan berhasil! Guru {$user->fullname} langsung dipulihkan ke Kelola Data Guru beserta seluruh data akun utuh (dalam radius 5 menit)."
+            ], 200);
+        } else {
+            // Melebihi 5 menit
+            $baseUser = $user->username ?: ('guru_' . ($user->nip ?: $user->id_user));
+            $newDefaultEmail = strtolower($baseUser) . '@smkn1purwosari.sch.id';
+            if (User::where('email', $newDefaultEmail)->where('id_user', '!=', $user->id_user)->exists()) {
+                $newDefaultEmail = strtolower($baseUser) . '_' . $user->id_user . '@smkn1purwosari.sch.id';
+            }
+            $user->email = $newDefaultEmail;
+            $user->password = Hash::make('Peh_1234');
+            $user->save();
+
+            return response()->json([
+                'status'          => 'success',
+                'is_instant_undo' => false,
+                'message'         => "Data guru {$user->fullname} berhasil dipulihkan ke Kelola Data Guru. Karena sudah melewati batas 5 menit, email lama & password di-reset (Email baru: {$user->email}, Password default: Peh_1234)."
+            ], 200);
+        }
     }
 
     public function getGraduations(Request $request)
@@ -276,18 +361,33 @@ class UserController extends Controller
                 ->get();
 
             $result = $retiredTeachers->map(function ($t) {
+                $snapshot = Cache::get("archive_snapshot_{$t->id_user}");
+                $isWithinUndo = false;
+                $remainingUndoSec = 0;
+                if (!empty($snapshot) && isset($snapshot['archived_at'])) {
+                    $elapsed = now()->timestamp - $snapshot['archived_at'];
+                    if ($elapsed <= 300) {
+                        $isWithinUndo = true;
+                        $remainingUndoSec = max(0, 300 - $elapsed);
+                    }
+                }
+
                 return [
-                    'id_user'        => $t->id_user,
-                    'nisn'           => '-',
-                    'nis'            => '-',
-                    'nip'            => $t->nip ?? '-',
-                    'fullname'       => $t->fullname ?? $t->username,
-                    'status_arsip'   => 'guru_pensiun',
-                    'status_label'   => 'Guru Pensiun',
-                    'total_izin'     => '-',
-                    'total_presensi' => '-',
-                    'tanggal_arsip'  => $t->updated_at ? date('d/m/Y', strtotime($t->updated_at)) : '-',
-                    'tahun_lulus'    => $t->updated_at ? date('Y', strtotime($t->updated_at)) : date('Y'),
+                    'id_user'            => $t->id_user,
+                    'nisn'               => '-',
+                    'nis'                => '-',
+                    'nip'                => $t->nip ?? '-',
+                    'fullname'           => $t->fullname ?? $t->username,
+                    'status_arsip'       => 'guru_pensiun',
+                    'status_label'       => 'Guru Pensiun',
+                    'total_izin'         => '-',
+                    'total_presensi'     => '-',
+                    'tanggal_arsip'      => $t->updated_at ? date('d/m/Y', strtotime($t->updated_at)) : '-',
+                    'tahun_lulus'        => $t->updated_at ? date('Y', strtotime($t->updated_at)) : date('Y'),
+                    'is_within_undo'     => $isWithinUndo,
+                    'remaining_undo_sec' => $remainingUndoSec,
+                    'prev_class_id'      => null,
+                    'prev_class_name'    => '',
                 ];
             });
 
@@ -336,18 +436,43 @@ class UserController extends Controller
             $totalPresensi = $attendancesCounts[$st->id_user] ?? 0;
             $isExpelled = (strtolower(trim($st->title ?? '')) === 'dikeluarkan');
 
+            $snapshot = Cache::get("archive_snapshot_{$st->id_user}");
+            $isWithinUndo = false;
+            $remainingUndoSec = 0;
+            $prevClassId = null;
+            $prevClassName = '';
+
+            if (!empty($snapshot) && isset($snapshot['archived_at'])) {
+                $elapsed = now()->timestamp - $snapshot['archived_at'];
+                if ($elapsed <= 300) {
+                    $isWithinUndo = true;
+                    $remainingUndoSec = max(0, 300 - $elapsed);
+                    $prevClassId = $snapshot['id_class'] ?? null;
+                    if ($prevClassId) {
+                        $cls = SchoolClass::find($prevClassId);
+                        if ($cls) {
+                            $prevClassName = trim("{$cls->kelas_nomor} {$cls->nama_kelas} " . ($cls->nomor_kelas ?? ''));
+                        }
+                    }
+                }
+            }
+
             return [
-                'id_user'        => $st->id_user,
-                'nisn'           => $st->nisn ?? '-',
-                'nis'            => $st->nis ?? '-',
-                'nip'            => '-',
-                'fullname'       => $st->fullname ?? $st->username,
-                'status_arsip'   => $isExpelled ? 'dikeluarkan' : 'alumni',
-                'status_label'   => $isExpelled ? 'Dikeluarkan' : 'Lulus / Alumni',
-                'total_izin'     => $totalIzin,
-                'total_presensi' => $totalPresensi,
-                'tanggal_arsip'  => $st->updated_at ? date('d/m/Y', strtotime($st->updated_at)) : '-',
-                'tahun_lulus'    => $st->updated_at ? date('Y', strtotime($st->updated_at)) : date('Y'),
+                'id_user'            => $st->id_user,
+                'nisn'               => $st->nisn ?? '-',
+                'nis'                => $st->nis ?? '-',
+                'nip'                => '-',
+                'fullname'           => $st->fullname ?? $st->username,
+                'status_arsip'       => $isExpelled ? 'dikeluarkan' : 'alumni',
+                'status_label'       => $isExpelled ? 'Dikeluarkan' : 'Lulus / Alumni',
+                'total_izin'         => $totalIzin,
+                'total_presensi'     => $totalPresensi,
+                'tanggal_arsip'      => $st->updated_at ? date('d/m/Y', strtotime($st->updated_at)) : '-',
+                'tahun_lulus'        => $st->updated_at ? date('Y', strtotime($st->updated_at)) : date('Y'),
+                'is_within_undo'     => $isWithinUndo,
+                'remaining_undo_sec' => $remainingUndoSec,
+                'prev_class_id'      => $prevClassId,
+                'prev_class_name'    => $prevClassName,
             ];
         });
 
@@ -358,18 +483,33 @@ class UserController extends Controller
                 ->orderBy('fullname', 'asc')
                 ->get();
             foreach ($retiredTeachers as $t) {
+                $snapshot = Cache::get("archive_snapshot_{$t->id_user}");
+                $isWithinUndo = false;
+                $remainingUndoSec = 0;
+                if (!empty($snapshot) && isset($snapshot['archived_at'])) {
+                    $elapsed = now()->timestamp - $snapshot['archived_at'];
+                    if ($elapsed <= 300) {
+                        $isWithinUndo = true;
+                        $remainingUndoSec = max(0, 300 - $elapsed);
+                    }
+                }
+
                 $result->push([
-                    'id_user'        => $t->id_user,
-                    'nisn'           => '-',
-                    'nis'            => '-',
-                    'nip'            => $t->nip ?? '-',
-                    'fullname'       => $t->fullname ?? $t->username,
-                    'status_arsip'   => 'guru_pensiun',
-                    'status_label'   => 'Guru Pensiun',
-                    'total_izin'     => '-',
-                    'total_presensi' => '-',
-                    'tanggal_arsip'  => $t->updated_at ? date('d/m/Y', strtotime($t->updated_at)) : '-',
-                    'tahun_lulus'    => $t->updated_at ? date('Y', strtotime($t->updated_at)) : date('Y'),
+                    'id_user'            => $t->id_user,
+                    'nisn'               => '-',
+                    'nis'                => '-',
+                    'nip'                => $t->nip ?? '-',
+                    'fullname'           => $t->fullname ?? $t->username,
+                    'status_arsip'       => 'guru_pensiun',
+                    'status_label'       => 'Guru Pensiun',
+                    'total_izin'         => '-',
+                    'total_presensi'     => '-',
+                    'tanggal_arsip'      => $t->updated_at ? date('d/m/Y', strtotime($t->updated_at)) : '-',
+                    'tahun_lulus'        => $t->updated_at ? date('Y', strtotime($t->updated_at)) : date('Y'),
+                    'is_within_undo'     => $isWithinUndo,
+                    'remaining_undo_sec' => $remainingUndoSec,
+                    'prev_class_id'      => null,
+                    'prev_class_name'    => '',
                 ]);
             }
         }
@@ -1369,8 +1509,20 @@ class UserController extends Controller
             $currentTingkat = strtoupper(trim($currentClass->kelas_nomor));
 
             if ($currentTingkat === 'XII') {
+                // Simpan snapshot untuk batas undo 5 menit (300 detik)
+                Cache::put("archive_snapshot_{$student->id_user}", [
+                    'id_class'    => $student->id_class,
+                    'email'       => $student->email,
+                    'password'    => $student->password,
+                    'title'       => $student->title,
+                    'archived_at' => now()->timestamp,
+                ], 300);
+
                 $student->id_class = null;
                 $student->title = 'alumni';
+                if ($student->email && !str_starts_with($student->email, 'archived_')) {
+                    $student->email = 'archived_' . $student->id_user . '_' . time() . '_' . $student->email;
+                }
                 $student->save();
                 $graduatedCount++;
             } elseif ($currentTingkat === 'X') {
