@@ -603,7 +603,7 @@
                     statusBadge = `<span class="bg-amber-100 text-amber-700 font-bold px-2.5 py-1 rounded-full text-xs">${highlightMatch('Pending', query)}</span>`;
                 }
 
-                const expiredNotice = isExpired ? `<span class="block text-[11px] font-bold text-amber-500 mt-1">â€¢ Tanggal Kadaluwarsa</span>` : '';
+                const expiredNotice = isExpired ? `<span class="block text-[11px] font-bold text-amber-500 mt-1">• Tanggal Kadaluwarsa</span>` : '';
 
                 let docs = item.document_path || item.documents || [];
                 if (typeof docs === 'string') { try { docs = JSON.parse(docs); } catch(e) { docs = [docs]; } }
@@ -703,7 +703,7 @@
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'text-xs text-blue-600 font-semibold hover:underline block text-left';
-                    btn.textContent = `â€¢ ${fileName}`;
+                    btn.textContent = `• ${fileName}`;
                     btn.onclick = () => openFileViewer(fileUrl, fileName);
                     fileListContainer.appendChild(btn);
                 });

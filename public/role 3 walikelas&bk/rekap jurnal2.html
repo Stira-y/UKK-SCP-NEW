@@ -587,7 +587,7 @@
 
             currentEditingJournal = j;
             const clsName = j.schedule?.school_class ? `${j.schedule.school_class.kelas_nomor} ${j.schedule.school_class.nama_kelas} ${j.schedule.school_class.nomor_kelas || ''}` : '';
-            document.getElementById('attendanceModalSubtitle').textContent = `${clsName} â€¢ Tanggal: ${jDate}`;
+            document.getElementById('attendanceModalSubtitle').textContent = `${clsName} • Tanggal: ${jDate}`;
 
             const tbody = document.getElementById('attendanceEditTableBody');
             tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-400">Memuat data siswa kelas...</td></tr>';
