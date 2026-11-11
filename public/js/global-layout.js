@@ -1307,9 +1307,20 @@ function initUniversalGlobalLayout() {
 
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) {
-        btnLogout.addEventListener('click', (e) => {
+        btnLogout.addEventListener('click', async (e) => {
             e.preventDefault();
-            if (confirm('Apakah Anda yakin ingin keluar dari akun ini?')) {
+            let confirmed = false;
+            if (window.showCustomConfirm) {
+                confirmed = await window.showCustomConfirm('Apakah Anda yakin ingin keluar dari akun ini?', 'Konfirmasi Keluar', {
+                    confirmText: 'Ya, Keluar',
+                    cancelText: 'Batal',
+                    type: 'confirm'
+                });
+            } else {
+                confirmed = confirm('Apakah Anda yakin ingin keluar dari akun ini?');
+            }
+
+            if (confirmed) {
                 localStorage.removeItem('auth_token');
                 localStorage.removeItem('user_data');
                 localStorage.removeItem('login_timestamp');

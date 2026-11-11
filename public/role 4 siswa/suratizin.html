@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SCP Sekolah">
-    <script src="/js/pwa.js?v=20261111_1.0"></script>
+    <script src="/js/pwa.js?v=20261111_2.0"></script>
     <title>Surat Izin Siswa - Sistem SCP</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -60,7 +60,7 @@
                 <select id="parentStudentSelector" class="bg-transparent text-white text-xs md:text-sm font-semibold outline-none cursor-pointer pr-1">
                 </select>
             </div>
-            <button id="btnLogout" onclick="handleLogout()" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition flex-shrink-0">
+            <button id="btnLogout" onclick="event.preventDefault(); handleLogout();" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition flex-shrink-0">
                 Keluar
             </button>
         </div>
@@ -445,7 +445,7 @@
     </div>
 
     <!-- Script Utama Profil -->
-    <script src="../js/profile-role siswa.js?v=20261109_7.0"></script>
+    <script src="../js/profile-role siswa.js?v=20261111_2.0"></script>
 
     <!-- Script Logika Halaman Surat Izin -->
     <script>
@@ -708,7 +708,7 @@
                 }
 
                 const blueDot = isRecentlyEdited ? `<span class="inline-block w-2 h-2 bg-blue-600 rounded-full mr-1.5 align-middle" title="Baru saja diedit"></span>` : '';
-                const expiredNotice = isExpired ? `<span class="block text-[11px] font-bold text-amber-500 mt-1">• Tanggal Kadaluwarsa</span>` : '';
+                const expiredNotice = isExpired ? `<span class="block text-[11px] font-bold text-amber-500 mt-1">â€¢ Tanggal Kadaluwarsa</span>` : '';
 
                 return `
                     <tr class="hover:bg-slate-50 transition border-b border-slate-100">

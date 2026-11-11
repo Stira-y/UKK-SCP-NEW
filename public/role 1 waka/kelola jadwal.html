@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SCP Sekolah">
-    <script src="/js/pwa.js?v=20261111_1.0"></script>
+    <script src="/js/pwa.js?v=20261111_2.0"></script>
     <title>Kelola Jadwal - Sistem SCP</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1859,7 +1859,7 @@
                 }
                 if (labelPdfMerged) {
                     labelPdfMerged.className = 'text-xs font-bold text-emerald-800';
-                    labelPdfMerged.textContent = 'JADWAL_GABUNGAN_PUTARAN_2.pdf (48 Kelas • Tabel Header Biru)';
+                    labelPdfMerged.textContent = 'JADWAL_GABUNGAN_PUTARAN_2.pdf (48 Kelas â€¢ Tabel Header Biru)';
                 }
                 if (mergedPdfActionButtons) {
                     mergedPdfActionButtons.classList.remove('hidden');
@@ -2306,6 +2306,6 @@
             doc.save(`Jadwal_Kelas_${currentTingkat}_Putaran_${currentCycle}.pdf`);
         });
     </script>
-    <script src="../js/global-layout.js?v=20261110_6.0"></script>
+    <script src="../js/global-layout.js?v=20261111_2.0"></script>
 </body>
 </html>

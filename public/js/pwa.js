@@ -212,9 +212,13 @@
         });
     };
 
-    // Override bawaan browser window.alert secara global
+    // Override bawaan browser window.alert & window.confirm secara global
     window.alert = function(message) {
         return window.showCustomAlert(message);
+    };
+
+    window.confirm = function(message) {
+        return window.showCustomConfirm(message);
     };
 
     window.showSuccess = (msg, title) => window.showCustomAlert(msg, title || 'Berhasil!', 'success');

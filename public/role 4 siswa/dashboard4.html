@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SCP Sekolah">
-    <script src="/js/pwa.js?v=20261111_1.0"></script>
+    <script src="/js/pwa.js?v=20261111_2.0"></script>
     <title>Dashboard Siswa - Sistem SCP</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -60,7 +60,7 @@
                 <select id="parentStudentSelector" class="bg-transparent text-white text-xs md:text-sm font-semibold outline-none cursor-pointer pr-1">
                 </select>
             </div>
-            <button id="btnLogout" onclick="handleLogout()" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition flex-shrink-0">
+            <button id="btnLogout" onclick="event.preventDefault(); handleLogout();" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition flex-shrink-0">
                 Keluar
             </button>
         </div>
@@ -426,7 +426,7 @@
     </div>
 
     <!-- Script Utama (Modular Profil & Logout) -->
-    <script src="../js/profile-role siswa.js?v=20261109_7.0"></script>
+    <script src="../js/profile-role siswa.js?v=20261111_2.0"></script>
 
     <!-- Script Khusus Dashboard Siswa: Rekap Siswa, Jadwal Hari Ini, Status Presensi & Izin Khusus Realtime -->
     <script>
