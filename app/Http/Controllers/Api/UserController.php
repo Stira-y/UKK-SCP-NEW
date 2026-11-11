@@ -793,6 +793,7 @@ class UserController extends Controller
 
         $classes = SchoolClass::all();
         $importedCount = 0;
+        $updatedCount = 0;
         $errors = [];
 
         foreach ($request->items as $idx => $item) {
@@ -800,21 +801,6 @@ class UserController extends Controller
 
             $email = strtolower(trim($item['email']));
             $this->releaseArchivedEmailCollisions($email);
-
-            if ($this->isEmailTakenByActiveUser($email)) {
-                $errors[] = "Baris {$rowNum}: Email '{$email}' sudah terdaftar pada akun aktif lain.";
-                continue;
-            }
-
-            if (User::where('username', trim($item['username']))->exists()) {
-                $errors[] = "Baris {$rowNum}: Username '{$item['username']}' sudah digunakan.";
-                continue;
-            }
-
-            if (!empty($item['nip']) && trim($item['nip']) !== '-' && User::where('nip', trim($item['nip']))->exists()) {
-                $errors[] = "Baris {$rowNum}: NIP '{$item['nip']}' sudah terdaftar.";
-                continue;
-            }
 
             $rawRole = strtolower(trim(str_replace(' ', '', (string)($item['role'] ?? ''))));
             $title = trim($item['title'] ?? 'Guru Normada');
@@ -837,7 +823,7 @@ class UserController extends Controller
 
             if ($isWali) {
                 if (empty($item['kelas']) || trim($item['kelas']) === '-') {
-                    $errors[] = "Baris {$rowNum}: Wali Kelas wajib menentukan kelas binaan.";
+                    $errors[] = "Baris {$rowNum} ({$item['fullname']}): Wali Kelas wajib menentukan kelas binaan.";
                     continue;
                 }
 
@@ -857,7 +843,7 @@ class UserController extends Controller
                 }
 
                 if (!$matchedClassId) {
-                    $errors[] = "Baris {$rowNum}: Kelas binaan '{$item['kelas']}' tidak ditemukan di database.";
+                    $errors[] = "Baris {$rowNum} ({$item['fullname']}): Kelas binaan '{$item['kelas']}' tidak ditemukan di database.";
                     continue;
                 }
             } else {
@@ -883,11 +869,57 @@ class UserController extends Controller
                 }
             }
 
+            // Cek apakah data guru sudah terdaftar di sistem (berdasarkan NIP, Email, atau Username)
+            $existingTeacher = null;
+            $cleanNip = (!empty($item['nip']) && trim($item['nip']) !== '-') ? trim($item['nip']) : null;
+
+            if ($cleanNip) {
+                $existingTeacher = User::where('nip', $cleanNip)->first();
+            }
+            if (!$existingTeacher && !empty($email)) {
+                $existingTeacher = User::where('email', $email)->first();
+            }
+            if (!$existingTeacher && !empty($item['username'])) {
+                $existingTeacher = User::where('username', trim($item['username']))->first();
+            }
+
+            if ($existingTeacher) {
+                // UPDATE GURU YANG SUDAH ADA (Upsert)
+                $existingTeacher->fullname = trim($item['fullname']);
+                $existingTeacher->title    = $title;
+                $existingTeacher->id_role  = $roleId;
+                if ($matchedClassId) {
+                    $existingTeacher->id_class = $matchedClassId;
+                }
+                if (!empty($item['password']) && trim($item['password']) !== '') {
+                    $existingTeacher->password = Hash::make(trim($item['password']));
+                }
+                $existingTeacher->save();
+
+                if (!empty($bkClassIds)) {
+                    $existingTeacher->counselorClasses()->sync($bkClassIds);
+                }
+
+                $updatedCount++;
+                continue;
+            }
+
+            // Jika guru baru, cek keunikan email & username
+            if ($this->isEmailTakenByActiveUser($email)) {
+                $errors[] = "Baris {$rowNum}: Email '{$email}' sudah terdaftar pada akun aktif lain.";
+                continue;
+            }
+
+            if (User::where('username', trim($item['username']))->exists()) {
+                $errors[] = "Baris {$rowNum}: Username '{$item['username']}' sudah digunakan akun lain.";
+                continue;
+            }
+
             $plainPassword = !empty($item['password']) ? trim($item['password']) : 'Peh_1234';
 
             $user = User::create([
                 'fullname' => trim($item['fullname']),
-                'nip'      => !empty($item['nip']) && trim($item['nip']) !== '-' ? trim($item['nip']) : null,
+                'nip'      => $cleanNip,
                 'username' => trim($item['username']),
                 'email'    => $email,
                 'password' => Hash::make($plainPassword),
@@ -903,18 +935,26 @@ class UserController extends Controller
             $importedCount++;
         }
 
-        if ($importedCount === 0 && count($errors) > 0) {
+        $totalProcessed = $importedCount + $updatedCount;
+
+        if ($totalProcessed === 0 && count($errors) > 0) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Seluruh baris gagal diimpor:',
+                'message' => 'Seluruh baris gagal diimpor karena kendala data berikut:',
                 'errors'  => $errors
             ], 422);
         }
 
+        $msgParts = [];
+        if ($importedCount > 0) $msgParts[] = "{$importedCount} guru baru berhasil ditambahkan";
+        if ($updatedCount > 0) $msgParts[] = "{$updatedCount} data guru berhasil diperbarui";
+        $summaryMsg = !empty($msgParts) ? "Berhasil memproses data guru: " . implode(', ', $msgParts) . "." : "Proses impor selesai.";
+
         return response()->json([
             'status'         => 'success',
-            'message'        => "Berhasil mengimpor {$importedCount} data guru.",
+            'message'        => $summaryMsg,
             'imported_count' => $importedCount,
+            'updated_count'  => $updatedCount,
             'errors'         => $errors
         ], 200);
     }
@@ -1030,6 +1070,7 @@ class UserController extends Controller
         ]);
 
         $importedCount = 0;
+        $updatedCount = 0;
         $errors = [];
 
         // 2. KUNCI OPTIMASI #1: Muat seluruh kelas ke memory RAM dengan berbagai variasi penamaan
@@ -1047,18 +1088,37 @@ class UserController extends Controller
             $classMap[str_replace([' ', '-', '_'], '', $c2)] = $c->id_class;
         }
 
-        // Ambil data unik yang aktif di database ke array PHP (abaikan akun yang sudah diarsipkan)
-        $activeUsers = User::whereRaw("LOWER(TRIM(COALESCE(title, ''))) NOT IN ('dikeluarkan', 'pensiun', 'alumni', 'lulus')")
-            ->where(function ($q) {
-                $q->where('id_role', '!=', 4)
-                  ->orWhereNotNull('id_class');
-            })
+        // Ambil data siswa aktif di database ke array PHP untuk cek Upsert (Update jika sudah ada)
+        $activeStudents = User::where('id_role', 4)
+            ->whereRaw("LOWER(TRIM(COALESCE(title, ''))) NOT IN ('dikeluarkan', 'pensiun', 'alumni', 'lulus')")
             ->get();
 
-        $existingEmails    = array_flip($activeUsers->pluck('email')->filter()->map(fn($e) => strtolower(trim($e)))->toArray());
-        $existingUsernames = array_flip($activeUsers->pluck('username')->filter()->map(fn($u) => strtolower(trim($u)))->toArray());
-        $existingNis       = array_flip($activeUsers->pluck('nis')->filter()->map(fn($n) => trim($n))->toArray());
-        $existingNisn      = array_flip($activeUsers->pluck('nisn')->filter()->map(fn($n) => trim($n))->toArray());
+        $studentByNis = [];
+        $studentByNisn = [];
+        $studentByEmail = [];
+        $studentByUsername = [];
+
+        foreach ($activeStudents as $st) {
+            if (!empty($st->nis) && trim($st->nis) !== '-') {
+                $studentByNis[trim($st->nis)] = $st;
+            }
+            if (!empty($st->nisn) && trim($st->nisn) !== '-') {
+                $studentByNisn[trim($st->nisn)] = $st;
+            }
+            if (!empty($st->email)) {
+                $studentByEmail[strtolower(trim($st->email))] = $st;
+            }
+            if (!empty($st->username)) {
+                $studentByUsername[strtolower(trim($st->username))] = $st;
+            }
+        }
+
+        // Ambil email/username dari role lain (Waka, Guru, Wali Kelas, BK) untuk proteksi tabrakan
+        $otherActiveUsers = User::where('id_role', '!=', 4)
+            ->whereRaw("LOWER(TRIM(COALESCE(title, ''))) NOT IN ('dikeluarkan', 'pensiun', 'alumni', 'lulus')")
+            ->get();
+        $otherEmails = array_flip($otherActiveUsers->pluck('email')->filter()->map(fn($e) => strtolower(trim($e)))->toArray());
+        $otherUsernames = array_flip($otherActiveUsers->pluck('username')->filter()->map(fn($u) => strtolower(trim($u)))->toArray());
 
         $rowsToInsert = [];
         $now = now();
@@ -1066,57 +1126,82 @@ class UserController extends Controller
         foreach ($request->items as $idx => $item) {
             $rowNum = $idx + 2;
 
-            $rawKelas = strtolower(trim($item['kelas']));
+            $rawKelas = strtolower(trim($item['kelas'] ?? ''));
             $cleanClassStr = strtolower(preg_replace('/\s+/', ' ', $rawKelas));
             $noSpaceClass = str_replace([' ', '-', '_'], '', $rawKelas);
 
             $matchedClassId = $classMap[$cleanClassStr] ?? ($classMap[$noSpaceClass] ?? null);
 
             if (!$matchedClassId) {
-                $errors[] = "Baris {$rowNum}: Kelas '{$item['kelas']}' tidak terdaftar di sistem.";
+                $errors[] = "Baris {$rowNum} ({$item['fullname']}): Kelas '{$item['kelas']}' tidak terdaftar di sistem.";
                 continue;
             }
 
-            $cleanEmail = strtolower(trim($item['email']));
+            $cleanEmail = strtolower(trim($item['email'] ?? ''));
             $this->releaseArchivedEmailCollisions($cleanEmail);
 
-            $cleanUser  = strtolower(trim($item['username']));
+            $cleanUser  = strtolower(trim($item['username'] ?? ''));
             $cleanNis   = (!empty($item['nis']) && trim($item['nis']) !== '-') ? trim($item['nis']) : null;
             $cleanNisn  = (!empty($item['nisn']) && trim($item['nisn']) !== '-') ? trim($item['nisn']) : null;
 
-            // Pengecekan duplikat instan di RAM (0 ms, tanpa query SQL bolak-balik)
-            if (isset($existingEmails[$cleanEmail])) {
-                $errors[] = "Baris {$rowNum}: Email '{$item['email']}' sudah terdaftar.";
+            // Cek apakah siswa ini sudah ada di database (Upsert)
+            $existingStudent = null;
+            if ($cleanNis && isset($studentByNis[$cleanNis])) {
+                $existingStudent = $studentByNis[$cleanNis];
+            } elseif ($cleanNisn && isset($studentByNisn[$cleanNisn])) {
+                $existingStudent = $studentByNisn[$cleanNisn];
+            } elseif ($cleanEmail && isset($studentByEmail[$cleanEmail])) {
+                $existingStudent = $studentByEmail[$cleanEmail];
+            } elseif ($cleanUser && isset($studentByUsername[$cleanUser])) {
+                $existingStudent = $studentByUsername[$cleanUser];
+            }
+
+            if ($existingStudent) {
+                // UPDATE SISWA YANG SUDAH ADA
+                $existingStudent->fullname = trim($item['fullname']);
+                $existingStudent->id_class = $matchedClassId;
+                if ($cleanNis)  $existingStudent->nis = $cleanNis;
+                if ($cleanNisn) $existingStudent->nisn = $cleanNisn;
+                if (!empty($item['password']) && trim($item['password']) !== '') {
+                    $existingStudent->password = password_hash(trim($item['password']), PASSWORD_BCRYPT, ['cost' => 4]);
+                }
+                $existingStudent->save();
+
+                // Perbarui index memory
+                if ($cleanNis)  $studentByNis[$cleanNis] = $existingStudent;
+                if ($cleanNisn) $studentByNisn[$cleanNisn] = $existingStudent;
+                if ($cleanEmail) $studentByEmail[$cleanEmail] = $existingStudent;
+                if ($cleanUser)  $studentByUsername[$cleanUser] = $existingStudent;
+
+                $updatedCount++;
                 continue;
             }
 
-            if (isset($existingUsernames[$cleanUser])) {
-                $errors[] = "Baris {$rowNum}: Username '{$item['username']}' sudah digunakan.";
+            // Validasi jika akun baru tetapi email/username bentrok dengan pegawai (guru/waka/bk)
+            if (isset($otherEmails[$cleanEmail])) {
+                $errors[] = "Baris {$rowNum} ({$item['fullname']}): Email '{$cleanEmail}' telah digunakan oleh akun staf/guru.";
                 continue;
             }
 
-            if ($cleanNis && isset($existingNis[$cleanNis])) {
-                $errors[] = "Baris {$rowNum}: NIS '{$cleanNis}' sudah terdaftar.";
+            if (isset($otherUsernames[$cleanUser])) {
+                $errors[] = "Baris {$rowNum} ({$item['fullname']}): Username '{$cleanUser}' telah digunakan oleh akun staf/guru.";
                 continue;
             }
 
-            if ($cleanNisn && isset($existingNisn[$cleanNisn])) {
-                $errors[] = "Baris {$rowNum}: NISN '{$cleanNisn}' sudah terdaftar.";
-                continue;
+            // Jika username atau email sudah pernah diantrekan di batch ini, buat variasi unik otomatis
+            if (isset($studentByUsername[$cleanUser])) {
+                $cleanUser = $cleanUser . '_' . ($cleanNis ?? rand(100, 999));
             }
-
-            // Tandai terpakai di memori agar baris di bawahnya tidak menabrak baris sekarang
-            $existingEmails[$cleanEmail] = true;
-            $existingUsernames[$cleanUser] = true;
-            if ($cleanNis)  $existingNis[$cleanNis] = true;
-            if ($cleanNisn) $existingNisn[$cleanNisn] = true;
+            if (isset($studentByEmail[$cleanEmail])) {
+                $cleanEmail = ($cleanNis ?? rand(100, 999)) . '_' . $cleanEmail;
+            }
 
             $plainPass = !empty($item['password']) ? trim($item['password']) : 'Peh_1234';
             $pass = password_hash($plainPass, PASSWORD_BCRYPT, ['cost' => 4]);
 
             $rowsToInsert[] = [
                 'fullname'   => trim($item['fullname']),
-                'username'   => trim($item['username']),
+                'username'   => $cleanUser,
                 'email'      => $cleanEmail,
                 'password'   => $pass,
                 'nis'        => $cleanNis,
@@ -1126,6 +1211,12 @@ class UserController extends Controller
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
+
+            // Daftarkan ke memory agar baris berikutnya di batch yang sama tidak bentrok
+            $studentByUsername[$cleanUser] = true;
+            $studentByEmail[$cleanEmail] = true;
+            if ($cleanNis)  $studentByNis[$cleanNis] = true;
+            if ($cleanNisn) $studentByNisn[$cleanNisn] = true;
 
             $importedCount++;
 
@@ -1140,18 +1231,26 @@ class UserController extends Controller
             User::insert($rowsToInsert);
         }
 
-        if ($importedCount === 0 && count($errors) > 0) {
+        $totalProcessed = $importedCount + $updatedCount;
+
+        if ($totalProcessed === 0 && count($errors) > 0) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Seluruh baris gagal diimpor:',
+                'message' => 'Seluruh baris gagal diimpor karena kendala data berikut:',
                 'errors'  => $errors
             ], 422);
         }
 
+        $msgParts = [];
+        if ($importedCount > 0) $msgParts[] = "{$importedCount} siswa baru berhasil ditambahkan";
+        if ($updatedCount > 0) $msgParts[] = "{$updatedCount} data siswa berhasil diperbarui";
+        $summaryMsg = !empty($msgParts) ? "Berhasil memproses data siswa: " . implode(', ', $msgParts) . "." : "Proses impor selesai.";
+
         return response()->json([
             'status'         => 'success',
-            'message'        => "Berhasil mengimpor {$importedCount} data siswa.",
+            'message'        => $summaryMsg,
             'imported_count' => $importedCount,
+            'updated_count'  => $updatedCount,
             'errors'         => $errors
         ], 200);
     }
