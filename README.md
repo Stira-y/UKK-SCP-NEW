@@ -23,7 +23,11 @@
 ## 📑 Daftar Isi
 1. [Tentang Sistem](#-tentang-sistem)
 2. [Fitur Unggulan](#-fitur-unggulan)
-3. [Peran Pengguna (Role-Based Access Control)](#-peran-pengguna-role-based-access-control)
+3. [Peran Pengguna & Konsep Role vs Title](#-peran-pengguna--konsep-role-vs-title)
+   - [Fungsi Role vs Title](#-apa-fungsi-role-dan-title)
+   - [Matriks Pemetaan Role + Title](#-matriks-pemetaan-role--title)
+   - [Logika Login Role + Title](#-logika-login-berdasarkan-role--title)
+   - [Rincian Fitur Berdasarkan 4 Role](#-rincian-fitur-utama-berdasarkan-4-role)
 4. [Teknologi & Arsitektur (Tech Stack)](#-teknologi--arsitektur-tech-stack)
 5. [Struktur Direktori Proyek](#-struktur-direktori-proyek)
 6. [Skema & Entitas Database](#-skema--entitas-database)
@@ -54,9 +58,99 @@ Aplikasi dibangun dengan arsitektur **decoupled**: Backend bertindak sebagai pen
 
 ---
 
-## 👥 Peran Pengguna (Role-Based Access Control)
+## 👥 Peran Pengguna & Konsep Role vs Title
 
-Sistem membagi hak akses ke dalam 4 (empat) peran utama:
+Sistem menerapkan arsitektur ganda dalam otorisasi pengguna, yaitu kombinasi antara **`Role` (`id_role`)** dan **`Title` (`title`)**.
+
+### 💡 Apa Fungsi `Role` dan `Title`?
+
+| Entitas | Kolom Database | Fungsi Utama dalam Sistem |
+| :--- | :--- | :--- |
+| **`Role`** | `users.id_role` | **Tingkat Otorisasi & Routing Utama**.<br>Menentukan hak akses level gerbang (gate-level authorization), hak akses endpoint API di backend (`routes/api.php`), serta menentukan direktori dashboard mana yang akan dibuka saat user berhasil login (Role 1: Waka, Role 2: Guru, Role 3: Kesiswaan, Role 4: Siswa). |
+| **`Title`** | `users.title` | **Spesialisasi Tugas Fungsional & Status Keaktifan Akun**.<br>Menentukan tugas spesifik pengguna di lingkungan sekolah (contoh: apakah seorang pengajar bertindak sebagai *Guru Normada*, *Guru Produktif*, *Wali Kelas*, atau *Guru BK*), menentukan kelas binaan yang diasuh, serta menentukan siklus hidup akun (apakah akun masih *Aktif*, berstatus *Pensiun*, *Alumni/Lulus*, atau *Dikeluarkan*). |
+
+---
+
+### 📊 Matriks Pemetaan `Role` + `Title`
+
+| `id_role` | Nama Role | Variasi `title` | Status Akun | Hak Akses & Tugas Fungsional |
+| :---: | :--- | :--- | :---: | :--- |
+| **1** | **Waka** | `Waka` / `Wakakurikulum` / `Admin` | Aktif | Memegang kendali penuh data sekolah: generator jadwal pelajaran anti-bentrok, kelola guru, siswa, kelas, ruangan, dan monitoring KBM seluruh sekolah. |
+| **2** | **Guru** | `Guru Normada` | Aktif | Mengampu mata pelajaran umum/normatif-adaptif (Bahasa, Matematika, Agama, dll.), mengisi absensi siswa per jam pelajaran, dan mengisi jurnal mengajar harian. |
+| **2** | **Guru** | `Guru Produktif` | Aktif | Mengampu mata pelajaran kejuruan/praktik keahlian (RPL, TKJ, AKL, dll.), mengisi absensi di lab/bengkel, dan jurnal praktik KBM. |
+| **3** | **Kesiswaan** | `Wali Kelas` | Aktif | Bertanggung jawab atas 1 rombel binaan (`id_class`). Memverifikasi surat izin/sakit siswa kelasnya, memantau absensi bulanan, dan mendeteksi alpa beruntun. |
+| **3** | **Kesiswaan** | `Guru BK` | Aktif | Membina bimbingan konseling untuk beberapa kelas (`counselor_classes`). Mengawasi catatan pelanggaran/kehadiran siswa dan memproses tindak lanjut siswa bermasalah. |
+| **4** | **Siswa** | `null` / Siswa Aktif | Aktif | Siswa terdaftar pada rombel aktif (`id_class`). Dapat melihat jadwal pelajaran kelasnya, memantau rekap absensi pribadi, dan mengunggah pengajuan surat izin online. |
+| **4** | **Siswa** | `orang tua` | Aktif | Akun pendamping/wali murid yang terhubung dengan akun siswa (`parent_student`) untuk memantau rekap absensi dan perizinan putra-putrinya secara transparan. |
+| **1, 2, 3**| **Guru/Waka** | `Pensiun` | **Nonaktif (Arsip)** | Guru telah purna tugas. Akun dipindahkan ke data arsip dan otomatis dikeluarkan dari slot generator jadwal KBM aktif. |
+| **4** | **Siswa** | `alumni` / `lulus` | **Nonaktif** | Siswa telah menyelesaikan masa studi. Akses login dinonaktifkan oleh sistem. |
+| **4** | **Siswa** | `dikeluarkan` | **Nonaktif** | Siswa telah dikeluarkan/mutasi. Akses login diblokir total oleh sistem. |
+
+---
+
+### 🔐 Logika Login Berdasarkan `Role` + `Title`
+
+Alur autentikasi pada saat pengguna masuk melalui halaman [`login.html`](file:///d:/laragon/www/ukk-scp-new/public/login/login.html) diproses dengan rangkaian validasi backend (`AuthController.php`) dan frontend sebagai berikut:
+
+```
+[ Form Login ] 
+  (Input: Username / Email / NIS & Kata Sandi)
+       │
+       ▼
+[ Validasi Kredensial Database ]
+       │
+       ├─► Kredensial Salah / Tidak Ditemukan ──► [ Tolak: Pesan Gagal Login ]
+       │
+       ▼ (Kredensial Cocok)
+[ Evaluasi Kolom `title` & Status Akun ]
+       │
+       ├─► Siswa (`id_role = 4`) & `title` IN ('dikeluarkan', 'lulus', 'alumni')
+       │   └──► [ BLOKIR LOGIN: "Akun Anda telah dinonaktifkan karena berstatus..." ]
+       │
+       ├─► Guru (`id_role` 1,2,3) & `title` = 'Pensiun'
+       │   └──► [ BLOKIR LOGIN: Akun dalam status arsip pensiun ]
+       │
+       ├─► Siswa (`id_role = 4`) & `title` = 'orang tua'
+       │   └──► [ Izinkan Login: Muat relasi linkedStudents anak ]
+       │
+       ├─► Normalisasi Title: 'gurubkpengajar' otomatis diperbarui menjadi 'Guru BK'
+       │
+       ▼ (Status Valid & Aktif)
+[ Penerbitan Token Sanctum & Penyimpanan LocalStorage ]
+       │
+       ▼
+[ Evaluasi `id_role` untuk Routing Dashboard Otomatis ]
+       │
+       ├─► id_role === 1 ──► [ Redirect ke: public/role 1 waka/dashboard1.html ]
+       ├─► id_role === 2 ──► [ Redirect ke: public/role 2 guru/dashboard2.html ]
+       ├─► id_role === 3 ──► [ Redirect ke: public/role 3 walikelas&bk/dashboard3.html ]
+       └─► id_role === 4 ──► [ Redirect ke: public/role 4 siswa/dashboard4.html ]
+       │
+       ▼
+[ Personalisasi Tampilan via `global-layout.js` ]
+   - Membaca `user.title` untuk badge profil (e.g. "Wali Kelas - XII RPL 1")
+   - Membuka form persetujuan izin khusus Wali Kelas / BK pada Role 3
+```
+
+#### Penjelasan Tahapan Logika:
+1. **Autentikasi Fleksibel (Multi-Identifier)**:
+   Pengguna dapat masuk menggunakan salah satu dari tiga pengenal: **Username**, **Email**, atau **NIS** (khusus siswa).
+2. **Filter Proteksi Status Akun via `title`**:
+   Sebelum token sesi diterbitkan, backend memeriksa `title`:
+   - Jika siswa memiliki `title` bernilai `'dikeluarkan'` atau `'alumni'`/`'lulus'`, login **langsung digagalkan** dengan respon HTTP 200/403 yang menerangkan status akun nonaktif.
+   - Hal ini mencegah mantan siswa atau siswa nonaktif mengakses sistem meskipun kata sandi mereka masih diketahui.
+3. **Penyelarasan Jabatan (Title Auto-Repair)**:
+   Sistem secara otomatis menormalisasi penulisan jabatan lawas seperti `gurubkpengajar` menjadi format baku `Guru BK` secara transparan saat login berlangsung.
+4. **Pengalihan Halaman Terpusat (Dynamic Redirect)**:
+   Halaman login mendeteksi `user.id_role` dari payload JSON yang dikembalikan oleh API dan mengarahkan pengguna ke dasbor peran yang tepat.
+5. **Personalisasi Hak Operasional di Sisi Dasbor**:
+   Meskipun Wali Kelas dan Guru BK sama-sama berada di `id_role = 3`, skrip tata letak (`global-layout.js`) membaca `user.title` untuk membatasi aksi:
+   - **Wali Kelas**: Mengelola persetujuan izin dan presensi pada rombel yang dimilikinya (`user.id_class`).
+   - **Guru BK**: Mengakses kelas binaan konseling melalui daftar penugasan multi-kelas (`user.counselor_classes`).
+
+---
+
+### 📋 Rincian Fitur Utama Berdasarkan 4 Role
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -72,7 +166,7 @@ Sistem membagi hak akses ke dalam 4 (empat) peran utama:
  └──────────┘      └──────────┘          └──────────┘      └──────────┘
 ```
 
-### 1. Role 1 — Waka Kurikulum & Administrator
+#### 1. Role 1 — Waka Kurikulum & Administrator
 - **Dashboard Statistik**: Memantau metrik total guru, siswa, kelas, persentase kehadiran sekolah hari ini, dan status putaran jadwal.
 - **Kelola Jadwal Pelajaran**:
   - Generator jadwal otomatis anti-bentrok.
