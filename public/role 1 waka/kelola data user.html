@@ -362,7 +362,12 @@
 
     <script>
         var isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        window.API_BASE_URL = window.API_BASE_URL || (isLocalhost ? 'http://localhost/ukk-scp-new/public/api' : `${window.location.origin}/api`);
+        const pagePathname = window.location.pathname.toLowerCase();
+        let defaultApiBase = `${window.location.origin}/api`;
+        if (isLocalhost && pagePathname.includes('/ukk-scp-new/public')) {
+            defaultApiBase = `${window.location.origin}/ukk-scp-new/public/api`;
+        }
+        window.API_BASE_URL = window.API_BASE_URL || defaultApiBase;
         var API_BASE_URL = window.API_BASE_URL;
 
         const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
@@ -1105,14 +1110,22 @@
             if (!file) return;
 
             if (typeof XLSX === 'undefined') {
-                alert('Library pemroses Excel (SheetJS) belum siap dimuat. Silakan periksa koneksi internet atau refresh halaman.');
+                if (window.showWarning) {
+                    window.showWarning('Library pemroses Excel (SheetJS) belum siap dimuat. Silakan periksa koneksi internet atau muat ulang halaman.', 'Peringatan');
+                } else {
+                    alert('Library pemroses Excel (SheetJS) belum siap dimuat. Silakan periksa koneksi internet atau refresh halaman.');
+                }
                 excelFileInput.value = '';
                 return;
             }
 
             const reader = new FileReader();
             reader.onerror = () => {
-                alert('Gagal membaca file dari komputer. Silakan coba lagi.');
+                if (window.showError) {
+                    window.showError('Gagal membaca file dari komputer. Silakan coba lagi.', 'Kesalahan Berkas');
+                } else {
+                    alert('Gagal membaca file dari komputer. Silakan coba lagi.');
+                }
                 excelFileInput.value = '';
             };
 
@@ -1130,19 +1143,72 @@
                     }
 
                     if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-                        alert('File Excel tidak memiliki lembar kerja (worksheet).');
+                        if (window.showWarning) {
+                            window.showWarning('File Excel tidak memiliki lembar kerja (worksheet).', 'Peringatan');
+                        } else {
+                            alert('File Excel tidak memiliki lembar kerja (worksheet).');
+                        }
+                        excelFileInput.value = '';
                         return;
                     }
+
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                    // Coba baca dengan deteksi baris header dinamis (mengatasi judul di baris 1 atau baris kosong)
+                    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                    let headerRowIdx = -1;
+                    const targetKeywords = ['nama', 'fullname', 'siswa', 'rombel', 'kelas', 'nis', 'nisn'];
+
+                    for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
+                        const rowArr = rawRows[i];
+                        if (Array.isArray(rowArr)) {
+                            const hasKeyword = rowArr.some(cell => {
+                                const str = String(cell || '').toLowerCase().replace(/[\s_\-]+/g, '');
+                                return targetKeywords.some(kw => str.includes(kw));
+                            });
+                            if (hasKeyword) {
+                                headerRowIdx = i;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (headerRowIdx >= 0) {
+                        const headers = rawRows[headerRowIdx].map(h => String(h || '').trim());
+                        rows = [];
+                        for (let r = headerRowIdx + 1; r < rawRows.length; r++) {
+                            const rowArr = rawRows[r];
+                            if (!rowArr || !Array.isArray(rowArr)) continue;
+                            const isAllEmpty = rowArr.every(c => String(c || '').trim() === '');
+                            if (isAllEmpty) continue;
+                            const rowObj = {};
+                            headers.forEach((h, colIdx) => {
+                                const key = h || `_col_${colIdx}`;
+                                rowObj[key] = rowArr[colIdx] !== undefined ? rowArr[colIdx] : '';
+                            });
+                            rows.push(rowObj);
+                        }
+                    } else {
+                        rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                    }
                 } catch (readErr) {
                     console.error('SheetJS parse error:', readErr);
-                    alert('Gagal memproses file Excel: ' + (readErr.message || 'Format file tidak didukung atau file korup. Pastikan file berformat .xlsx atau .xls'));
+                    const errMsg = 'Gagal memproses file Excel: ' + (readErr.message || 'Format file tidak didukung atau file korup. Pastikan file berformat .xlsx atau .xls');
+                    if (window.showError) {
+                        window.showError(errMsg, 'Kesalahan Format');
+                    } else {
+                        alert(errMsg);
+                    }
+                    excelFileInput.value = '';
                     return;
                 }
 
                 if (!rows || rows.length === 0) {
-                    alert('File Excel kosong atau tidak memiliki data baris!');
+                    if (window.showWarning) {
+                        window.showWarning('File Excel kosong atau tidak memiliki data baris yang dapat dibaca!', 'Berkas Kosong');
+                    } else {
+                        alert('File Excel kosong atau tidak memiliki data baris!');
+                    }
+                    excelFileInput.value = '';
                     return;
                 }
 
@@ -1152,23 +1218,34 @@
                     const row = rows[rIdx];
                     const findVal = (keyNames) => {
                         for (const k in row) {
-                            const cleanK = k.toString().trim().toLowerCase().replace(/[\s_\-]+/g, '');
+                            const cleanK = k.toString().trim().toLowerCase().replace(/[\s_\-\.\:\/]+/g, '');
                             for (const target of keyNames) {
-                                const cleanTarget = target.toLowerCase().replace(/[\s_\-]+/g, '');
+                                const cleanTarget = target.toLowerCase().replace(/[\s_\-\.\:\/]+/g, '');
                                 if (cleanK === cleanTarget) {
-                                    return String(row[k]).trim();
+                                    const val = String(row[k] !== undefined && row[k] !== null ? row[k] : '').trim();
+                                    if (val !== '') return val;
+                                }
+                            }
+                        }
+                        for (const k in row) {
+                            const cleanK = k.toString().trim().toLowerCase().replace(/[\s_\-\.\:\/]+/g, '');
+                            for (const target of keyNames) {
+                                const cleanTarget = target.toLowerCase().replace(/[\s_\-\.\:\/]+/g, '');
+                                if (cleanTarget.length >= 3 && (cleanK.startsWith(cleanTarget) || cleanK.endsWith(cleanTarget))) {
+                                    const val = String(row[k] !== undefined && row[k] !== null ? row[k] : '').trim();
+                                    if (val !== '') return val;
                                 }
                             }
                         }
                         return '';
                     };
 
-                    const kelas = findVal(['Kelas', 'Class', 'Rombel', 'KelasSiswa', 'NamaKelas']);
-                    const nis = findVal(['NIS', 'NomorIndukSiswa', 'NoInduk']);
+                    const kelas = findVal(['Kelas', 'Class', 'Rombel', 'RombonganBelajar', 'KelasSiswa', 'NamaKelas']);
+                    const nis = findVal(['NIS', 'NomorIndukSiswa', 'NoInduk', 'NomorInduk']);
                     const nisn = findVal(['NISN', 'NomorIndukSiswaNasional']);
-                    const fullname = findVal(['Fullname', 'Nama', 'NamaLengkap', 'NamaSiswa', 'PesertaDidik']);
-                    let username = findVal(['Username', 'User', 'NamaPengguna']);
-                    let email = findVal(['Email', 'Surel', 'AlamatEmail']);
+                    const fullname = findVal(['Fullname', 'Nama', 'NamaLengkap', 'NamaSiswa', 'PesertaDidik', 'NamaPesertaDidik']);
+                    let username = findVal(['Username', 'User', 'NamaPengguna', 'IDPengguna']);
+                    let email = findVal(['Email', 'Surel', 'AlamatEmail', 'E-mail']);
                     let password = findVal(['Password', 'KataSandi', 'Sandi']);
 
                     // Baris wajib minimal memiliki Fullname dan Kelas
@@ -1179,7 +1256,7 @@
                     if (!password) password = 'Peh_1234';
 
                     if (!username) {
-                        if (nis && nis !== '-') {
+                        if (nis && nis !== '-' && nis !== '0') {
                             username = 'siswa_' + nis.replace(/[^a-zA-Z0-9]/g, '');
                         } else {
                             username = fullname.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) + (rIdx + 1);
@@ -1203,12 +1280,29 @@
                 }
 
                 if (payloadItems.length === 0) {
-                    alert('Tidak ada baris data siswa yang valid terbaca!\nPastikan header kolom Excel memiliki minimal: Nama Lengkap (Fullname) dan Kelas (Rombel).');
+                    const emptyMsg = 'Tidak ada baris data siswa yang valid terbaca!\nPastikan header kolom Excel memiliki minimal kolom Nama Lengkap (Fullname) dan Kelas (Rombel).';
+                    if (window.showWarning) {
+                        window.showWarning(emptyMsg, 'Data Tidak Ditemukan');
+                    } else {
+                        alert(emptyMsg);
+                    }
+                    excelFileInput.value = '';
                     return;
                 }
 
-                const confirmOk = window.showCustomConfirm ? await window.showCustomConfirm(`Ditemukan ${payloadItems.length} data siswa pada Excel. Lanjutkan proses impor ke database?`, 'Konfirmasi Impor Excel') : true;
+                let confirmOk = false;
+                if (window.showCustomConfirm) {
+                    confirmOk = await window.showCustomConfirm(
+                        `Ditemukan ${payloadItems.length} data siswa pada berkas Excel. Apakah Anda yakin ingin memproses impor data ini ke database?`,
+                        'Konfirmasi Impor Siswa',
+                        { confirmText: 'Yakin', cancelText: 'Tidak', type: 'confirm' }
+                    );
+                } else {
+                    confirmOk = confirm(`Ditemukan ${payloadItems.length} data siswa pada Excel. Lanjutkan proses impor ke database?`);
+                }
+
                 if (!confirmOk) {
+                    excelFileInput.value = '';
                     return;
                 }
 
@@ -1264,13 +1358,22 @@
                             msg += `\n...dan ${accumulatedErrors.length - 5} kendala lainnya.`;
                         }
                     }
-                    alert(msg);
+                    if (window.showSuccess) {
+                        window.showSuccess(msg, 'Impor Selesai');
+                    } else {
+                        alert(msg);
+                    }
                     addUserModal.classList.add('hidden');
                     fetchStudents();
                     fetchAllSystemUsers();
                 } catch (netErr) {
                     console.error('Import network/server error:', netErr);
-                    alert('Gagal mengimpor ke server: ' + (netErr.message || 'Terjadi kesalahan pada server.'));
+                    const netErrMsg = 'Gagal mengimpor ke server: ' + (netErr.message || 'Terjadi kesalahan pada server.');
+                    if (window.showError) {
+                        window.showError(netErrMsg, 'Gagal Impor');
+                    } else {
+                        alert(netErrMsg);
+                    }
                 } finally {
                     btnTriggerExcelImport.disabled = false;
                     btnTriggerExcelImport.innerHTML = originalHtml;
