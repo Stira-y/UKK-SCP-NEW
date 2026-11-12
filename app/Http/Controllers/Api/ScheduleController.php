@@ -8,6 +8,7 @@ use App\Models\Room;
 use App\Models\User;
 use App\Models\SchoolClass;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class ScheduleController extends Controller
 {
@@ -880,7 +881,16 @@ class ScheduleController extends Controller
             ], 422);
         }
 
-        // 2. Ambil guru yang memiliki mata pelajaran
+        // 2. Pastikan kolom mapel ada pada tabel users
+        if (!Schema::hasColumn('users', 'mapel')) {
+            try {
+                Schema::table('users', function ($table) {
+                    $table->string('mapel')->nullable()->after('title');
+                });
+            } catch (\Throwable $e) {}
+        }
+
+        // Ambil guru yang memiliki mata pelajaran
         $teachers = User::whereIn('id_role', [2, 3])
             ->whereNotNull('mapel')
             ->where('mapel', '!=', '')

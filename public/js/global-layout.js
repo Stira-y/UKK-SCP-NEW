@@ -24,7 +24,9 @@ function initUniversalGlobalLayout() {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('user_data');
             localStorage.removeItem('login_timestamp');
-            alert('Sesi masuk Anda telah kedaluwarsa (30 hari). Silakan masuk kembali.');
+            if (window.showWarning) {
+                window.showWarning('Sesi masuk Anda telah kedaluwarsa (30 hari). Silakan masuk kembali.');
+            }
             window.location.href = '../login/login.html';
             return;
         }

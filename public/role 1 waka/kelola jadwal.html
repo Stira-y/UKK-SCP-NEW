@@ -471,7 +471,7 @@
 
     <!-- POP-UP FITUR IMPORT PDF: UPLOAD JADWAL & UPLOAD RUANG -->
     <div id="modalImportPdf" class="fixed inset-0 bg-slate-950/70 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col transform transition-all animate-in fade-in zoom-in duration-150">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] transform transition-all animate-in fade-in zoom-in duration-150">
             <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
                 <div class="flex items-center space-x-2">
                     <svg class="w-5 h-5 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
@@ -480,7 +480,7 @@
                 <button type="button" id="btnCloseModalImportPdf" class="text-indigo-200 hover:text-white text-2xl font-bold leading-none">&times;</button>
             </div>
 
-            <div class="p-6 space-y-4">
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
                 <p class="text-xs text-slate-500 leading-relaxed">
                     Silakan unggah kedua berkas PDF (Jadwal Pelajaran & Jadwal Ruangan) di bawah ini. Tombol simpan akan aktif secara otomatis setelah kedua berkas terpenuhi.
                 </p>
@@ -691,6 +691,15 @@
                         </label>
                     </div>
                 </div>
+
+                <!-- Status & Animasi Loading Progress Generate -->
+                <div id="genScheduleProgressBox" class="hidden p-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs flex items-center space-x-3 animate-pulse">
+                    <svg class="animate-spin h-5 w-5 text-indigo-600 shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                    <div>
+                        <p class="font-bold">Sedang menyusun jadwal cerdas anti-bentrok...</p>
+                        <p class="text-[11px] text-indigo-700">Mohon tunggu sebentar, sistem sedang memetakan guru, mata pelajaran, kelas, dan ruangan agar tidak saling bentrok.</p>
+                    </div>
+                </div>
             </div>
 
             <div class="bg-slate-50 px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 shrink-0">
@@ -727,12 +736,22 @@
     </div>
 
     <script>
-        
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const pathname = window.location.pathname.toLowerCase();
+        window.API_BASE_URL = window.API_BASE_URL || (
+            isLocalhost && pathname.includes('/ukk-scp-new/public')
+                ? `${window.location.origin}/ukk-scp-new/public/api`
+                : `${window.location.origin}/api`
+        );
+        var API_BASE_URL = window.API_BASE_URL;
+
         const token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
         const userData = JSON.parse(sessionStorage.getItem('user_data') || localStorage.getItem('user_data') || '{}');
 
         if (!token || Number(userData.id_role) !== 1) {
-            alert('Akses ditolak! Silakan login sebagai Waka/Admin.');
+            if (window.showError) {
+                window.showError('Akses ditolak! Silakan login sebagai Waka/Admin.');
+            }
             window.location.href = '../login/login.html';
         }
 
@@ -1519,7 +1538,7 @@
         // Buka form pop up edit tunggal saat baris jadwal diklik (Dengan dropdown jam ke)
         window.openSingleScheduleEdit = function(idSchedule) {
             if (isScheduleLocked) {
-                alert('Jadwal sedang terkunci!');
+                if (window.showWarning) window.showWarning('Jadwal sedang terkunci!');
                 return;
             }
 
@@ -1600,7 +1619,7 @@
             const targets = allSchedules.filter(s => Number(s.id_class) === Number(idClass) && String(s.cycle_type) === String(currentCycle));
 
             if (targets.length === 0) {
-                alert(`Tidak ada jadwal pelajaran terdaftar untuk ${cName} pada Putaran ${currentCycle}.`);
+                if (window.showWarning) window.showWarning(`Tidak ada jadwal pelajaran terdaftar untuk ${cName} pada Putaran ${currentCycle}.`);
                 return;
             }
 
@@ -1655,7 +1674,7 @@
         if (btnDeleteSingleSchedule) {
             btnDeleteSingleSchedule.addEventListener('click', () => {
                 if (isScheduleLocked) {
-                    alert('Jadwal sedang dikunci oleh Waka/Admin!');
+                    if (window.showWarning) window.showWarning('Jadwal sedang dikunci oleh Waka/Admin!');
                     return;
                 }
                 const sid = editScheduleId.value;
@@ -1746,16 +1765,16 @@
                 const result = await res.json();
 
                 if (res.ok) {
-                    alert('Jadwal berhasil diperbarui!');
+                    if (window.showSuccess) window.showSuccess('Jadwal berhasil diperbarui!');
                     formEditScheduleModal.classList.add('hidden');
                     detailScheduleModal.classList.add('hidden');
                     await fetchSchedules();
                     renderClassTable();
                 } else {
-                    alert(result.message || 'Gagal memperbarui jadwal.');
+                    if (window.showError) window.showError(result.message || 'Gagal memperbarui jadwal.');
                 }
             } catch (err) {
-                alert('Terjadi kesalahan koneksi server.');
+                if (window.showError) window.showError('Terjadi kesalahan koneksi server.');
             } finally {
                 btnTriggerEditScheduleSave.disabled = false;
                 btnTriggerEditScheduleSave.textContent = 'Simpan';
@@ -1782,10 +1801,10 @@
                     isScheduleLocked = lockVal;
                     updateScheduleLockUI();
                 } else {
-                    alert(json.message || 'Gagal memperbarui status kunci jadwal.');
+                    if (window.showError) window.showError(json.message || 'Gagal memperbarui status kunci jadwal.');
                 }
             } catch (err) {
-                alert('Terjadi kesalahan koneksi saat mengubah status kunci jadwal.');
+                if (window.showError) window.showError('Terjadi kesalahan koneksi saat mengubah status kunci jadwal.');
             } finally {
                 btnToggleLockJadwal.disabled = false;
             }
@@ -1814,12 +1833,12 @@
                     applyCycleVisualStatus();
                     await fetchSchedules();
                     renderClassTable();
-                    alert(json.message || `Putaran ${cycleVal} berhasil dikunci sebagai putaran aktif!`);
+                    if (window.showSuccess) window.showSuccess(json.message || `Putaran ${cycleVal} berhasil dikunci sebagai putaran aktif!`);
                 } else {
-                    alert(json.message || 'Gagal mengubah putaran aktif.');
+                    if (window.showError) window.showError(json.message || 'Gagal mengubah putaran aktif.');
                 }
             } catch (err) {
-                alert('Terjadi kesalahan koneksi saat mengunci putaran.');
+                if (window.showError) window.showError('Terjadi kesalahan koneksi saat mengunci putaran.');
             } finally {
                 btnLockCycle.disabled = false;
             }
@@ -1858,15 +1877,15 @@
                 const result = await res.json();
 
                 if (res.ok) {
-                    alert('Jadwal berhasil disimpan!');
+                    if (window.showSuccess) window.showSuccess('Jadwal berhasil disimpan!');
                     formScheduleModal.classList.add('hidden');
                     await fetchSchedules();
                     renderClassTable();
                 } else {
-                    alert(result.message || 'Gagal menyimpan jadwal.');
+                    if (window.showError) window.showError(result.message || 'Gagal menyimpan jadwal.');
                 }
             } catch (err) {
-                alert('Terjadi kesalahan koneksi ke server.');
+                if (window.showError) window.showError('Terjadi kesalahan koneksi ke server.');
             } finally {
                 btnTriggerScheduleSave.disabled = false;
                 btnTriggerScheduleSave.textContent = 'Simpan';
@@ -1889,15 +1908,15 @@
                 });
                 const resJson = await res.json();
                 if (res.ok) {
-                    alert('Jadwal kelas berhasil dihapus!');
+                    if (window.showSuccess) window.showSuccess('Jadwal kelas berhasil dihapus!');
                     await fetchSchedules();
                     renderClassTable();
                 } else {
-                    alert(resJson.message || 'Gagal menghapus jadwal.');
+                    if (window.showError) window.showError(resJson.message || 'Gagal menghapus jadwal.');
                 }
             } catch (err) {
                 console.error(err);
-                alert('Terjadi kesalahan saat menghapus jadwal: ' + err.message);
+                if (window.showError) window.showError('Terjadi kesalahan saat menghapus jadwal: ' + err.message);
             }
         }
 
@@ -1918,16 +1937,16 @@
                 });
                 const resJson = await res.json();
                 if (res.ok) {
-                    alert(`Semua jadwal untuk ${classIds.length} kelas terpilih berhasil dihapus!`);
+                    if (window.showSuccess) window.showSuccess(`Semua jadwal untuk ${classIds.length} kelas terpilih berhasil dihapus!`);
                     if (checkAllClasses) checkAllClasses.checked = false;
                     await fetchSchedules();
                     renderClassTable();
                 } else {
-                    alert(resJson.message || 'Gagal menghapus jadwal.');
+                    if (window.showError) window.showError(resJson.message || 'Gagal menghapus jadwal.');
                 }
             } catch (err) {
                 console.error(err);
-                alert('Terjadi kesalahan saat menghapus jadwal: ' + err.message);
+                if (window.showError) window.showError('Terjadi kesalahan saat menghapus jadwal: ' + err.message);
             }
         }
 
@@ -1939,7 +1958,7 @@
                     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
                 });
                 if (res.ok) {
-                    alert('Data jadwal berhasil dihapus!');
+                    if (window.showSuccess) window.showSuccess('Data jadwal berhasil dihapus!');
                     formEditScheduleModal.classList.add('hidden');
                     await fetchSchedules();
                     renderClassTable();
@@ -1951,10 +1970,10 @@
                     }
                 } else {
                     const json = await res.json();
-                    alert(json.message || 'Gagal menghapus jadwal.');
+                    if (window.showError) window.showError(json.message || 'Gagal menghapus jadwal.');
                 }
             } catch (err) {
-                alert('Terjadi kesalahan koneksi saat menghapus jadwal.');
+                if (window.showError) window.showError('Terjadi kesalahan koneksi saat menghapus jadwal.');
             }
         }
 
@@ -2002,7 +2021,7 @@
 
         btnTriggerPdfImport.addEventListener('click', () => {
             if (isScheduleLocked) {
-                alert('Jadwal sedang dikunci oleh Waka/Admin!');
+                if (window.showWarning) window.showWarning('Jadwal sedang dikunci oleh Waka/Admin!');
                 return;
             }
             inputPdfJadwal.value = '';
@@ -2248,7 +2267,7 @@
                 }
 
                 if (payloadItems.length === 0) {
-                    alert('Tidak ditemukan data jadwal yang dapat diekstrak dari PDF!');
+                    if (window.showWarning) window.showWarning('Tidak ditemukan data jadwal yang dapat diekstrak dari PDF!');
                     return;
                 }
 
@@ -2270,10 +2289,6 @@
                 } catch (delErr) {
                     console.warn('Pembersihan jadwal awal dilewati:', delErr);
                 }
-
-                importPdfProgressBar.style.width = '75%';
-                importPdfProgressPct.textContent = '75%';
-                importPdfProgressLabel.textContent = `Menyimpan ${payloadItems.length} jadwal (Putaran ${targetCycle}) ke database...`;
 
                 // Kirim per batch 300 dengan retry aman
                 const BATCH_SIZE = 300;
@@ -2350,7 +2365,6 @@
                         msg += `\n...dan ${totalErrors.length - 5} lainnya.`;
                     }
                 }
-                alert(msg);
                 modalImportPdf.classList.add('hidden');
                 formScheduleModal.classList.add('hidden');
                 currentCycle = targetCycle;
@@ -2358,9 +2372,10 @@
                 applyCycleVisualStatus();
                 await fetchSchedules();
                 renderClassTable();
+                if (window.showSuccess) window.showSuccess(msg, 'Impor Jadwal Selesai');
             } catch (err) {
                 console.error(err);
-                alert('Gagal memproses berkas PDF: ' + (err.message || 'Format tidak dikenali'));
+                if (window.showError) window.showError('Gagal memproses berkas PDF: ' + (err.message || 'Format tidak dikenali'));
             } finally {
                 importPdfProgressBox.classList.add('hidden');
             }
@@ -2791,6 +2806,8 @@
         btnCloseGenerateSchedule.addEventListener('click', () => generateScheduleModal.classList.add('hidden'));
         btnCancelGenerateSchedule.addEventListener('click', () => generateScheduleModal.classList.add('hidden'));
 
+        const genScheduleProgressBox = document.getElementById('genScheduleProgressBox');
+
         btnExecuteGenerateSchedule.addEventListener('click', async () => {
             const selectedDays = Array.from(document.querySelectorAll('input[name="genDay"]:checked')).map(cb => cb.value);
             if (selectedDays.length === 0) {
@@ -2805,13 +2822,11 @@
             const tingkatTxt = (targetTingkat === 'all') ? 'Semua Kelas (X, XI, XII)' : `Kelas ${targetTingkat}`;
             const cycleTxt = (cycleType === 'all') ? 'Putaran 1 & 2' : `Putaran ${cycleType}`;
 
-            const ok = window.showCustomConfirm
-                ? await window.showCustomConfirm(`Apakah Anda yakin ingin melakukan generate jadwal otomatis untuk ${tingkatTxt} (${cycleTxt}) pada hari ${selectedDays.join(', ')}?\n\nSistem akan menjadwalkan guru & mapel secara cerdas dengan jaminan TANPA BENTROK antar guru, kelas, dan ruangan.`, 'Konfirmasi Generate Jadwal')
-                : true;
-
-            if (!ok) return;
-
+            // Tampilkan animasi progress pada tombol dan kotak status
             btnExecuteGenerateSchedule.disabled = true;
+            btnCancelGenerateSchedule.disabled = true;
+            if (genScheduleProgressBox) genScheduleProgressBox.classList.remove('hidden');
+
             const origHtml = btnExecuteGenerateSchedule.innerHTML;
             btnExecuteGenerateSchedule.innerHTML = `
                 <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
@@ -2838,11 +2853,37 @@
 
                 if (res.ok) {
                     generateScheduleModal.classList.add('hidden');
+                    
+                    // Sesuaikan tab yang aktif agar hasil langsung terlihat oleh pengguna
+                    if (targetTingkat !== 'all') {
+                        currentTingkat = targetTingkat;
+                        document.querySelectorAll('.tab-tingkat').forEach(btn => {
+                            if (btn.dataset.tingkat === currentTingkat) {
+                                btn.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-600');
+                                btn.classList.remove('text-slate-500');
+                            } else {
+                                btn.classList.remove('text-indigo-600', 'border-b-2', 'border-indigo-600');
+                                btn.classList.add('text-slate-500');
+                            }
+                        });
+                    }
+                    if (cycleType !== 'all') {
+                        currentCycle = cycleType;
+                        if (selectCycle) selectCycle.value = currentCycle;
+                        applyCycleVisualStatus();
+                    }
+
+                    await fetchSchedules();
+                    renderClassTable();
+
+                    // Jika ada modal detail kelas yang sedang terbuka, refresh juga isinya
+                    if (typeof currentDetailClassId !== 'undefined' && currentDetailClassId && !detailClassModal.classList.contains('hidden')) {
+                        openDetailClassModal(currentDetailClassId);
+                    }
+
                     if (window.showSuccess) {
                         window.showSuccess(resJson.message || 'Generate jadwal berhasil diselesaikan!', 'Jadwal Berhasil Disusun');
                     }
-                    await fetchSchedules();
-                    renderClassTable();
                 } else {
                     if (window.showError) {
                         window.showError(resJson.message || 'Gagal menyusun jadwal otomatis.');
@@ -2853,7 +2894,9 @@
                 if (window.showError) window.showError('Terjadi kesalahan koneksi ke server saat menyusun jadwal.');
             } finally {
                 btnExecuteGenerateSchedule.disabled = false;
+                btnCancelGenerateSchedule.disabled = false;
                 btnExecuteGenerateSchedule.innerHTML = origHtml;
+                if (genScheduleProgressBox) genScheduleProgressBox.classList.add('hidden');
             }
         });
     </script>
