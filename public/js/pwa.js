@@ -46,6 +46,44 @@
     const modalQueue = [];
     let isCurrentPrompt = false;
 
+    const ICONS = {
+        success: {
+            bg: 'bg-emerald-100 text-emerald-600',
+            btn: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200',
+            svg: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>`
+        },
+        error: {
+            bg: 'bg-rose-100 text-rose-600',
+            btn: 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-200',
+            svg: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>`
+        },
+        warning: {
+            bg: 'bg-amber-100 text-amber-600',
+            btn: 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-200',
+            svg: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`
+        },
+        confirm: {
+            bg: 'bg-indigo-100 text-indigo-600',
+            btn: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200',
+            svg: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
+        },
+        delete: {
+            bg: 'bg-rose-100 text-rose-600',
+            btn: 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-200',
+            svg: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`
+        },
+        prompt: {
+            bg: 'bg-indigo-100 text-indigo-600',
+            btn: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200',
+            svg: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>`
+        },
+        info: {
+            bg: 'bg-blue-100 text-blue-600',
+            btn: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200',
+            svg: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
+        }
+    };
+
     function ensurePopupDom() {
         if (popupContainer && document.body && document.body.contains(popupContainer)) return popupContainer;
         if (!document.body) return null;
