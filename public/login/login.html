@@ -157,75 +157,15 @@
             }
         }
 
-        function getLockoutState() {
-            const attempts = parseInt(localStorage.getItem('login_fail_attempts') || '0', 10);
-            const lastFail = parseInt(localStorage.getItem('login_last_fail_time') || '0', 10);
-            const lockedUntil = parseInt(localStorage.getItem('login_locked_until') || '0', 10);
-            const now = Date.now();
-
-            // Jika sedang dalam masa lockout 1 jam
-            if (lockedUntil && now < lockedUntil) {
-                const remainingMinutes = Math.ceil((lockedUntil - now) / 60000);
-                return { isLocked: true, remainingMinutes, attempts };
-            }
-
-            // Jika sudah lewat masa lockout 1 jam, reset
-            if (lockedUntil && now >= lockedUntil) {
-                localStorage.removeItem('login_locked_until');
-                localStorage.removeItem('login_fail_attempts');
-                localStorage.removeItem('login_last_fail_time');
-                return { isLocked: false, remainingMinutes: 0, attempts: 0 };
-            }
-
-            // Jika gagal 1-4 kali, tapi tidak sampai ke-5 dan sudah lewat 30 menit, reset counter
-            if (attempts > 0 && lastFail && (now - lastFail > 30 * 60 * 1000)) {
-                localStorage.removeItem('login_fail_attempts');
-                localStorage.removeItem('login_last_fail_time');
-                return { isLocked: false, remainingMinutes: 0, attempts: 0 };
-            }
-
-            return { isLocked: false, remainingMinutes: 0, attempts };
-        }
-
-        function recordLoginFailure() {
-            let state = getLockoutState();
-            let attempts = state.attempts + 1;
-            const now = Date.now();
-
-            localStorage.setItem('login_last_fail_time', now.toString());
-
-            if (attempts >= 5) {
-                const lockoutDuration = 60 * 60 * 1000; // 1 Jam
-                const lockedUntil = now + lockoutDuration;
-                localStorage.setItem('login_locked_until', lockedUntil.toString());
-                localStorage.setItem('login_fail_attempts', '5');
-                showAlert('Anda telah gagal login sebanyak 5 kali. Akun terkunci sementara selama 1 jam demi keamanan.', false);
-            } else {
-                localStorage.setItem('login_fail_attempts', attempts.toString());
-                showAlert(`Username/Email/NIS atau kata sandi salah. Percobaan gagal ke-${attempts} dari 5.`, false);
-            }
-        }
-
-        function recordLoginSuccess() {
+        // Hapus sisa status lockout jika pernah tersimpan di browser
+        try {
             localStorage.removeItem('login_fail_attempts');
             localStorage.removeItem('login_last_fail_time');
             localStorage.removeItem('login_locked_until');
-        }
-
-        // Periksa status saat halaman dimuat
-        const initialLockout = getLockoutState();
-        if (initialLockout.isLocked) {
-            showAlert(`Akses login sedang terkunci karena 5 kali percobaan gagal. Silakan coba lagi dalam ${initialLockout.remainingMinutes} menit.`, false);
-        }
+        } catch (e) {}
 
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            const lockout = getLockoutState();
-            if (lockout.isLocked) {
-                showAlert(`Akses login sedang diblokir selama 1 jam karena gagal login 5 kali berturut-turut. Sisa waktu: ${lockout.remainingMinutes} menit.`, false);
-                return;
-            }
 
             const loginValue = loginInput.value.trim();
             const passwordValue = passwordInput.value;
@@ -256,7 +196,8 @@
                 }
 
                 if (!response.ok) {
-                    recordLoginFailure();
+                    const errorMsg = (result && result.message) ? result.message : 'Username/Email/NIS atau kata sandi salah.';
+                    showAlert(errorMsg, false);
                     setLoading(false);
                     return;
                 }
@@ -268,7 +209,6 @@
                 }
 
                 if (result.status === 'success') {
-                    recordLoginSuccess();
                     localStorage.setItem('auth_token', result.data.token);
                     localStorage.setItem('user_data', JSON.stringify(result.data.user));
                     localStorage.setItem('login_timestamp', String(Date.now()));
