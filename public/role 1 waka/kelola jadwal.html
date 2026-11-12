@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SCP Sekolah">
-    <script src="/js/pwa.js?v=20261111_2.0"></script>
+    <script src="/js/pwa.js?v=20261112_3.0"></script>
     <title>Kelola Jadwal - Sistem SCP</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -2596,7 +2596,9 @@
             if (!t) return;
 
             const currentMapel = t.mapel || '';
-            const newMapel = prompt(`Ubah Mata Pelajaran untuk Guru:\n"${t.fullname || t.username}"\n\nMasukkan nama mata pelajaran:`, currentMapel);
+            const newMapel = window.showCustomPrompt
+                ? await window.showCustomPrompt(`Masukkan mata pelajaran untuk guru:\n"${t.fullname || t.username}"`, 'Ubah Mata Pelajaran Guru', currentMapel, 'Contoh: IPAS, Matematika, PJOK...')
+                : null;
             if (newMapel === null) return; // Dibatalkan
 
             try {
@@ -2728,7 +2730,7 @@
 
                     const ok = window.showCustomConfirm 
                         ? await window.showCustomConfirm(`Ditemukan ${itemsToImport.length} baris guru pada berkas. Lanjutkan import pemetaan mata pelajaran ke sistem?`, 'Konfirmasi Impor Pegawai')
-                        : confirm(`Ditemukan ${itemsToImport.length} baris guru pada berkas. Lanjutkan?`);
+                        : true;
                     if (!ok) return;
 
                     btnTriggerImportNominatif.disabled = true;
@@ -2805,7 +2807,7 @@
 
             const ok = window.showCustomConfirm
                 ? await window.showCustomConfirm(`Apakah Anda yakin ingin melakukan generate jadwal otomatis untuk ${tingkatTxt} (${cycleTxt}) pada hari ${selectedDays.join(', ')}?\n\nSistem akan menjadwalkan guru & mapel secara cerdas dengan jaminan TANPA BENTROK antar guru, kelas, dan ruangan.`, 'Konfirmasi Generate Jadwal')
-                : confirm(`Generate jadwal untuk ${tingkatTxt}?`);
+                : true;
 
             if (!ok) return;
 

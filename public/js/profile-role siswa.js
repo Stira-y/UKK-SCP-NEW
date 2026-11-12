@@ -89,7 +89,7 @@ window.handleLogout = async function() {
             type: 'confirm'
         });
     } else {
-        confirmed = confirm('Apakah Anda yakin ingin keluar dari akun ini?');
+        confirmed = true;
     }
 
     if (confirmed) {
