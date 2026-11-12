@@ -1,5 +1,5 @@
 // Service Worker for SCP SMKN 1 Bantul PWA
-const CACHE_NAME = 'scp-smkn1bantul-v20261109_2';
+const CACHE_NAME = 'scp-smkn1bantul-v20261112_4';
 const STATIC_ASSETS = [
     '/',
     '/login/login.html',

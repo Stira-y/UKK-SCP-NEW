@@ -81,8 +81,16 @@ function getFirstName(fullName) {
 
 // Fungsi Global Logout
 window.handleLogout = function() {
-    if (window.performLogout) {
+    if (typeof window.performLogout === 'function') {
         window.performLogout();
+    } else {
+        try {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_data');
+            localStorage.removeItem('login_timestamp');
+            sessionStorage.clear();
+        } catch (err) {}
+        window.location.replace('../login/login.html');
     }
 };
 
