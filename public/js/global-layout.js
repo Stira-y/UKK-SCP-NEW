@@ -5,15 +5,12 @@
  */
 
 // 1. DEFINISI GLOBAL SEBELUM DOMContentLoaded (Agar langsung dikenali di seluruh file HTML)
-var isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-var pathname = window.location.pathname.toLowerCase();
-var API_BASE_URL = window.API_BASE_URL || (
-    isLocalhost && pathname.includes('/ukk-scp-new/public')
+window.API_BASE_URL = window.API_BASE_URL || (
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.pathname.toLowerCase().includes('/ukk-scp-new/public')
         ? `${window.location.origin}/ukk-scp-new/public/api`
         : `${window.location.origin}/api`
 );
-
-window.API_BASE_URL = API_BASE_URL;
+var API_BASE_URL = window.API_BASE_URL;
 
 function initUniversalGlobalLayout() {
     // 0. Auto-Login & Validasi Batas Sesi 30 Hari

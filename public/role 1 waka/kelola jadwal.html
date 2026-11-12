@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -736,10 +736,8 @@
     </div>
 
     <script>
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const pathname = window.location.pathname.toLowerCase();
         window.API_BASE_URL = window.API_BASE_URL || (
-            isLocalhost && pathname.includes('/ukk-scp-new/public')
+            (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.pathname.toLowerCase().includes('/ukk-scp-new/public')
                 ? `${window.location.origin}/ukk-scp-new/public/api`
                 : `${window.location.origin}/api`
         );
@@ -1610,29 +1608,37 @@
             confirmScheduleActionModal.classList.remove('hidden');
         });
 
-        window.deleteSchedulesByClass = function(idClass) {
-            if (isScheduleLocked) return;
+        window.deleteSchedulesByClass = async function(idClass) {
+            if (isScheduleLocked) {
+                if (window.showWarning) window.showWarning('Jadwal sedang dikunci oleh Waka/Admin!');
+                return;
+            }
 
-            const classObj = allClasses.find(c => c.id_class === idClass);
+            const classObj = allClasses.find(c => Number(c.id_class) === Number(idClass));
             const cName = classObj ? `${classObj.kelas_nomor} ${classObj.nama_kelas} ${classObj.nomor_kelas || ''}`.trim() : 'kelas ini';
 
             const targets = allSchedules.filter(s => Number(s.id_class) === Number(idClass) && String(s.cycle_type) === String(currentCycle));
 
             if (targets.length === 0) {
-                if (window.showWarning) window.showWarning(`Tidak ada jadwal pelajaran terdaftar untuk ${cName} pada Putaran ${currentCycle}.`);
+                if (window.showWarning) {
+                    window.showWarning(`Tidak ada jadwal pelajaran terdaftar untuk ${cName} pada Putaran ${currentCycle}.`, 'Jadwal Masih Kosong');
+                } else {
+                    alert(`Tidak ada jadwal pelajaran terdaftar untuk ${cName} pada Putaran ${currentCycle}.`);
+                }
                 return;
             }
 
-            pendingActionType = 'delete';
-            pendingDeleteClassId = idClass;
+            const confirmed = window.showCustomConfirm
+                ? await window.showCustomConfirm(`Apakah Anda yakin ingin menghapus seluruh jadwal pelajaran untuk ${cName} pada Putaran ${currentCycle}?\n(${targets.length} sesi jadwal akan dihapus)`, 'Konfirmasi Hapus Jadwal', {
+                    confirmText: 'Ya, Hapus',
+                    cancelText: 'Batal',
+                    type: 'error'
+                })
+                : confirm(`Apakah Anda yakin ingin menghapus seluruh jadwal pelajaran untuk ${cName} pada Putaran ${currentCycle}?`);
 
-            confirmActionTitle.textContent = 'Konfirmasi Hapus Jadwal';
-            confirmActionDesc.textContent = `Apakah Anda yakin ingin menghapus seluruh jadwal pelajaran untuk ${cName} pada Putaran ${currentCycle}?`;
-            confirmActionIconWrapper.className = 'w-12 h-12 rounded-full bg-red-50 text-red-600 mx-auto flex items-center justify-center mb-4';
-            btnConfirmActionYes.className = 'w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-md';
-            btnConfirmActionYes.textContent = 'Yakin';
-
-            confirmScheduleActionModal.classList.remove('hidden');
+            if (confirmed) {
+                await executeDeleteSchedules(idClass);
+            }
         };
 
         // Handler Checkbox Aksi & Bulk Delete Jadwal
@@ -1649,30 +1655,34 @@
             });
         }
 
-        window.handleDeleteAction = function(idClass) {
-            if (isScheduleLocked) return;
+        window.handleDeleteAction = async function(idClass) {
+            if (isScheduleLocked) {
+                if (window.showWarning) window.showWarning('Jadwal sedang dikunci oleh Waka/Admin!');
+                return;
+            }
             const checkedBoxes = Array.from(document.querySelectorAll('.class-row-checkbox:checked'));
             if (checkedBoxes.length > 0) {
                 const ids = checkedBoxes.map(cb => Number(cb.value));
-                pendingActionType = 'bulk_delete_schedules';
-                pendingBulkDeleteClassIds = ids;
+                const confirmed = window.showCustomConfirm
+                    ? await window.showCustomConfirm(`Apakah Anda yakin ingin menghapus seluruh jadwal untuk ${ids.length} kelas yang dipilih pada Putaran ${currentCycle}?`, 'Hapus Jadwal Terpilih', {
+                        confirmText: 'Ya, Hapus Semua',
+                        cancelText: 'Batal',
+                        type: 'error'
+                    })
+                    : confirm(`Apakah Anda yakin ingin menghapus seluruh jadwal untuk ${ids.length} kelas yang dipilih?`);
 
-                confirmActionTitle.textContent = 'Hapus Jadwal Terpilih';
-                confirmActionDesc.textContent = `Apakah Anda yakin ingin menghapus seluruh jadwal untuk ${ids.length} kelas yang dipilih pada Putaran ${currentCycle}?`;
-                confirmActionIconWrapper.className = 'w-12 h-12 rounded-full bg-red-50 text-red-600 mx-auto flex items-center justify-center mb-4';
-                btnConfirmActionYes.className = 'w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-md';
-                btnConfirmActionYes.textContent = 'Yakin';
-
-                confirmScheduleActionModal.classList.remove('hidden');
+                if (confirmed) {
+                    await executeBulkDeleteSchedules(ids);
+                }
             } else {
-                deleteSchedulesByClass(idClass);
+                await deleteSchedulesByClass(idClass);
             }
         };
 
         // Tombol Hapus Single Jadwal pada Modal Edit
         const btnDeleteSingleSchedule = document.getElementById('btnDeleteSingleSchedule');
         if (btnDeleteSingleSchedule) {
-            btnDeleteSingleSchedule.addEventListener('click', () => {
+            btnDeleteSingleSchedule.addEventListener('click', async () => {
                 if (isScheduleLocked) {
                     if (window.showWarning) window.showWarning('Jadwal sedang dikunci oleh Waka/Admin!');
                     return;
@@ -1680,16 +1690,17 @@
                 const sid = editScheduleId.value;
                 if (!sid) return;
 
-                pendingActionType = 'delete_single_schedule';
-                pendingDeleteScheduleId = sid;
+                const confirmed = window.showCustomConfirm
+                    ? await window.showCustomConfirm('Apakah Anda yakin ingin menghapus data jadwal pelajaran ini? Tindakan ini tidak dapat dibatalkan.', 'Konfirmasi Hapus Jadwal', {
+                        confirmText: 'Ya, Hapus',
+                        cancelText: 'Batal',
+                        type: 'error'
+                    })
+                    : confirm('Apakah Anda yakin ingin menghapus data jadwal pelajaran ini?');
 
-                confirmActionTitle.textContent = 'Konfirmasi Hapus Jadwal';
-                confirmActionDesc.textContent = 'Apakah Anda yakin ingin menghapus data jadwal pelajaran ini? Tindakan ini tidak dapat dibatalkan.';
-                confirmActionIconWrapper.className = 'w-12 h-12 rounded-full bg-red-50 text-red-600 mx-auto flex items-center justify-center mb-4';
-                btnConfirmActionYes.className = 'w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-md';
-                btnConfirmActionYes.textContent = 'Yakin';
-
-                confirmScheduleActionModal.classList.remove('hidden');
+                if (confirmed) {
+                    await executeDeleteSingleSchedule(sid);
+                }
             });
         }
 
