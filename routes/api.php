@@ -69,6 +69,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Route Khusus Kelola User Guru oleh Waka
     Route::get('/waka/teachers', [UserController::class, 'getTeachersGrouped']);
+    Route::get('/waka/teachers-subjects', [UserController::class, 'getTeachersWithSubjects']);
+    Route::put('/waka/teachers/{id}/subject', [UserController::class, 'updateTeacherSubject']);
+    Route::post('/waka/teachers/import-nominatif', [UserController::class, 'importTeachersNominatif']);
     Route::post('/waka/teachers', [UserController::class, 'storeTeacherByWaka']);
     Route::post('/waka/teachers/import-batch', [UserController::class, 'importTeachersBatch']);
     Route::post('/waka/teachers/send-otp', [UserController::class, 'sendWakaOtp']);
@@ -232,7 +235,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('attendances', AttendanceController::class);
     Route::apiResource('leave-requests', LeaveRequestController::class);
 
-    // Route Import Excel/PDF Batch & Bulk Delete Jadwal
+    // Route Import Excel/PDF Batch & Bulk Delete Jadwal & Generate Bebas Bentrok
+    Route::post('schedules/generate', [ScheduleController::class, 'generateSchedules']);
     Route::post('schedules/import-batch', [ScheduleController::class, 'importBatch']);
     Route::post('schedules/merge-import-pdf', [ScheduleController::class, 'mergeImportPdf']);
     Route::post('schedules/bulk-delete', [ScheduleController::class, 'bulkDelete']);

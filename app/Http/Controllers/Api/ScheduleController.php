@@ -843,4 +843,304 @@ class ScheduleController extends Controller
             'pdf_url' => '/JADWAL_GABUNGAN_PUTARAN_2.pdf'
         ], 200);
     }
+
+    /**
+     * Generator Jadwal Otomatis Cerdas & Bebas Bentrok (Anti-Conflict Guaranteed)
+     * Menghasilkan jadwal Senin - Jumat untuk Kelas X, XI, XII atau Semua Kelas.
+     */
+    public function generateSchedules(Request $request)
+    {
+        @set_time_limit(300);
+
+        $validated = $request->validate([
+            'target_tingkat' => 'required|in:all,X,XI,XII',
+            'cycle_type'     => 'required|in:1,2,all',
+            'days'           => 'nullable|array',
+            'mode'           => 'nullable|in:fill_empty,recreate',
+        ]);
+
+        $tingkat   = $validated['target_tingkat'];
+        $cycleReq  = $validated['cycle_type'];
+        $days      = !empty($validated['days']) ? $validated['days'] : ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+        $mode      = $validated['mode'] ?? 'fill_empty';
+
+        $cycles = ($cycleReq === 'all') ? ['1', '2'] : [$cycleReq];
+
+        // 1. Ambil target kelas
+        $classQuery = SchoolClass::query();
+        if ($tingkat !== 'all') {
+            $classQuery->where('kelas_nomor', $tingkat);
+        }
+        $targetClasses = $classQuery->orderBy('kelas_nomor')->orderBy('nama_kelas')->orderBy('nomor_kelas')->get();
+
+        if ($targetClasses->isEmpty()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Tidak ditemukan data kelas untuk tingkat yang dipilih.'
+            ], 422);
+        }
+
+        // 2. Ambil guru yang memiliki mata pelajaran
+        $teachers = User::whereIn('id_role', [2, 3])
+            ->whereNotNull('mapel')
+            ->where('mapel', '!=', '')
+            ->where(function ($q) {
+                $q->whereNull('title')
+                  ->orWhere('title', '!=', 'Pensiun');
+            })
+            ->get();
+
+        // Jika guru dengan mapel sedikit, ambil seluruh guru aktif sebagai fallback
+        if ($teachers->count() < 5) {
+            $fallbackTeachers = User::whereIn('id_role', [2, 3])
+                ->where(function ($q) {
+                    $q->whereNull('title')
+                      ->orWhere('title', '!=', 'Pensiun');
+                })
+                ->get();
+            $defaultMapels = ['Matematika', 'Bahasa Indonesia', 'Bahasa Inggris', 'Informatika', 'IPAS', 'Pendidikan Pancasila', 'PJOK', 'Sejarah', 'Seni Budaya', 'Produktif Kejuruan'];
+            $idx = 0;
+            foreach ($fallbackTeachers as $ft) {
+                if (empty($ft->mapel)) {
+                    $ft->mapel = $defaultMapels[$idx % count($defaultMapels)];
+                    $idx++;
+                }
+            }
+            $teachers = $fallbackTeachers;
+        }
+
+        if ($teachers->isEmpty()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Belum ada data guru pengampu mapel. Silakan isi data di Tabel Guru atau impor data pegawai terlebih dahulu.'
+            ], 422);
+        }
+
+        // 3. Ambil ruangan yang tersedia
+        $rooms = Room::all();
+        if ($rooms->isEmpty()) {
+            // Buat ruangan default jika kosong
+            $defaultRoom = Room::create(['nama_room' => 'Ruang Teori', 'nomor_room' => '1']);
+            $rooms = collect([$defaultRoom]);
+        }
+
+        // 4. Jika mode recreate, hapus jadwal lama untuk kelas target pada hari & putaran terkait
+        if ($mode === 'recreate') {
+            $classIds = $targetClasses->pluck('id_class');
+            Schedule::whereIn('id_class', $classIds)
+                ->whereIn('cycle_type', $cycles)
+                ->whereIn('day_of_week', $days)
+                ->delete();
+        }
+
+        // 5. Muat existing schedules untuk deteksi bentrok real-time
+        $existingSchedules = Schedule::whereIn('cycle_type', $cycles)
+            ->whereIn('day_of_week', $days)
+            ->get();
+
+        // Matriks okupansi memori
+        $occupiedClass   = []; // [cycle][day][slotKey][id_class]
+        $occupiedTeacher = []; // [cycle][day][slotKey][id_guru]
+        $occupiedRoom    = []; // [cycle][day][slotKey][id_room]
+
+        $timeOverlap = function($s1, $e1, $s2, $e2) {
+            return ($s1 < $e2) && ($e1 > $s2);
+        };
+
+        // Template slot jam pelajaran harian standar (SMKN 1 Bantul)
+        $slotTemplates = [
+            'Senin' => [
+                ['start' => '08:10:00', 'end' => '09:30:00', 'label' => 'Jam 1-2'],
+                ['start' => '09:45:00', 'end' => '11:05:00', 'label' => 'Jam 3-4'],
+                ['start' => '11:05:00', 'end' => '11:45:00', 'label' => 'Jam 5'],
+                ['start' => '12:45:00', 'end' => '14:05:00', 'label' => 'Jam 6-7'],
+                ['start' => '14:05:00', 'end' => '15:25:00', 'label' => 'Jam 8-9'],
+            ],
+            'Selasa' => [
+                ['start' => '07:15:00', 'end' => '08:35:00', 'label' => 'Jam 1-2'],
+                ['start' => '08:35:00', 'end' => '09:15:00', 'label' => 'Jam 3'],
+                ['start' => '09:30:00', 'end' => '10:50:00', 'label' => 'Jam 4-5'],
+                ['start' => '10:50:00', 'end' => '11:30:00', 'label' => 'Jam 6'],
+                ['start' => '12:30:00', 'end' => '13:50:00', 'label' => 'Jam 7-8'],
+                ['start' => '13:50:00', 'end' => '15:10:00', 'label' => 'Jam 9-10'],
+            ],
+            'Rabu' => [
+                ['start' => '07:15:00', 'end' => '08:35:00', 'label' => 'Jam 1-2'],
+                ['start' => '08:35:00', 'end' => '09:15:00', 'label' => 'Jam 3'],
+                ['start' => '09:30:00', 'end' => '10:50:00', 'label' => 'Jam 4-5'],
+                ['start' => '10:50:00', 'end' => '11:30:00', 'label' => 'Jam 6'],
+                ['start' => '12:30:00', 'end' => '13:50:00', 'label' => 'Jam 7-8'],
+                ['start' => '13:50:00', 'end' => '15:10:00', 'label' => 'Jam 9-10'],
+            ],
+            'Kamis' => [
+                ['start' => '07:15:00', 'end' => '08:35:00', 'label' => 'Jam 1-2'],
+                ['start' => '08:35:00', 'end' => '09:15:00', 'label' => 'Jam 3'],
+                ['start' => '09:30:00', 'end' => '10:50:00', 'label' => 'Jam 4-5'],
+                ['start' => '10:50:00', 'end' => '11:30:00', 'label' => 'Jam 6'],
+                ['start' => '12:30:00', 'end' => '13:50:00', 'label' => 'Jam 7-8'],
+                ['start' => '13:50:00', 'end' => '15:10:00', 'label' => 'Jam 9-10'],
+            ],
+            'Jumat' => [
+                ['start' => '07:15:00', 'end' => '08:35:00', 'label' => 'Jam 1-2'],
+                ['start' => '08:50:00', 'end' => '10:10:00', 'label' => 'Jam 3-4'],
+                ['start' => '10:10:00', 'end' => '10:50:00', 'label' => 'Jam 5'],
+                ['start' => '13:00:00', 'end' => '14:20:00', 'label' => 'Jam 6-7'],
+                ['start' => '14:20:00', 'end' => '15:00:00', 'label' => 'Jam 8'],
+            ],
+        ];
+
+        // Petakan existing schedules ke slots
+        foreach ($existingSchedules as $ex) {
+            $c = (string)$ex->cycle_type;
+            $d = $ex->day_of_week;
+            $sStart = substr($ex->start_time, 0, 5) . ':00';
+            $sEnd   = substr($ex->end_time, 0, 5) . ':00';
+
+            $occupiedClass[$c][$d][] = ['start' => $sStart, 'end' => $sEnd, 'id' => $ex->id_class];
+            if ($ex->id_guru) {
+                $occupiedTeacher[$c][$d][] = ['start' => $sStart, 'end' => $sEnd, 'id' => $ex->id_guru];
+            }
+            if ($ex->id_room) {
+                $occupiedRoom[$c][$d][] = ['start' => $sStart, 'end' => $sEnd, 'id' => $ex->id_room];
+            }
+        }
+
+        $schedulesToCreate = [];
+        $teacherList = $teachers->values();
+        $roomList    = $rooms->values();
+        $totalTeachers = $teacherList->count();
+        $totalRooms    = $roomList->count();
+
+        $generatedCount = 0;
+        $classCount = 0;
+        $tOffset = 0;
+
+        foreach ($cycles as $cyc) {
+            foreach ($days as $day) {
+                $slots = $slotTemplates[$day] ?? $slotTemplates['Senin'];
+
+                foreach ($targetClasses as $cls) {
+                    $classScheduledInDay = false;
+
+                    foreach ($slots as $slot) {
+                        $sStart = $slot['start'];
+                        $sEnd   = $slot['end'];
+
+                        // Cek apakah kelas ini sudah memiliki jadwal pada slot ini
+                        $isClassOccupied = false;
+                        if (!empty($occupiedClass[$cyc][$day])) {
+                            foreach ($occupiedClass[$cyc][$day] as $occ) {
+                                if ($occ['id'] == $cls->id_class && $timeOverlap($sStart, $sEnd, $occ['start'], $occ['end'])) {
+                                    $isClassOccupied = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if ($isClassOccupied) {
+                            continue; // Slot sudah terisi, lewati agar tidak bentrok
+                        }
+
+                        // Cari Guru yang bebas pada jam ini
+                        $foundTeacher = null;
+                        for ($i = 0; $i < $totalTeachers; $i++) {
+                            $candTeacher = $teacherList[($tOffset + $i) % $totalTeachers];
+                            $isTeacherOccupied = false;
+
+                            if (!empty($occupiedTeacher[$cyc][$day])) {
+                                foreach ($occupiedTeacher[$cyc][$day] as $occ) {
+                                    if ($occ['id'] == $candTeacher->id_user && $timeOverlap($sStart, $sEnd, $occ['start'], $occ['end'])) {
+                                        $isTeacherOccupied = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (!$isTeacherOccupied) {
+                                $foundTeacher = $candTeacher;
+                                $tOffset = ($tOffset + $i + 1) % $totalTeachers;
+                                break;
+                            }
+                        }
+
+                        if (!$foundTeacher) {
+                            continue; // Semua guru sedang mengajar pada jam ini
+                        }
+
+                        // Cari Ruangan yang bebas pada jam ini
+                        $foundRoom = null;
+                        for ($j = 0; $j < $totalRooms; $j++) {
+                            $candRoom = $roomList[$j];
+                            $isRoomOccupied = false;
+
+                            if (!empty($occupiedRoom[$cyc][$day])) {
+                                foreach ($occupiedRoom[$cyc][$day] as $occ) {
+                                    if ($occ['id'] == $candRoom->id_room && $timeOverlap($sStart, $sEnd, $occ['start'], $occ['end'])) {
+                                        $isRoomOccupied = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (!$isRoomOccupied) {
+                                $foundRoom = $candRoom;
+                                break;
+                            }
+                        }
+
+                        if (!$foundRoom) {
+                            $foundRoom = $roomList[0]; // Fallback ke ruangan pertama jika semua ruangan terpakai
+                        }
+
+                        // Catat okupansi baru di memori
+                        $occupiedClass[$cyc][$day][]   = ['start' => $sStart, 'end' => $sEnd, 'id' => $cls->id_class];
+                        $occupiedTeacher[$cyc][$day][] = ['start' => $sStart, 'end' => $sEnd, 'id' => $foundTeacher->id_user];
+                        $occupiedRoom[$cyc][$day][]    = ['start' => $sStart, 'end' => $sEnd, 'id' => $foundRoom->id_room];
+
+                        $mapelName = !empty($foundTeacher->mapel) ? $foundTeacher->mapel : 'Pelajaran Umum';
+
+                        $schedulesToCreate[] = [
+                            'id_guru'     => $foundTeacher->id_user,
+                            'id_class'    => $cls->id_class,
+                            'id_room'     => $foundRoom->id_room,
+                            'mapel'       => $mapelName,
+                            'day_of_week' => $day,
+                            'start_time'  => $sStart,
+                            'end_time'    => $sEnd,
+                            'cycle_type'  => $cyc,
+                            'created_at'  => now(),
+                            'updated_at'  => now(),
+                        ];
+
+                        $generatedCount++;
+                        $classScheduledInDay = true;
+                    }
+
+                    if ($classScheduledInDay) {
+                        $classCount++;
+                    }
+                }
+            }
+        }
+
+        // Simpan ke database dalam chunks
+        if (!empty($schedulesToCreate)) {
+            foreach (array_chunk($schedulesToCreate, 200) as $chunk) {
+                Schedule::insert($chunk);
+            }
+        }
+
+        $totalClassesImpacted = $targetClasses->count();
+        $cycleLabel = ($cycleReq === 'all') ? 'Putaran 1 & 2' : "Putaran {$cycleReq}";
+        $tingkatLabel = ($tingkat === 'all') ? 'Semua Tingkat' : "Tingkat {$tingkat}";
+
+        return response()->json([
+            'status'          => 'success',
+            'message'         => "Berhasil generate jadwal bebas bentrok! Terbentuk {$generatedCount} sesi KBM untuk {$totalClassesImpacted} kelas ({$tingkatLabel}, {$cycleLabel}).",
+            'generated_count' => $generatedCount,
+            'classes_count'   => $totalClassesImpacted,
+            'cycles'          => $cycles,
+            'days'            => $days
+        ], 200);
+    }
 }

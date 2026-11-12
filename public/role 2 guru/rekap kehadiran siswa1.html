@@ -16,6 +16,8 @@
     <title>Rekap Kehadiran Siswa - Panel Guru</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS untuk Export Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- jsPDF & autoTable untuk Export PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
@@ -93,9 +95,9 @@
                             Rekap Kehadiran Siswa Kelas (<span id="labelPeriodText">-</span>)
                         </div>
 
-                        <button type="button" id="btnDownloadPdf" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow transition flex items-center space-x-1.5 shrink-0">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            <span>Download</span>
+                        <button type="button" id="btnDownloadPdf" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-4 py-2 rounded-xl text-xs font-bold shadow transition flex items-center space-x-1.5 shrink-0 cursor-pointer" title="Download Format Excel">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span>Download Excel</span>
                         </button>
                     </div>
 
@@ -440,53 +442,78 @@
         selectYear.addEventListener('change', loadAndCalculateRecap);
         btnFilterApply.addEventListener('click', loadAndCalculateRecap);
 
+        // Download Rekap Ke Format Excel (.xlsx)
         btnDownloadPdf.addEventListener('click', () => {
             if (recapList.length === 0) {
-                alert('Tidak ada data rekap untuk diunduh.');
+                if (window.showWarning) window.showWarning('Tidak ada data rekap untuk diunduh.');
+                else alert('Tidak ada data rekap untuk diunduh.');
                 return;
             }
 
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('landscape');
+            if (typeof XLSX === 'undefined') {
+                if (window.showError) window.showError('Library Excel belum siap dimuat. Silakan periksa koneksi atau muat ulang halaman.');
+                return;
+            }
+
             const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
             const m = selectMonth.value;
             const y = selectYear.value;
+            const guruName = userData.fullname || userData.username || 'Guru';
 
-            doc.setFontSize(14);
-            doc.text(`REKAP KEHADIRAN SISWA - KBM GURU`, 14, 15);
-            doc.setFontSize(10);
-            doc.text(`Periode: ${monthNames[m]} ${y} | Guru: ${userData.fullname || userData.username}`, 14, 22);
-            doc.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, 14, 27);
+            const wsData = [
+                ['REKAP KEHADIRAN SISWA - KBM GURU'],
+                [`Periode: ${monthNames[m]} ${y}`, `Guru Pengampu: ${guruName}`, `Tanggal Unduh: ${new Date().toLocaleDateString('id-ID')}`],
+                [],
+                ['NO', 'NISN', 'NIS', 'NAMA LENGKAP', 'IZIN', 'ALPA', 'HARI INI', 'MINGGU 1', 'MINGGU 2', 'MINGGU 3', 'MINGGU 4', 'TOTAL HADIR', 'TOTAL IZIN', 'TOTAL ALPA']
+            ];
 
-            const tableData = recapList.map(r => [
-                r.nisn, r.nis, r.fullname, r.izin, r.alpa, r.harian || '-', r.minggu_1, r.minggu_2, r.minggu_3, r.minggu_4, r.total_hadir, r.total_izin, r.total_alpa
-            ]);
-
-            doc.autoTable({
-                startY: 32,
-                head: [['NISN', 'NIS', 'Nama Lengkap', 'Izin', 'Alpa', 'Hari Ini', 'Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4', 'Total Hadir', 'Total Izin', 'Total Alpa']],
-                body: tableData,
-                styles: { fontSize: 8, cellPadding: 2, lineColor: [203, 213, 225], lineWidth: 0.1 },
-                headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
-                columnStyles: {
-                    0: { halign: 'center', cellWidth: 24 },
-                    1: { halign: 'center', cellWidth: 20 },
-                    2: { halign: 'left' },
-                    3: { halign: 'center', cellWidth: 14 },
-                    4: { halign: 'center', cellWidth: 14 },
-                    5: { halign: 'center', cellWidth: 16 },
-                    6: { halign: 'center', cellWidth: 14 },
-                    7: { halign: 'center', cellWidth: 14 },
-                    8: { halign: 'center', cellWidth: 14 },
-                    9: { halign: 'center', cellWidth: 14 },
-                    10: { halign: 'center', fontStyle: 'bold', cellWidth: 20 },
-                    11: { halign: 'center', fontStyle: 'bold', cellWidth: 18 },
-                    12: { halign: 'center', fontStyle: 'bold', cellWidth: 18 }
-                },
-                theme: 'grid'
+            recapList.forEach((r, idx) => {
+                wsData.push([
+                    idx + 1,
+                    r.nisn || '-',
+                    r.nis || '-',
+                    r.fullname || '',
+                    r.izin || 0,
+                    r.alpa || 0,
+                    r.harian || '-',
+                    r.minggu_1 || 0,
+                    r.minggu_2 || 0,
+                    r.minggu_3 || 0,
+                    r.minggu_4 || 0,
+                    r.total_hadir || 0,
+                    r.total_izin || 0,
+                    r.total_alpa || 0
+                ]);
             });
 
-            doc.save(`Rekap_Kehadiran_KBM_${monthNames[m]}_${y}.pdf`);
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+            ws['!cols'] = [
+                { wch: 6 },  // NO
+                { wch: 18 }, // NISN
+                { wch: 14 }, // NIS
+                { wch: 32 }, // NAMA LENGKAP
+                { wch: 8 },  // IZIN
+                { wch: 8 },  // ALPA
+                { wch: 12 }, // HARI INI
+                { wch: 10 }, // MINGGU 1
+                { wch: 10 }, // MINGGU 2
+                { wch: 10 }, // MINGGU 3
+                { wch: 10 }, // MINGGU 4
+                { wch: 14 }, // TOTAL HADIR
+                { wch: 12 }, // TOTAL IZIN
+                { wch: 12 }, // TOTAL ALPA
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Rekap Kehadiran');
+
+            const fileName = `Rekap_Kehadiran_KBM_${monthNames[m]}_${y}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+
+            if (window.showSuccess) {
+                window.showSuccess(`File Excel "${fileName}" berhasil diunduh!`, 'Unduh Selesai');
+            }
         });
     </script>
     <script src="../js/global-layout.js?v=20261111_2.0"></script>

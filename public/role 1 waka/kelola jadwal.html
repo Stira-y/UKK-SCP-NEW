@@ -19,6 +19,8 @@
     <!-- jsPDF & autoTable untuk Export PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <!-- SheetJS untuk Pemrosesan Excel & CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- pdf.js untuk Parsing PDF Jadwal Guru -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="../js/merged-schedule-data.js?v=20261109_2"></script>
@@ -113,6 +115,31 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Div Bar Khusus: Tabel Guru & Generate Jadwal -->
+                <div class="bg-gradient-to-r from-indigo-50/90 via-white to-purple-50/90 p-3.5 sm:p-4 rounded-2xl shadow-xs border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-200 shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-xs sm:text-sm font-bold text-slate-800">Manajemen Guru & Jadwal Otomatis</h3>
+                            <p class="text-[11px] sm:text-xs text-slate-500">Lihat pemetaan mapel guru, impor data pegawai, dan generate jadwal anti-bentrok.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 shrink-0">
+                        <!-- Tombol Tabel Guru -->
+                        <button type="button" id="btnOpenTeacherTable" class="bg-white hover:bg-slate-50 text-indigo-700 border border-indigo-200 active:scale-95 px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold shadow-xs transition flex items-center space-x-1.5 cursor-pointer">
+                            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <span>Tabel Guru</span>
+                        </button>
+                        <!-- Tombol Generate Jadwal -->
+                        <button type="button" id="btnOpenGenerateSchedule" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 active:scale-95 text-white px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md shadow-indigo-200 transition flex items-center space-x-1.5 cursor-pointer">
+                            <svg class="w-4 h-4 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                            <span>Generate Jadwal</span>
+                        </button>
                     </div>
                 </div>
 
@@ -525,6 +552,157 @@
         </div>
     </div>
 
+    <!-- MODAL TABEL GURU & MAPEL -->
+    <div id="teacherTableModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-indigo-600 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between text-white gap-3 shrink-0">
+                <div>
+                    <h3 class="font-bold text-base md:text-lg flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                        <span>Tabel Data Guru & Mapel Pengampu</span>
+                    </h3>
+                    <p class="text-xs text-indigo-100 mt-0.5">Daftar mata pelajaran yang diampu guru untuk otomatisasi jadwal KBM.</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" id="btnTriggerImportNominatif" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                        <span>Import Data Pegawai</span>
+                    </button>
+                    <input type="file" id="inputNominatifFile" accept=".xlsx, .xls, .csv" class="hidden">
+                    <button type="button" id="btnCloseTeacherTable" class="text-indigo-200 hover:text-white text-2xl font-bold leading-none p-1 cursor-pointer">&times;</button>
+                </div>
+            </div>
+
+            <div class="p-4 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+                <div class="relative w-full sm:w-72">
+                    <input type="text" id="searchTeacherInput" placeholder="Cari nama guru atau mapel..." class="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500">
+                    <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <span id="teacherCountBadge" class="text-xs font-semibold text-slate-500 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                    Memuat data guru...
+                </span>
+            </div>
+
+            <div class="overflow-y-auto flex-1 p-4">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-600 uppercase tracking-wider border-b border-slate-200">
+                            <th class="py-2.5 px-3 text-center w-12">No</th>
+                            <th class="py-2.5 px-3 w-44">NIP</th>
+                            <th class="py-2.5 px-3">Nama Guru</th>
+                            <th class="py-2.5 px-3">Mata Pelajaran (Mapel)</th>
+                            <th class="py-2.5 px-3 text-center w-28">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="teacherTableBody" class="divide-y divide-slate-100 text-slate-700">
+                        <tr>
+                            <td colspan="5" class="py-8 text-center text-slate-400">Memuat data guru...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-slate-50 px-6 py-3 flex justify-end border-t border-slate-200 shrink-0">
+                <button type="button" id="btnDoneTeacherTable" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer">Selesai</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GENERATE JADWAL BEBAS BENTROK -->
+    <div id="generateScheduleModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[88vh]">
+            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                <div>
+                    <h3 class="font-bold text-base md:text-lg flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                        <span>Generate Jadwal Bebas Bentrok</span>
+                    </h3>
+                    <p class="text-xs text-indigo-100 mt-0.5">Alokasi otomatis guru & mapel Senin-Jumat tanpa jadwal tumpang tindih.</p>
+                </div>
+                <button type="button" id="btnCloseGenerateSchedule" class="text-indigo-200 hover:text-white text-2xl font-bold leading-none cursor-pointer">&times;</button>
+            </div>
+
+            <div class="p-6 space-y-4 overflow-y-auto flex-1 text-xs md:text-sm">
+                <!-- Target Kelas -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Target Kelas</label>
+                    <select id="genTargetTingkat" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                        <option value="all">Semua Kelas (Kelas X, XI, dan XII)</option>
+                        <option value="X">Hanya Kelas X</option>
+                        <option value="XI">Hanya Kelas XI</option>
+                        <option value="XII">Hanya Kelas XII</option>
+                    </select>
+                </div>
+
+                <!-- Putaran / Cycle -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Putaran (Cycle)</label>
+                    <select id="genCycleType" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                        <option value="all">Keduanya (Putaran 1 & Putaran 2)</option>
+                        <option value="1">Putaran 1 Saja</option>
+                        <option value="2">Putaran 2 Saja</option>
+                    </select>
+                </div>
+
+                <!-- Hari -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Hari Pelaksanaan</label>
+                    <div class="grid grid-cols-5 gap-2 text-center text-xs font-bold">
+                        <label class="bg-indigo-50 border border-indigo-200 p-2 rounded-xl text-indigo-700 cursor-pointer flex flex-col items-center gap-1">
+                            <input type="checkbox" name="genDay" value="Senin" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                            <span>Senin</span>
+                        </label>
+                        <label class="bg-indigo-50 border border-indigo-200 p-2 rounded-xl text-indigo-700 cursor-pointer flex flex-col items-center gap-1">
+                            <input type="checkbox" name="genDay" value="Selasa" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                            <span>Selasa</span>
+                        </label>
+                        <label class="bg-indigo-50 border border-indigo-200 p-2 rounded-xl text-indigo-700 cursor-pointer flex flex-col items-center gap-1">
+                            <input type="checkbox" name="genDay" value="Rabu" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                            <span>Rabu</span>
+                        </label>
+                        <label class="bg-indigo-50 border border-indigo-200 p-2 rounded-xl text-indigo-700 cursor-pointer flex flex-col items-center gap-1">
+                            <input type="checkbox" name="genDay" value="Kamis" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                            <span>Kamis</span>
+                        </label>
+                        <label class="bg-indigo-50 border border-indigo-200 p-2 rounded-xl text-indigo-700 cursor-pointer flex flex-col items-center gap-1">
+                            <input type="checkbox" name="genDay" value="Jumat" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                            <span>Jumat</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Opsi Mode -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Metode Penjadwalan</label>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-2.5 p-3 rounded-xl border border-indigo-200 bg-indigo-50/50 cursor-pointer">
+                            <input type="radio" name="genMode" value="fill_empty" checked class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <span class="block text-xs font-bold text-slate-800">Isi Slot Jam Kosong Saja (Aman)</span>
+                                <span class="block text-[11px] text-slate-500">Menjaga jadwal yang sudah ada dan hanya melengkapi jam-jam yang belum terisi tanpa bentrok.</span>
+                            </div>
+                        </label>
+                        <label class="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                            <input type="radio" name="genMode" value="recreate" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <span class="block text-xs font-bold text-slate-800">Buat Ulang Seluruh Jadwal Kelas Terpilih</span>
+                                <span class="block text-[11px] text-slate-500">Menghapus jadwal lama kelas terpilih pada hari & putaran terkait lalu menyusun jadwal baru secara rapi.</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 px-6 py-3.5 flex justify-end space-x-2 border-t border-slate-200 shrink-0">
+                <button type="button" id="btnCancelGenerateSchedule" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer">Batal</button>
+                <button type="button" id="btnExecuteGenerateSchedule" class="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1.5 cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    <span>Mulai Generate Jadwal</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- POP-UP KONFIRMASI YAKIN & TIDAK (Z-INDEX 70) -->
     <div id="confirmScheduleActionModal" class="fixed inset-0 bg-slate-950/70 z-[70] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center transform transition-all animate-in fade-in zoom-in duration-200">
@@ -909,11 +1087,32 @@
             formGuru.innerHTML = '<option value="">Pilih Guru</option>';
             editFormGuru.innerHTML = '<option value="">Pilih Guru</option>';
             allTeachers.forEach(t => {
-                const text = t.fullname || t.username;
-                formGuru.appendChild(new Option(text, t.id_user));
-                editFormGuru.appendChild(new Option(text, t.id_user));
+                const mapelHint = t.mapel ? ` (${t.mapel})` : '';
+                const text = (t.fullname || t.username) + mapelHint;
+                const opt1 = new Option(text, t.id_user);
+                if (t.mapel) opt1.dataset.mapel = t.mapel;
+                formGuru.appendChild(opt1);
+
+                const opt2 = new Option(text, t.id_user);
+                if (t.mapel) opt2.dataset.mapel = t.mapel;
+                editFormGuru.appendChild(opt2);
             });
         }
+
+        // Auto-fill Mata Pelajaran saat guru dipilih pada Tambah Jadwal & Edit Jadwal
+        formGuru.addEventListener('change', () => {
+            const selectedTeacher = allTeachers.find(t => String(t.id_user) === String(formGuru.value));
+            if (selectedTeacher && selectedTeacher.mapel && selectedTeacher.mapel.trim()) {
+                formMapel.value = selectedTeacher.mapel.trim();
+            }
+        });
+
+        editFormGuru.addEventListener('change', () => {
+            const selectedTeacher = allTeachers.find(t => String(t.id_user) === String(editFormGuru.value));
+            if (selectedTeacher && selectedTeacher.mapel && selectedTeacher.mapel.trim()) {
+                editFormMapel.value = selectedTeacher.mapel.trim();
+            }
+        });
 
         function populateRoomSelect() {
             formRoom.innerHTML = '<option value="">Pilih Ruangan</option>';
@@ -2304,6 +2503,356 @@
             });
 
             doc.save(`Jadwal_Kelas_${currentTingkat}_Putaran_${currentCycle}.pdf`);
+        });
+
+        // ========================================================
+        // FITUR BARU: MANAJEMEN TABEL GURU & MAPEL PENGAMPU
+        // ========================================================
+        const teacherTableModal = document.getElementById('teacherTableModal');
+        const btnOpenTeacherTable = document.getElementById('btnOpenTeacherTable');
+        const btnCloseTeacherTable = document.getElementById('btnCloseTeacherTable');
+        const btnDoneTeacherTable = document.getElementById('btnDoneTeacherTable');
+        const teacherTableBody = document.getElementById('teacherTableBody');
+        const searchTeacherInput = document.getElementById('searchTeacherInput');
+        const teacherCountBadge = document.getElementById('teacherCountBadge');
+        const btnTriggerImportNominatif = document.getElementById('btnTriggerImportNominatif');
+        const inputNominatifFile = document.getElementById('inputNominatifFile');
+
+        let teacherDataList = [];
+
+        async function fetchTeachersWithSubjects() {
+            try {
+                teacherTableBody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-400">Memuat data guru & mapel...</td></tr>';
+                const res = await fetch(`${API_BASE_URL}/waka/teachers-subjects`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const json = await res.json();
+                if (res.ok && json.data) {
+                    teacherDataList = json.data;
+                    allTeachers = json.data;
+                    populateTeacherSelect();
+                    renderTeacherTable();
+                } else {
+                    teacherDataList = allTeachers || [];
+                    renderTeacherTable();
+                }
+            } catch (err) {
+                console.error('Fetch teachers error:', err);
+                teacherDataList = allTeachers || [];
+                renderTeacherTable();
+            }
+        }
+
+        function renderTeacherTable() {
+            const query = searchTeacherInput.value.trim().toLowerCase();
+            let filtered = teacherDataList.filter(t => {
+                const name = (t.fullname || t.username || '').toLowerCase();
+                const nip = (t.nip || '').toLowerCase();
+                const mapel = (t.mapel || '').toLowerCase();
+                return name.includes(query) || nip.includes(query) || mapel.includes(query);
+            });
+
+            teacherCountBadge.textContent = `${filtered.length} Guru Terdaftar`;
+
+            if (filtered.length === 0) {
+                teacherTableBody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-400 italic">Tidak ada data guru yang cocok.</td></tr>';
+                return;
+            }
+
+            teacherTableBody.innerHTML = filtered.map((t, idx) => {
+                const nipText = t.nip && t.nip !== '-' ? t.nip : '<span class="text-slate-400 italic">Belum ada NIP</span>';
+                const mapelBadge = t.mapel 
+                    ? `<span class="bg-indigo-50 text-indigo-700 font-semibold px-2.5 py-1 rounded-md text-xs border border-indigo-100">${t.mapel}</span>`
+                    : '<span class="text-slate-400 italic text-[11px]">Belum diatur</span>';
+
+                return `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100" id="teacherRow_${t.id_user}">
+                        <td class="py-3 px-3 text-center text-slate-500 font-mono">${idx + 1}</td>
+                        <td class="py-3 px-3 font-mono text-slate-600 text-xs">${nipText}</td>
+                        <td class="py-3 px-3 font-bold text-slate-800">${t.fullname || t.username}</td>
+                        <td class="py-3 px-3" id="teacherMapelCell_${t.id_user}">${mapelBadge}</td>
+                        <td class="py-3 px-3 text-center">
+                            <button type="button" onclick="editTeacherSubject(${t.id_user})" class="bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 px-2.5 py-1 rounded-lg text-xs font-semibold transition border border-slate-200 hover:border-indigo-200">
+                                Ubah Mapel
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        searchTeacherInput.addEventListener('input', renderTeacherTable);
+
+        btnOpenTeacherTable.addEventListener('click', () => {
+            teacherTableModal.classList.remove('hidden');
+            fetchTeachersWithSubjects();
+        });
+
+        btnCloseTeacherTable.addEventListener('click', () => teacherTableModal.classList.add('hidden'));
+        btnDoneTeacherTable.addEventListener('click', () => teacherTableModal.classList.add('hidden'));
+
+        window.editTeacherSubject = async function(id) {
+            const t = teacherDataList.find(item => item.id_user === id);
+            if (!t) return;
+
+            const currentMapel = t.mapel || '';
+            const newMapel = prompt(`Ubah Mata Pelajaran untuk Guru:\n"${t.fullname || t.username}"\n\nMasukkan nama mata pelajaran:`, currentMapel);
+            if (newMapel === null) return; // Dibatalkan
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/waka/teachers/${id}/subject`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ mapel: newMapel.trim() })
+                });
+                const json = await res.json();
+                if (res.ok) {
+                    t.mapel = newMapel.trim();
+                    renderTeacherTable();
+                    populateTeacherSelect();
+                    if (window.showSuccess) window.showSuccess(`Mapel untuk ${t.fullname} berhasil diperbarui.`);
+                } else {
+                    if (window.showError) window.showError(json.message || 'Gagal menyimpan perubahan mapel.');
+                }
+            } catch (err) {
+                if (window.showError) window.showError('Terjadi kesalahan jaringan.');
+            }
+        };
+
+        // Import Excel / CSV Data Pegawai (DATA NOMINATIF GURU)
+        btnTriggerImportNominatif.addEventListener('click', () => inputNominatifFile.click());
+
+        inputNominatifFile.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (typeof XLSX === 'undefined') {
+                if (window.showError) window.showError('Library pemroses Excel belum siap. Silakan muat ulang halaman.');
+                inputNominatifFile.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                try {
+                    let workbook;
+                    try {
+                        const data = new Uint8Array(evt.target.result);
+                        workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    } catch (err1) {
+                        const decoder = new TextDecoder('utf-8');
+                        const textData = decoder.decode(evt.target.result);
+                        workbook = XLSX.read(textData, { type: 'string' });
+                    }
+
+                    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+                        if (window.showError) window.showError('File Excel tidak memiliki lembar kerja.');
+                        return;
+                    }
+
+                    // Baca sheet pertama sebagai baris array 2D
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+                    if (!rawRows || rawRows.length === 0) {
+                        if (window.showError) window.showError('Berkas kosong!');
+                        return;
+                    }
+
+                    // Cari baris header yang mengandung NIP atau NAMA dan MAPEL
+                    let headerRowIdx = -1;
+                    let colNip = -1, colNama = -1, colMapel = -1, colJabatan = -1;
+
+                    for (let r = 0; r < Math.min(rawRows.length, 25); r++) {
+                        const row = rawRows[r];
+                        if (!Array.isArray(row)) continue;
+
+                        let foundNip = -1, foundNama = -1, foundMapel = -1, foundJabatan = -1;
+
+                        row.forEach((cellVal, cIdx) => {
+                            const valStr = String(cellVal || '').toLowerCase().trim().replace(/[\s_\-]+/g, '');
+                            if (valStr === 'nip' || valStr === 'nonip' || valStr === 'nomorindukpegawai') foundNip = cIdx;
+                            if (valStr === 'nama' || valStr === 'namaguru' || valStr === 'namalengkap' || valStr === 'fullname') foundNama = cIdx;
+                            if (valStr === 'mapel' || valStr === 'matapelajaran' || valStr === 'mengampumapel' || valStr === 'tugas') foundMapel = cIdx;
+                            if (valStr === 'jabatan' || valStr === 'title' || valStr === 'tugaspokok') foundJabatan = cIdx;
+                        });
+
+                        if (foundNama !== -1 && (foundNip !== -1 || foundMapel !== -1)) {
+                            headerRowIdx = r;
+                            colNip = foundNip;
+                            colNama = foundNama;
+                            colMapel = foundMapel;
+                            colJabatan = foundJabatan;
+                            break;
+                        }
+                    }
+
+                    if (headerRowIdx === -1 || colNama === -1) {
+                        if (window.showError) window.showError('Format tabel tidak dikenali! Pastikan baris kolom memiliki minimal: NAMA dan MAPEL (atau NIP).');
+                        return;
+                    }
+
+                    const itemsToImport = [];
+
+                    for (let r = headerRowIdx + 1; r < rawRows.length; r++) {
+                        const row = rawRows[r];
+                        if (!Array.isArray(row) || row.length === 0) continue;
+
+                        const rawNama = String(row[colNama] || '').trim();
+                        if (!rawNama || rawNama === '-' || rawNama.toLowerCase().includes('data nominatif') || rawNama.toLowerCase() === 'satpam') {
+                            // Cek jika masuk ke bagian tabel berikutnya
+                            if (rawNama.toLowerCase().includes('data nominatif tata usaha')) break;
+                            continue;
+                        }
+
+                        const rawNip   = (colNip !== -1) ? String(row[colNip] || '').trim() : '';
+                        const rawMapel = (colMapel !== -1) ? String(row[colMapel] || '').trim() : '';
+                        const rawJab   = (colJabatan !== -1) ? String(row[colJabatan] || '').trim() : '';
+
+                        itemsToImport.push({
+                            nip: rawNip,
+                            nama: rawNama,
+                            mapel: rawMapel,
+                            jabatan: rawJab
+                        });
+                    }
+
+                    if (itemsToImport.length === 0) {
+                        if (window.showError) window.showError('Tidak ada baris data guru yang valid terbaca dari berkas.');
+                        return;
+                    }
+
+                    const ok = window.showCustomConfirm 
+                        ? await window.showCustomConfirm(`Ditemukan ${itemsToImport.length} baris guru pada berkas. Lanjutkan import pemetaan mata pelajaran ke sistem?`, 'Konfirmasi Impor Pegawai')
+                        : confirm(`Ditemukan ${itemsToImport.length} baris guru pada berkas. Lanjutkan?`);
+                    if (!ok) return;
+
+                    btnTriggerImportNominatif.disabled = true;
+                    btnTriggerImportNominatif.innerHTML = `<span>Mengimpor...</span>`;
+
+                    const res = await fetch(`${API_BASE_URL}/waka/teachers/import-nominatif`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ items: itemsToImport })
+                    });
+
+                    const resJson = await res.json();
+
+                    if (res.ok) {
+                        if (window.showSuccess) window.showSuccess(resJson.message || 'Import data pegawai berhasil diproses!', 'Impor Berhasil');
+                        await fetchTeachersWithSubjects();
+                    } else {
+                        if (window.showError) window.showError(resJson.message || 'Gagal memproses import data pegawai.');
+                    }
+                } catch (parseErr) {
+                    console.error('Import parse error:', parseErr);
+                    if (window.showError) window.showError('Terjadi kesalahan saat memproses berkas Excel/CSV: ' + parseErr.message);
+                } finally {
+                    btnTriggerImportNominatif.disabled = false;
+                    btnTriggerImportNominatif.innerHTML = `
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                        <span>Import Data Pegawai</span>
+                    `;
+                    inputNominatifFile.value = '';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // ========================================================
+        // FITUR BARU: GENERATE JADWAL CERDAS BEBAS BENTROK
+        // ========================================================
+        const generateScheduleModal = document.getElementById('generateScheduleModal');
+        const btnOpenGenerateSchedule = document.getElementById('btnOpenGenerateSchedule');
+        const btnCloseGenerateSchedule = document.getElementById('btnCloseGenerateSchedule');
+        const btnCancelGenerateSchedule = document.getElementById('btnCancelGenerateSchedule');
+        const btnExecuteGenerateSchedule = document.getElementById('btnExecuteGenerateSchedule');
+
+        const genTargetTingkat = document.getElementById('genTargetTingkat');
+        const genCycleType = document.getElementById('genCycleType');
+
+        btnOpenGenerateSchedule.addEventListener('click', () => {
+            // Set default sesuai tab yang aktif saat ini
+            genTargetTingkat.value = currentTingkat || 'all';
+            genCycleType.value = currentCycle || 'all';
+            generateScheduleModal.classList.remove('hidden');
+        });
+
+        btnCloseGenerateSchedule.addEventListener('click', () => generateScheduleModal.classList.add('hidden'));
+        btnCancelGenerateSchedule.addEventListener('click', () => generateScheduleModal.classList.add('hidden'));
+
+        btnExecuteGenerateSchedule.addEventListener('click', async () => {
+            const selectedDays = Array.from(document.querySelectorAll('input[name="genDay"]:checked')).map(cb => cb.value);
+            if (selectedDays.length === 0) {
+                if (window.showWarning) window.showWarning('Pilih minimal 1 hari pelaksanaan KBM!');
+                return;
+            }
+
+            const targetTingkat = genTargetTingkat.value;
+            const cycleType = genCycleType.value;
+            const mode = document.querySelector('input[name="genMode"]:checked')?.value || 'fill_empty';
+
+            const tingkatTxt = (targetTingkat === 'all') ? 'Semua Kelas (X, XI, XII)' : `Kelas ${targetTingkat}`;
+            const cycleTxt = (cycleType === 'all') ? 'Putaran 1 & 2' : `Putaran ${cycleType}`;
+
+            const ok = window.showCustomConfirm
+                ? await window.showCustomConfirm(`Apakah Anda yakin ingin melakukan generate jadwal otomatis untuk ${tingkatTxt} (${cycleTxt}) pada hari ${selectedDays.join(', ')}?\n\nSistem akan menjadwalkan guru & mapel secara cerdas dengan jaminan TANPA BENTROK antar guru, kelas, dan ruangan.`, 'Konfirmasi Generate Jadwal')
+                : confirm(`Generate jadwal untuk ${tingkatTxt}?`);
+
+            if (!ok) return;
+
+            btnExecuteGenerateSchedule.disabled = true;
+            const origHtml = btnExecuteGenerateSchedule.innerHTML;
+            btnExecuteGenerateSchedule.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                <span>Sedang Menyusun Jadwal...</span>
+            `;
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/schedules/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        target_tingkat: targetTingkat,
+                        cycle_type: cycleType,
+                        days: selectedDays,
+                        mode: mode
+                    })
+                });
+
+                const resJson = await res.json();
+
+                if (res.ok) {
+                    generateScheduleModal.classList.add('hidden');
+                    if (window.showSuccess) {
+                        window.showSuccess(resJson.message || 'Generate jadwal berhasil diselesaikan!', 'Jadwal Berhasil Disusun');
+                    }
+                    await fetchSchedules();
+                    renderClassTable();
+                } else {
+                    if (window.showError) {
+                        window.showError(resJson.message || 'Gagal menyusun jadwal otomatis.');
+                    }
+                }
+            } catch (netErr) {
+                console.error('Generate schedule network error:', netErr);
+                if (window.showError) window.showError('Terjadi kesalahan koneksi ke server saat menyusun jadwal.');
+            } finally {
+                btnExecuteGenerateSchedule.disabled = false;
+                btnExecuteGenerateSchedule.innerHTML = origHtml;
+            }
         });
     </script>
     <script src="../js/global-layout.js?v=20261111_2.0"></script>

@@ -2204,4 +2204,185 @@ class UserController extends Controller
             'user' => $student->load(['role', 'schoolClass', 'parents'])
         ], 200);
     }
+
+    /**
+     * Mengambil daftar guru beserta mata pelajaran yang diampu.
+     */
+    public function getTeachersWithSubjects(Request $request)
+    {
+        // Pastikan kolom mapel ada di database
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('users', 'mapel')) {
+            try {
+                \Illuminate\Support\Facades\Schema::table('users', function ($table) {
+                    $table->string('mapel', 150)->nullable()->after('title');
+                });
+            } catch (\Throwable $e) {}
+        }
+
+        $teachers = User::with(['role', 'schoolClass', 'counselorClasses'])
+            ->where(function ($q) {
+                $q->whereIn('id_role', [1, 2, 3])
+                  ->orWhereNotNull('nip');
+            })
+            ->where(function ($q) {
+                $q->whereNull('email')
+                  ->orWhere('email', 'not like', '%@school.id');
+            })
+            ->where('fullname', '!=', '-')
+            ->where(function ($q) {
+                $q->whereNull('title')
+                  ->orWhere('title', '!=', 'Pensiun');
+            })
+            ->orderBy('fullname', 'asc')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $teachers
+        ], 200);
+    }
+
+    /**
+     * Memperbarui mata pelajaran seorang guru secara langsung.
+     */
+    public function updateTeacherSubject(Request $request, $id)
+    {
+        $teacher = User::find($id);
+        if (!$teacher) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Guru tidak ditemukan.'
+            ], 404);
+        }
+
+        // Pastikan kolom mapel ada
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('users', 'mapel')) {
+            try {
+                \Illuminate\Support\Facades\Schema::table('users', function ($table) {
+                    $table->string('mapel', 150)->nullable()->after('title');
+                });
+            } catch (\Throwable $e) {}
+        }
+
+        $validated = $request->validate([
+            'mapel' => 'nullable|string|max:150',
+        ]);
+
+        $teacher->mapel = !empty($validated['mapel']) ? trim($validated['mapel']) : null;
+        $teacher->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Mata pelajaran untuk {$teacher->fullname} berhasil diperbarui.",
+            'data' => $teacher
+        ], 200);
+    }
+
+    /**
+     * Mengimpor data nominatif pegawai / guru dari Excel/CSV untuk memetakan Guru ke Mapel.
+     */
+    public function importTeachersNominatif(Request $request)
+    {
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.nama' => 'required|string',
+            'items.*.mapel' => 'nullable|string',
+            'items.*.nip' => 'nullable|string',
+        ]);
+
+        // Pastikan kolom mapel ada
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('users', 'mapel')) {
+            try {
+                \Illuminate\Support\Facades\Schema::table('users', function ($table) {
+                    $table->string('mapel', 150)->nullable()->after('title');
+                });
+            } catch (\Throwable $e) {}
+        }
+
+        $allTeachers = User::whereIn('id_role', [1, 2, 3])
+            ->where(function ($q) {
+                $q->whereNull('title')
+                  ->orWhere('title', '!=', 'Pensiun');
+            })
+            ->get();
+
+        $updatedCount = 0;
+        $insertedCount = 0;
+        $errors = [];
+
+        foreach ($request->items as $idx => $row) {
+            $rawName  = trim($row['nama'] ?? ($row['fullname'] ?? ''));
+            $rawMapel = trim($row['mapel'] ?? '');
+            $rawNip   = trim($row['nip'] ?? '');
+
+            if (empty($rawName) || $rawName === '-') continue;
+
+            $cleanNip = (!empty($rawNip) && $rawNip !== '-' && strlen($rawNip) > 5) ? $rawNip : null;
+
+            // Cari guru yang cocok
+            $matchedTeacher = null;
+
+            if ($cleanNip) {
+                $matchedTeacher = $allTeachers->firstWhere('nip', $cleanNip);
+            }
+
+            if (!$matchedTeacher) {
+                // Bersihkan nama dari gelar untuk pencarian fleksibel
+                $normalizeName = function($name) {
+                    $n = strtolower($name);
+                    $n = preg_replace('/[,.]/', ' ', $n);
+                    $n = preg_replace('/\b(drs|dra|dr|h|hj|s\.pd|s\.pd\.i|s\.t|s\.kom|s\.e|s\.ip|m\.pd|m\.m|m\.eng|m\.acc|ss)\b/i', '', $n);
+                    $n = preg_replace('/\s+/', ' ', trim($n));
+                    return $n;
+                };
+
+                $cleanSearch = $normalizeName($rawName);
+
+                $matchedTeacher = $allTeachers->first(function ($t) use ($rawName, $cleanSearch, $normalizeName) {
+                    if (strtolower(trim($t->fullname)) === strtolower(trim($rawName))) return true;
+                    $cleanTarget = $normalizeName($t->fullname ?? '');
+                    return !empty($cleanSearch) && ($cleanSearch === $cleanTarget || str_contains($cleanTarget, $cleanSearch) || str_contains($cleanSearch, $cleanTarget));
+                });
+            }
+
+            if ($matchedTeacher) {
+                // Update guru yang sudah ada
+                if (!empty($rawMapel)) {
+                    $matchedTeacher->mapel = $rawMapel;
+                }
+                if ($cleanNip && (empty($matchedTeacher->nip) || $matchedTeacher->nip === '-')) {
+                    $matchedTeacher->nip = $cleanNip;
+                }
+                $matchedTeacher->save();
+                $updatedCount++;
+            } else {
+                // Buat guru baru
+                $username = strtolower(preg_replace('/[^a-z0-9]/', '', $rawName));
+                if (strlen($username) > 15) $username = substr($username, 0, 15);
+                $uniqueUser = $username . '_' . rand(10, 99);
+                $uniqueEmail = $uniqueUser . '@smkn1bantul.sch.id';
+
+                $newTeacher = User::create([
+                    'id_role'  => 2,
+                    'fullname' => $rawName,
+                    'nip'      => $cleanNip,
+                    'username' => $uniqueUser,
+                    'email'    => $uniqueEmail,
+                    'password' => Hash::make('Peh_1234'),
+                    'title'    => 'Guru Normada',
+                    'mapel'    => !empty($rawMapel) ? $rawMapel : null,
+                ]);
+
+                $allTeachers->push($newTeacher);
+                $insertedCount++;
+            }
+        }
+
+        return response()->json([
+            'status'         => 'success',
+            'message'        => "Berhasil memproses data guru & mapel: {$updatedCount} data guru diperbarui, {$insertedCount} guru baru ditambahkan.",
+            'updated_count'  => $updatedCount,
+            'inserted_count' => $insertedCount
+        ], 200);
+    }
 }
