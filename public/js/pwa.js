@@ -279,6 +279,66 @@
     window.showSuccess = (msg, title) => window.showCustomAlert(msg, title || 'Berhasil!', 'success');
     window.showError = (msg, title) => window.showCustomAlert(msg, title || 'Terjadi Kendala', 'error');
     window.showWarning = (msg, title) => window.showCustomAlert(msg, title || 'Peringatan', 'warning');
+
+    // ========================================================
+    // UNIVERSAL LOGOUT HANDLER & GLOBAL CLICK INTERCEPTOR
+    // Menjamin tombol logout berfungsi stabil & pop up modern di semua role
+    // ========================================================
+    let isLogoutInProgress = false;
+    window.performLogout = async function() {
+        if (isLogoutInProgress) return;
+        isLogoutInProgress = true;
+
+        try {
+            let confirmed = false;
+            if (window.showCustomConfirm) {
+                confirmed = await window.showCustomConfirm('Apakah Anda yakin ingin keluar dari akun ini?', 'Konfirmasi Keluar', {
+                    confirmText: 'Ya, Keluar',
+                    cancelText: 'Batal',
+                    type: 'confirm'
+                });
+            } else {
+                confirmed = true;
+            }
+
+            if (confirmed) {
+                try {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user_data');
+                    localStorage.removeItem('login_timestamp');
+                    localStorage.removeItem('waka_dropdown_open');
+                    sessionStorage.clear();
+                } catch (e) {
+                    console.warn('Gagal membersihkan storage:', e);
+                }
+
+                const path = window.location.pathname.toLowerCase();
+                const targetUrl = path.includes('/role') ? '../login/login.html' : '/login/login.html';
+                window.location.replace(targetUrl);
+            }
+        } catch (err) {
+            console.error('Logout error:', err);
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+            } catch (e) {}
+            window.location.replace('../login/login.html');
+        } finally {
+            isLogoutInProgress = false;
+        }
+    };
+
+    window.handleLogout = window.performLogout;
+
+    // Delegated click listener pada fasa capture: mencegat sebelum listener lokal lain bentrok
+    document.addEventListener('click', function(e) {
+        const btn = e.target && e.target.closest && e.target.closest('#btnLogout, .btn-logout-trigger');
+        if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.performLogout();
+        }
+    }, true);
 })();
 
 

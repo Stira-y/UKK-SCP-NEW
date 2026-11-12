@@ -60,7 +60,7 @@
                 <select id="parentStudentSelector" class="bg-transparent text-white text-xs md:text-sm font-semibold outline-none cursor-pointer pr-1">
                 </select>
             </div>
-            <button id="btnLogout" onclick="event.preventDefault(); handleLogout();" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition flex-shrink-0">
+            <button id="btnLogout" onclick="event.preventDefault(); window.performLogout ? window.performLogout() : handleLogout();" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition flex-shrink-0 cursor-pointer">
                 Keluar
             </button>
         </div>
@@ -426,7 +426,7 @@
     </div>
 
     <!-- Script Utama (Modular Profil & Logout) -->
-    <script src="../js/profile-role siswa.js?v=20261111_2.0"></script>
+    <script src="../js/profile-role siswa.js?v=20261112_3.0"></script>
 
     <!-- Script Khusus Dashboard Siswa: Rekap Siswa, Jadwal Hari Ini, Status Presensi & Izin Khusus Realtime -->
     <script>

@@ -123,7 +123,7 @@ function initUniversalGlobalLayout() {
                     <h1 id="navTitle" class="hidden lg:block text-base md:text-lg font-bold border-l border-indigo-400/40 pl-4">SCP Sekolah - Panel</h1>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button id="btnLogout" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition">Keluar</button>
+                    <button id="btnLogout" onclick="event.preventDefault(); window.performLogout ? window.performLogout() : null;" class="bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition cursor-pointer">Keluar</button>
                 </div>
             </nav>
         `;
@@ -1307,24 +1307,10 @@ function initUniversalGlobalLayout() {
 
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) {
-        btnLogout.addEventListener('click', async (e) => {
+        btnLogout.addEventListener('click', (e) => {
             e.preventDefault();
-            let confirmed = false;
-            if (window.showCustomConfirm) {
-                confirmed = await window.showCustomConfirm('Apakah Anda yakin ingin keluar dari akun ini?', 'Konfirmasi Keluar', {
-                    confirmText: 'Ya, Keluar',
-                    cancelText: 'Batal',
-                    type: 'confirm'
-                });
-            } else {
-                confirmed = true;
-            }
-
-            if (confirmed) {
-                localStorage.removeItem('auth_token');
-                localStorage.removeItem('user_data');
-                localStorage.removeItem('login_timestamp');
-                window.location.href = '../login/login.html';
+            if (window.performLogout) {
+                window.performLogout();
             }
         });
     }

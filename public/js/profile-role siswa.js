@@ -80,23 +80,9 @@ function getFirstName(fullName) {
 }
 
 // Fungsi Global Logout
-window.handleLogout = async function() {
-    let confirmed = false;
-    if (window.showCustomConfirm) {
-        confirmed = await window.showCustomConfirm('Apakah Anda yakin ingin keluar dari akun ini?', 'Konfirmasi Keluar', {
-            confirmText: 'Ya, Keluar',
-            cancelText: 'Batal',
-            type: 'confirm'
-        });
-    } else {
-        confirmed = true;
-    }
-
-    if (confirmed) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-        localStorage.removeItem('login_timestamp');
-        window.location.href = '../login/login.html';
+window.handleLogout = function() {
+    if (window.performLogout) {
+        window.performLogout();
     }
 };
 
