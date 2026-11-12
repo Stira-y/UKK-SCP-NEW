@@ -151,9 +151,11 @@
     <script>
         // Deteksi URL API secara dinamis (Laragon vs Hosting)
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const API_BASE_URL = isLocalhost 
-            ? 'http://localhost/ukk-scp-new/public/api' 
-            : `${window.location.origin}/api`;
+        const pathname = window.location.pathname.toLowerCase();
+        let API_BASE_URL = `${window.location.origin}/api`;
+        if (isLocalhost && pathname.includes('/ukk-scp-new/public')) {
+            API_BASE_URL = `${window.location.origin}/ukk-scp-new/public/api`;
+        }
 
         const lupaPwForm = document.getElementById('lupaPwForm');
         const usernameInput = document.getElementById('username');

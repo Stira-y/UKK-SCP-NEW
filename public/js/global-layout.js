@@ -6,9 +6,12 @@
 
 // 1. DEFINISI GLOBAL SEBELUM DOMContentLoaded (Agar langsung dikenali di seluruh file HTML)
 var isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-var API_BASE_URL = window.API_BASE_URL || (isLocalhost 
-    ? 'http://localhost/ukk-scp-new/public/api' 
-    : `${window.location.origin}/api`);
+var pathname = window.location.pathname.toLowerCase();
+var API_BASE_URL = window.API_BASE_URL || (
+    isLocalhost && pathname.includes('/ukk-scp-new/public')
+        ? `${window.location.origin}/ukk-scp-new/public/api`
+        : `${window.location.origin}/api`
+);
 
 window.API_BASE_URL = API_BASE_URL;
 
